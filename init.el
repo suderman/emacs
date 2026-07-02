@@ -72,8 +72,8 @@
       read-process-output-max (* 1024 1024)
       enable-recursive-minibuffers t)
 
-;; Match Neovim-style split navigation. These replace the default Emacs
-;; M-h/M-j/M-k/M-l text-editing bindings.
+;; Match Neovim-style split navigation from Evil states only. Native Emacs
+;; state keeps its own global M-h/M-j/M-k/M-l bindings.
 (defun jon/window-left-or-treemacs ()
   "Move focus left, falling back to a visible Treemacs side window."
   (interactive)
@@ -85,10 +85,184 @@
          (select-window window)
        (user-error "No window left from selected window")))))
 
-(global-set-key (kbd "M-h") #'jon/window-left-or-treemacs)
-(global-set-key (kbd "M-j") #'windmove-down)
-(global-set-key (kbd "M-k") #'windmove-up)
-(global-set-key (kbd "M-l") #'windmove-right)
+(defun jon/window-previous ()
+  "Move focus to the previously selected window."
+  (interactive)
+  (other-window -1))
+
+(defun jon/shrink-window-width ()
+  "Shrink the selected window horizontally."
+  (interactive)
+  (shrink-window-horizontally 5))
+
+(defun jon/enlarge-window-width ()
+  "Enlarge the selected window horizontally."
+  (interactive)
+  (enlarge-window-horizontally 5))
+
+(defun jon/enlarge-window-height ()
+  "Enlarge the selected window vertically."
+  (interactive)
+  (enlarge-window 3))
+
+(defun jon/shrink-window-height ()
+  "Shrink the selected window vertically."
+  (interactive)
+  (shrink-window 3))
+
+(defun jon/split-window-below-and-focus ()
+  "Split the selected window below and focus the new window."
+  (interactive)
+  (select-window (split-window-below)))
+
+(defun jon/split-window-right-and-focus ()
+  "Split the selected window right and focus the new window."
+  (interactive)
+  (select-window (split-window-right)))
+
+(defun jon/buffer-candidates ()
+  "Return live buffer names in most-recently-used order, excluding current."
+  (let ((current (current-buffer))
+        names)
+    (dolist (buffer (buffer-list) (or (nreverse names)
+                                      (list (buffer-name current))))
+      (let ((name (buffer-name buffer)))
+        (when (and name
+                   (not (eq buffer current))
+                   (not (string-prefix-p " " name)))
+          (push name names))))))
+
+(defun jon/picker-minibuffer-setup ()
+  "Use Vim-style navigation in a picker selection minibuffer."
+  (let ((map (copy-keymap (current-local-map))))
+    (define-key map (kbd "j") #'vertico-next)
+    (define-key map (kbd "k") #'vertico-previous)
+    (define-key map (kbd "l") #'vertico-exit)
+    (define-key map (kbd "RET") #'vertico-exit)
+    (use-local-map map)))
+
+(defun jon/switch-buffer ()
+  "Switch buffers in most-recently-used order."
+  (interactive)
+  (let* ((vertico-sort-override-function #'identity)
+         (buffer (minibuffer-with-setup-hook
+                     (:append #'jon/picker-minibuffer-setup)
+                   (completing-read "Buffer: "
+                                    (jon/buffer-candidates)
+                                    nil
+                                    t))))
+    (switch-to-buffer buffer)))
+
+(defun jon/alternate-buffer ()
+  "Switch to the most recent alternate buffer."
+  (interactive)
+  (let ((buffer (other-buffer (current-buffer) t)))
+    (if buffer
+        (switch-to-buffer buffer)
+      (user-error "No alternate buffer"))))
+
+(defun jon/smart-picker ()
+  "Pick a high-level source, then launch its picker."
+  (interactive)
+  (let* ((actions `(("buffers" . jon/switch-buffer)
+                    ("files" . jon/find-file)
+                    ("grep" . jon/search-project)
+                    ("recent" . consult-recent-file)
+                    ("commands" . execute-extended-command)
+                    ("command history" . consult-complex-command)
+                    ("line" . consult-line)
+                    ("symbols" . consult-imenu)
+                    ("keymaps" . describe-bindings)
+                    ("explorer" . jon/treemacs-toggle)))
+         (choice (let ((vertico-sort-override-function #'identity))
+                   (minibuffer-with-setup-hook
+                       (:append #'jon/picker-minibuffer-setup)
+                     (completing-read "Picker: "
+                                      (mapcar #'car actions)
+                                      nil
+                                      t)))))
+    (call-interactively (cdr (assoc choice actions)))))
+
+(defun jon/treemacs-root-for-file (file)
+  "Return a Treemacs project root for FILE, preferring the nearest Git root."
+  (file-name-as-directory
+   (expand-file-name
+    (or (locate-dominating-file file ".git")
+        (file-name-directory file)))))
+
+(defun jon/treemacs-project-name-candidates (root)
+  "Return unique Treemacs project name candidates for ROOT."
+  (let* ((dir (directory-file-name root))
+         (base (file-name-nondirectory dir))
+         (parent-dir (file-name-directory dir))
+         (parent (when parent-dir
+                   (file-name-nondirectory
+                    (directory-file-name parent-dir))))
+         (candidates (list base
+                           (when (and parent (not (string= parent "")))
+                             (format "%s (%s)" base parent))
+                           (abbreviate-file-name root)
+                           root))
+         names)
+    (dolist (name candidates (nreverse names))
+      (when (and name (not (member name names)))
+        (push name names)))))
+
+(defun jon/treemacs-add-project-root (root)
+  "Add ROOT to the current Treemacs workspace if possible."
+  (let (result)
+    (catch 'done
+      (dolist (name (jon/treemacs-project-name-candidates root))
+        (let ((attempt (treemacs-do-add-project-to-workspace root name)))
+          (setq result attempt)
+          (cond
+           ((memq (car-safe attempt) '(success duplicate-project includes-project))
+            (throw 'done attempt))
+           ((memq (car-safe attempt) '(duplicate-name invalid-name))
+            nil)
+           ((eq (car-safe attempt) 'invalid-path)
+            (user-error "Cannot add Treemacs project %s: %s" root (cadr attempt)))))))
+    (unless result
+      (user-error "Cannot add Treemacs project %s" root))
+    result))
+
+(defun jon/treemacs-toggle ()
+  "Toggle/focus Treemacs, adding the current project before revealing the file."
+  (interactive)
+  (cond
+   ((derived-mode-p 'treemacs-mode)
+    (treemacs))
+   ((not buffer-file-name)
+    (treemacs-select-window))
+   (t
+    (require 'treemacs)
+    (let ((file (treemacs-canonical-path (expand-file-name buffer-file-name))))
+      (unless (treemacs-is-path file :in-workspace)
+        (jon/treemacs-add-project-root
+         (jon/treemacs-root-for-file buffer-file-name)))
+      (unless (treemacs-is-path file :in-workspace)
+        (user-error "%s does not fall under any Treemacs project" file))
+      (treemacs-find-file)
+      (treemacs-select-window)))))
+
+(defun jon/clear-search ()
+  "Clear Evil search highlighting."
+  (interactive)
+  (evil-ex-nohighlight))
+
+(defun jon/evil-shift-left-visual (beg end)
+  "Outdent the visual selection and keep it selected."
+  (interactive "r")
+  (evil-shift-left beg end)
+  (evil-normal-state)
+  (evil-visual-restore))
+
+(defun jon/evil-shift-right-visual (beg end)
+  "Indent the visual selection and keep it selected."
+  (interactive "r")
+  (evil-shift-right beg end)
+  (evil-normal-state)
+  (evil-visual-restore))
 
 (savehist-mode 1)
 (save-place-mode 1)
@@ -280,7 +454,7 @@
 
 (use-package treemacs
   :after evil
-  :commands (treemacs)
+  :commands (treemacs treemacs-find-file treemacs-select-window)
   :init
   ;; Set this before any Treemacs buffer is created.
   (evil-set-initial-state 'treemacs-mode 'emacs)
