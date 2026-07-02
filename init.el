@@ -74,7 +74,18 @@
 
 ;; Match Neovim-style split navigation. These replace the default Emacs
 ;; M-h/M-j/M-k/M-l text-editing bindings.
-(global-set-key (kbd "M-h") #'windmove-left)
+(defun jon/window-left-or-treemacs ()
+  "Move focus left, falling back to a visible Treemacs side window."
+  (interactive)
+  (condition-case nil
+      (windmove-left)
+    (user-error
+     (if-let ((window (and (fboundp 'treemacs-get-local-window)
+                           (treemacs-get-local-window))))
+         (select-window window)
+       (user-error "No window left from selected window")))))
+
+(global-set-key (kbd "M-h") #'jon/window-left-or-treemacs)
 (global-set-key (kbd "M-j") #'windmove-down)
 (global-set-key (kbd "M-k") #'windmove-up)
 (global-set-key (kbd "M-l") #'windmove-right)
@@ -282,7 +293,7 @@
   (add-hook 'treemacs-mode-hook #'evil-emacs-state)
   (define-key treemacs-mode-map (kbd "j") #'treemacs-next-line)
   (define-key treemacs-mode-map (kbd "k") #'treemacs-previous-line)
-  (define-key treemacs-mode-map (kbd "M-h") #'windmove-left)
+  (define-key treemacs-mode-map (kbd "M-h") #'jon/window-left-or-treemacs)
   (define-key treemacs-mode-map (kbd "M-j") #'windmove-down)
   (define-key treemacs-mode-map (kbd "M-k") #'windmove-up)
   (define-key treemacs-mode-map (kbd "M-l") #'windmove-right)
