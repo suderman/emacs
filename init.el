@@ -98,6 +98,11 @@
   :after evil
   :demand t
   :config
+  ;; Let Evil Collection handle special modes, but keep Treemacs on its own
+  ;; keymap. Treemacs' mouse bindings work correctly in Evil's emacs state, and
+  ;; evil-treemacs/normal-state mouse handling interferes with double-click.
+  (setq evil-collection-mode-list
+        (delq 'treemacs evil-collection-mode-list))
   (evil-collection-init))
 
 ;;; Leader keys + discoverability
@@ -256,15 +261,17 @@
 ;;; Sidebar tree / file manager
 
 (use-package treemacs
+  :after evil
   :commands (treemacs)
   :init
+  ;; Set this before any Treemacs buffer is created.
+  (evil-set-initial-state 'treemacs-mode 'emacs)
   (setq treemacs-width 32
         treemacs-follow-after-init t
         treemacs-is-never-other-window t)
   :config
-  ;; Treemacs' own keymap handles mouse input correctly. Keeping Treemacs in
-  ;; Evil's emacs state avoids evil-treemacs mouse-event interference.
-  (evil-set-initial-state 'treemacs-mode 'emacs)
+  ;; Do not enable treemacs-evil here: Treemacs' own keymap handles mouse input
+  ;; correctly in emacs state, including double-click open/toggle.
   (add-hook 'treemacs-mode-hook #'evil-emacs-state)
   (define-key treemacs-mode-map (kbd "j") #'treemacs-next-line)
   (define-key treemacs-mode-map (kbd "k") #'treemacs-previous-line)
