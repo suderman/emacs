@@ -1,0 +1,80 @@
+# Emacs backup/autosave files
+*~
+\#*\#
+.#*
+auto-save-list/
+tramp
+
+# Lock files
+.#*
+
+# Native compilation cache
+eln-cache/
+
+# Package manager directories
+elpa/
+straight/
+elpaca/
+quelpa/
+var/
+
+# Generated package metadata
+package-quickstart.el
+package-quickstart.elc
+
+# Compiled Emacs Lisp
+*.elc *.eln
+# Runtime/history/cache files
+recentf
+recentf-save.el
+places
+places.el
+savehist
+savehist.el
+saveplace
+saveplace.el
+bookmarks
+bookmarks.el
+projectile-bookmarks.eld
+projectile.cache
+url/
+network-security.data
+
+# Org / agenda runtime state
+.org-id-locations
+org-clock-save.el
+
+# Eshell state
+eshell/history
+eshell/lastdir
+
+# LSP / language server caches
+.lsp-session-v1
+.eglot/
+dap-mode/
+semanticdb/
+
+# Tree-sitter grammars if built locally
+tree-sitter/
+tree-sitter-langs/
+tree-sitter-module/
+
+# Vertico / consult / prescient / completion history
+prescient-save.el
+transient/
+transient/history.el
+
+# Custom file if generated separately
+custom.el
+
+# Secrets / local machine config
+secrets.el
+private.el
+local.el
+.env
+.env.*
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+.cache
