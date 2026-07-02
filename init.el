@@ -72,6 +72,13 @@
       read-process-output-max (* 1024 1024)
       enable-recursive-minibuffers t)
 
+;; Match Neovim-style split navigation. These replace the default Emacs
+;; M-h/M-j/M-k/M-l text-editing bindings.
+(global-set-key (kbd "M-h") #'windmove-left)
+(global-set-key (kbd "M-j") #'windmove-down)
+(global-set-key (kbd "M-k") #'windmove-up)
+(global-set-key (kbd "M-l") #'windmove-right)
+
 (savehist-mode 1)
 (save-place-mode 1)
 (recentf-mode 1)
@@ -275,6 +282,10 @@
   (add-hook 'treemacs-mode-hook #'evil-emacs-state)
   (define-key treemacs-mode-map (kbd "j") #'treemacs-next-line)
   (define-key treemacs-mode-map (kbd "k") #'treemacs-previous-line)
+  (define-key treemacs-mode-map (kbd "M-h") #'windmove-left)
+  (define-key treemacs-mode-map (kbd "M-j") #'windmove-down)
+  (define-key treemacs-mode-map (kbd "M-k") #'windmove-up)
+  (define-key treemacs-mode-map (kbd "M-l") #'windmove-right)
   (treemacs-follow-mode 1)
   (treemacs-filewatch-mode 1))
 
