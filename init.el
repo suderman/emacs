@@ -262,66 +262,14 @@
         treemacs-follow-after-init t
         treemacs-is-never-other-window t)
   :config
+  ;; Treemacs' own keymap handles mouse input correctly. Keeping Treemacs in
+  ;; Evil's emacs state avoids evil-treemacs mouse-event interference.
+  (evil-set-initial-state 'treemacs-mode 'emacs)
+  (add-hook 'treemacs-mode-hook #'evil-emacs-state)
+  (define-key treemacs-mode-map (kbd "j") #'treemacs-next-line)
+  (define-key treemacs-mode-map (kbd "k") #'treemacs-previous-line)
   (treemacs-follow-mode 1)
   (treemacs-filewatch-mode 1))
-
-(use-package treemacs-evil
-  :after (treemacs evil)
-  :config
-  (defun jon/treemacs-goto-mouse-event (event)
-    "Select the Treemacs node targeted by mouse EVENT."
-    (let* ((posn (event-end event))
-           (window (posn-window posn))
-           (point (posn-point posn)))
-      (when (window-live-p window)
-        (select-window window))
-      (when (integer-or-marker-p point)
-        (goto-char point)))
-    (when (region-active-p)
-      (deactivate-mark t)))
-
-  (defun jon/treemacs-mouse-select (event)
-    "Select a Treemacs node without letting Evil start text selection."
-    (interactive "e")
-    (jon/treemacs-goto-mouse-event event))
-
-  (defun jon/treemacs-mouse-open-or-toggle (event)
-    "Open files/tags or toggle directories from a Treemacs mouse EVENT."
-    (interactive "e")
-    (jon/treemacs-goto-mouse-event event)
-    (pcase (treemacs--prop-at-point :state)
-      ((or 'root-node-open 'root-node-closed
-           'dir-node-open 'dir-node-closed
-           'tag-node-open 'tag-node-closed)
-       (treemacs-toggle-node))
-      ((or 'file-node-open 'file-node-closed 'tag-node)
-       (treemacs-visit-node-no-split))))
-
-  (defun jon/treemacs-ignore-mouse-up (event)
-    "Swallow mouse-up events that otherwise fall through to `mouse-set-point'."
-    (interactive "e")
-    (jon/treemacs-goto-mouse-event event))
-
-  (define-key evil-treemacs-state-map [down-mouse-1]
-    #'jon/treemacs-mouse-select)
-  (define-key evil-treemacs-state-map [mouse-1]
-    #'jon/treemacs-ignore-mouse-up)
-  (define-key evil-treemacs-state-map [drag-mouse-1]
-    #'treemacs-dragleftclick-action)
-  (define-key evil-treemacs-state-map [double-down-mouse-1]
-    #'jon/treemacs-mouse-select)
-  (define-key evil-treemacs-state-map [double-mouse-1]
-    #'jon/treemacs-mouse-open-or-toggle)
-  (evil-define-key 'treemacs treemacs-mode-map [down-mouse-1]
-    #'jon/treemacs-mouse-select)
-  (evil-define-key 'treemacs treemacs-mode-map [mouse-1]
-    #'jon/treemacs-ignore-mouse-up)
-  (evil-define-key 'treemacs treemacs-mode-map [drag-mouse-1]
-    #'treemacs-dragleftclick-action)
-  (evil-define-key 'treemacs treemacs-mode-map [double-down-mouse-1]
-    #'jon/treemacs-mouse-select)
-  (evil-define-key 'treemacs treemacs-mode-map [double-mouse-1]
-    #'jon/treemacs-mouse-open-or-toggle))
 
 (use-package dirvish
   :commands (dirvish dirvish-side)
