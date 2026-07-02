@@ -3,7 +3,7 @@
 ;;; Goals:
 ;; - XDG-friendly: ~/.config/emacs for config, ~/.local/share/emacs for packages,
 ;;   ~/.local/state/emacs for state, ~/.cache/emacs for cache.
-;; - Evil-first editing with a SPC leader.
+;; - Evil-first editing with a \ leader and SPC picker.
 ;; - Modern picker stack: Vertico + Consult + Marginalia + Orderless + Embark.
 ;; - Sidebar file tree: Treemacs.
 ;; - Mutable/package.el-friendly; no Nix lock-in.
@@ -284,7 +284,55 @@
   :config
   (evil-mode 1)
   ;; Use jk as a low-friction escape hatch from insert state.
-  (define-key evil-insert-state-map (kbd "j k") #'evil-normal-state))
+  (define-key evil-insert-state-map (kbd "j k") #'evil-normal-state)
+  (define-key evil-insert-state-map (kbd "M-h") #'left-char)
+  (define-key evil-insert-state-map (kbd "M-j") #'next-line)
+  (define-key evil-insert-state-map (kbd "M-k") #'previous-line)
+  (define-key evil-insert-state-map (kbd "M-l") #'right-char)
+  (define-key evil-insert-state-map (kbd "C-l") (lambda () (interactive) (insert " ")))
+
+  (dolist (map (list evil-normal-state-map evil-motion-state-map))
+    (define-key map (kbd "SPC") #'jon/smart-picker)
+    (define-key map (kbd ";") #'evil-ex)
+    (define-key map (kbd "j") #'evil-next-visual-line)
+    (define-key map (kbd "k") #'evil-previous-visual-line)
+    (define-key map (kbd "Y") (kbd "y$"))
+    (define-key map (kbd "K") #'jon/switch-buffer)
+    (define-key map (kbd "M-p") #'consult-recent-file)
+    (define-key map (kbd "M-g") #'jon/search-project)
+    (define-key map (kbd "-") #'dirvish)
+    (define-key map (kbd "M-h") #'jon/window-left-or-treemacs)
+    (define-key map (kbd "M-j") #'windmove-down)
+    (define-key map (kbd "M-k") #'windmove-up)
+    (define-key map (kbd "M-l") #'windmove-right)
+    (define-key map (kbd "M-;") #'jon/window-previous)
+    (define-key map (kbd "M-H") #'jon/shrink-window-width)
+    (define-key map (kbd "M-J") #'jon/enlarge-window-height)
+    (define-key map (kbd "M-K") #'jon/shrink-window-height)
+    (define-key map (kbd "M-L") #'jon/enlarge-window-width)
+    (define-key map (kbd "M-u") #'jon/split-window-below-and-focus)
+    (define-key map (kbd "M-i") #'jon/split-window-right-and-focus)
+    (define-key map (kbd "M-U") #'jon/split-window-below-and-focus)
+    (define-key map (kbd "M-I") #'jon/split-window-right-and-focus)
+    (define-key map (kbd "g u") #'jon/split-window-below-and-focus)
+    (define-key map (kbd "g i") #'jon/split-window-right-and-focus)
+    (define-key map (kbd "M-q") #'delete-window)
+    (let ((comma-map (make-sparse-keymap)))
+      (define-key comma-map (kbd "q") #'delete-window)
+      (define-key map (kbd ",") comma-map))
+    (define-key map (kbd "[b") #'previous-buffer)
+    (define-key map (kbd "]b") #'next-buffer)
+    (define-key map (kbd "[c") #'previous-error)
+    (define-key map (kbd "]c") #'next-error))
+
+  (define-key evil-visual-state-map (kbd "j") #'evil-next-visual-line)
+  (define-key evil-visual-state-map (kbd "k") #'evil-previous-visual-line)
+  (define-key evil-visual-state-map (kbd "<") #'jon/evil-shift-left-visual)
+  (define-key evil-visual-state-map (kbd ">") #'jon/evil-shift-right-visual)
+  (define-key evil-visual-state-map (kbd "M-h") #'jon/shrink-window-width)
+  (define-key evil-visual-state-map (kbd "M-j") #'jon/enlarge-window-height)
+  (define-key evil-visual-state-map (kbd "M-k") #'jon/shrink-window-height)
+  (define-key evil-visual-state-map (kbd "M-l") #'jon/enlarge-window-width))
 
 (use-package evil-collection
   :after evil
@@ -312,11 +360,15 @@
   (general-create-definer jon/leader
     :states '(normal visual motion)
     :keymaps 'override
-    :prefix "SPC"
-    :global-prefix "C-SPC")
+    :prefix "\\")
 
   (jon/leader
     "SPC" '(execute-extended-command :which-key "M-x")
+    "\\" '(jon/alternate-buffer :which-key "last buffer")
+    "="   '(jon/treemacs-toggle :which-key "toggle explorer")
+    "u"   '(jon/split-window-below-and-focus :which-key "split below")
+    "i"   '(jon/split-window-right-and-focus :which-key "split right")
+    "q"   '(delete-window :which-key "quit split")
 
     ;; Files
     "f"   '(:ignore t :which-key "files")
@@ -326,27 +378,42 @@
 
     ;; Buffers
     "b"   '(:ignore t :which-key "buffers")
-    "b b" '(consult-buffer :which-key "switch buffer")
+    "b b" '(jon/switch-buffer :which-key "switch buffer")
     "b k" '(kill-current-buffer :which-key "kill buffer")
     "b n" '(next-buffer :which-key "next buffer")
     "b p" '(previous-buffer :which-key "previous buffer")
 
     ;; Search
     "s"   '(:ignore t :which-key "search")
+    "s c" '(jon/clear-search :which-key "clear search")
     "s g" '(jon/search-project :which-key "grep project")
     "s l" '(consult-line :which-key "search line")
     "s i" '(consult-imenu :which-key "imenu symbols")
 
+    ;; Pickers
+    "t"   '(:ignore t :which-key "pickers")
+    "t b" '(jon/switch-buffer :which-key "buffers")
+    "t f" '(jon/find-file :which-key "files")
+    "t g" '(jon/search-project :which-key "grep")
+    "t r" '(consult-recent-file :which-key "recent")
+    "t q" '(consult-complex-command :which-key "command history")
+    "t l" '(consult-line :which-key "line")
+    "t i" '(consult-imenu :which-key "symbols")
+    "t k" '(describe-bindings :which-key "keymaps")
+
     ;; Windows
     "w"   '(:ignore t :which-key "windows")
-    "w v" '(split-window-right :which-key "split right")
-    "w s" '(split-window-below :which-key "split below")
+    "w v" '(jon/split-window-right-and-focus :which-key "split right")
+    "w s" '(jon/split-window-below-and-focus :which-key "split below")
     "w d" '(delete-window :which-key "delete window")
     "w o" '(delete-other-windows :which-key "only window")
-    "w h" '(windmove-left :which-key "window left")
+    "w h" '(jon/window-left-or-treemacs :which-key "window left")
     "w j" '(windmove-down :which-key "window down")
     "w k" '(windmove-up :which-key "window up")
     "w l" '(windmove-right :which-key "window right")
+    "w +" '(jon/enlarge-window-width :which-key "wider")
+    "w -" '(jon/shrink-window-width :which-key "narrower")
+    "w =" '(balance-windows :which-key "balance")
 
     ;; Projects
     "p"   '(:ignore t :which-key "projects")
@@ -356,7 +423,7 @@
     "p k" '(project-kill-buffers :which-key "kill project buffers")
 
     ;; Explorer / files
-    "e"   '(treemacs :which-key "explorer")
+    "e"   '(jon/treemacs-toggle :which-key "explorer")
     "d"   '(dirvish :which-key "dirvish")
 
     ;; Help
