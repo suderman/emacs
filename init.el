@@ -272,6 +272,12 @@
 
 ;;; Evil
 
+(defvar jon/local-leader-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "q") #'delete-window)
+    map)
+  "Fallback keymap for the local leader key `,'.")
+
 (use-package evil
   :demand t
   :init
@@ -317,9 +323,7 @@
     (define-key map (kbd "g u") #'jon/split-window-below-and-focus)
     (define-key map (kbd "g i") #'jon/split-window-right-and-focus)
     (define-key map (kbd "M-q") #'delete-window)
-    (let ((comma-map (make-sparse-keymap)))
-      (define-key comma-map (kbd "q") #'delete-window)
-      (define-key map (kbd ",") comma-map))
+    (define-key map (kbd ",") jon/local-leader-map)
     (define-key map (kbd "[b") #'previous-buffer)
     (define-key map (kbd "]b") #'next-buffer)
     (define-key map (kbd "[c") #'previous-error)
@@ -503,9 +507,170 @@
   :ensure nil
   :mode "\\.nix\\'")
 
+(defconst jon/markdown-preview-css
+  "<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #656d76;
+  --border: #d0d7de;
+  --code-bg: #f6f8fa;
+  --accent: #0969da;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #8b949e;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --accent: #58a6ff;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  max-width: none;
+  padding: 32px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  hyphens: manual;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+
+a { color: var(--accent); }
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+h1, h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+pre, code, kbd, samp {
+  font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Consolas, \"Liberation Mono\", Menlo, monospace;
+  font-size: 85%;
+}
+
+code {
+  padding: 0.2em 0.4em;
+  border-radius: 6px;
+  background: var(--code-bg);
+}
+
+pre {
+  overflow-x: auto;
+  padding: 16px;
+  border-radius: 6px;
+  background: var(--code-bg);
+}
+
+pre code {
+  padding: 0;
+  background: transparent;
+}
+
+blockquote {
+  padding: 0 1em;
+  color: var(--muted);
+  border-left: 0.25em solid var(--border);
+}
+
+img, svg {
+  max-width: none;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+}
+
+.table-wrapper table {
+  display: table;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+  overflow-wrap: normal;
+  word-break: normal;
+  vertical-align: top;
+}
+
+td code, th code {
+  white-space: nowrap;
+}
+
+tr:nth-child(2n) {
+  background: color-mix(in srgb, var(--code-bg) 70%, transparent);
+}
+
+</style>"
+  "CSS used for `jon/markdown-preview-buffer'.")
+
+(defun jon/markdown-preview-wrap-tables (html-file)
+  "Wrap tables in HTML-FILE so wide Markdown tables scroll cleanly."
+  (with-temp-buffer
+    (insert-file-contents html-file)
+    (goto-char (point-min))
+    (while (re-search-forward "<table\\([^>]*\\)>" nil t)
+      (replace-match "<div class=\"table-wrapper\">\n<table\\1>" nil nil))
+    (goto-char (point-min))
+    (while (search-forward "</table>" nil t)
+      (replace-match "</table>\n</div>" nil nil))
+    (write-region (point-min) (point-max) html-file nil 'silent)))
+
+(defun jon/markdown-preview-buffer ()
+  "Render current Markdown buffer with pandoc and open it in a browser."
+  (interactive)
+  (unless (executable-find "pandoc")
+    (user-error "pandoc not found"))
+  (let ((html-file (make-temp-file "markdown-preview-" nil ".html"))
+        (header-file (make-temp-file "markdown-preview-style-" nil ".html")))
+    (unwind-protect
+        (progn
+          (write-region jon/markdown-preview-css nil header-file nil 'silent)
+          (let ((status (call-process-region
+                         (point-min) (point-max)
+                         "pandoc" nil nil nil
+                         "--standalone"
+                         "--from=markdown"
+                         "--to=html5"
+                         "--metadata" (format "pagetitle=%s" (buffer-name))
+                         "--include-in-header" header-file
+                         "--output" html-file)))
+            (unless (zerop status)
+              (user-error "pandoc failed with exit code %s" status)))
+          (jon/markdown-preview-wrap-tables html-file))
+      (delete-file header-file))
+    (browse-url-of-file html-file)))
+
 (use-package markdown-ts-mode
   :ensure nil
-  :mode "\\.\\(?:md\\|markdown\\)\\'")
+  :mode "\\.\\(?:md\\|markdown\\)\\'"
+  :config
+  (evil-define-key '(normal motion visual) markdown-ts-mode-map
+    (kbd ", p") #'jon/markdown-preview-buffer))
 
 (use-package web-mode
   :ensure nil
