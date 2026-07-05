@@ -17,11 +17,11 @@
       (car (project-roots project)))))
 
 (defun suderman/find-file ()
-  "Find a file, preferring project files when inside a project."
+  "Find a file, using recursive home search outside projects."
   (interactive)
   (if (suderman/project-root)
       (call-interactively #'project-find-file)
-    (call-interactively #'find-file)))
+    (consult-fd (expand-file-name "~"))))
 
 (defun suderman/search-project ()
   "Run ripgrep from the project root, or from default-directory outside a project."
