@@ -602,11 +602,16 @@ img, svg {
 
 .table-wrapper table {
   display: table;
-  width: max-content;
-  min-width: 100%;
+  width: auto;
+  max-width: none;
   margin: 0;
   border-spacing: 0;
   border-collapse: collapse;
+  table-layout: auto;
+}
+
+.table-wrapper col {
+  width: auto !important;
 }
 
 th, td {
@@ -625,13 +630,151 @@ tr:nth-child(2n) {
   background: color-mix(in srgb, var(--code-bg) 70%, transparent);
 }
 
-</style>"
-  "CSS used for `jon/markdown-preview-buffer'.")
+</style>
+<script>
+(() => {
+  const versionUrl = window.location.pathname.replace(/\\.html$/, '.version');
+  let currentVersion = null;
 
-(defun jon/markdown-preview-wrap-tables (html-file)
-  "Wrap tables in HTML-FILE so wide Markdown tables scroll cleanly."
+  function tableScrolls() {
+    return Array.from(document.querySelectorAll('.table-wrapper'), (table) => table.scrollLeft);
+  }
+
+  function restoreScroll(state) {
+    window.scrollTo(state.x, state.y);
+    document.querySelectorAll('.table-wrapper').forEach((table, index) => {
+      table.scrollLeft = state.tables[index] || 0;
+    });
+  }
+
+  async function getVersion() {
+    const response = await fetch(`${versionUrl}?t=${Date.now()}`, { cache: 'no-store' });
+    return response.ok ? (await response.text()).trim() : null;
+  }
+
+  async function refreshIfChanged() {
+    try {
+      const nextVersion = await getVersion();
+      if (!nextVersion) return;
+      if (currentVersion === null) {
+        currentVersion = nextVersion;
+        return;
+      }
+      if (nextVersion === currentVersion) return;
+
+      const state = { x: window.scrollX, y: window.scrollY, tables: tableScrolls() };
+      const response = await fetch(`${window.location.pathname}?t=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) return;
+
+      const nextDocument = new DOMParser().parseFromString(await response.text(), 'text/html');
+      document.body.replaceWith(nextDocument.body);
+      document.title = nextDocument.title;
+      currentVersion = nextVersion;
+      requestAnimationFrame(() => requestAnimationFrame(() => restoreScroll(state)));
+    } catch (error) {
+      console.warn('Markdown preview refresh failed', error);
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    refreshIfChanged();
+    setInterval(refreshIfChanged, 1000);
+  });
+})();
+</script>"
+  "HTML header used for `jon/markdown-preview-buffer'.")
+
+(defvar jon/markdown-preview-server-process nil
+  "HTTP server process for Markdown previews.")
+
+(defvar jon/markdown-preview-server-port nil
+  "HTTP server port for Markdown previews.")
+
+(defvar jon/markdown-preview-server-root
+  (expand-file-name "jon-emacs-markdown-preview/" temporary-file-directory)
+  "Directory served by the Markdown preview HTTP server.")
+
+(defvar-local jon/markdown-preview-file nil
+  "HTML file used for the current buffer's Markdown preview.")
+
+(defvar-local jon/markdown-preview-version-file nil
+  "Version file polled by the current buffer's Markdown preview.")
+
+(defvar-local jon/markdown-preview-url nil
+  "HTTP URL used for the current buffer's Markdown preview.")
+
+(defun jon/markdown-preview-server-send (proc status content-type body)
+  "Send HTTP STATUS with CONTENT-TYPE and BODY to PROC."
+  (process-send-string
+   proc
+   (format "HTTP/1.1 %s\r\nContent-Type: %s\r\nCache-Control: no-store\r\nContent-Length: %d\r\nConnection: close\r\n\r\n"
+           status content-type (string-bytes body)))
+  (process-send-string proc body)
+  (delete-process proc))
+
+(defun jon/markdown-preview-server-handle (proc request)
+  "Serve one Markdown preview HTTP REQUEST from PROC."
+  (if (not (string-match "\\`GET \\([^ ?]+\\)" request))
+      (jon/markdown-preview-server-send proc "405 Method Not Allowed" "text/plain; charset=utf-8" "Method not allowed")
+    (let* ((name (file-name-nondirectory (match-string 1 request)))
+           (file (expand-file-name name jon/markdown-preview-server-root)))
+      (if (and (not (string-empty-p name))
+               (file-regular-p file))
+          (let ((body (with-temp-buffer
+                        (set-buffer-multibyte nil)
+                        (insert-file-contents-literally file)
+                        (buffer-string)))
+                (content-type (if (string-suffix-p ".html" name)
+                                  "text/html; charset=utf-8"
+                                "text/plain; charset=utf-8")))
+            (jon/markdown-preview-server-send proc "200 OK" content-type body))
+        (jon/markdown-preview-server-send proc "404 Not Found" "text/plain; charset=utf-8" "Not found")))))
+
+(defun jon/markdown-preview-server-filter (proc chunk)
+  "Collect HTTP request CHUNK from PROC and serve it when complete."
+  (let ((request (concat (process-get proc 'request) chunk)))
+    (if (string-match-p "\r\n\r\n" request)
+        (jon/markdown-preview-server-handle proc request)
+      (process-put proc 'request request))))
+
+(defun jon/markdown-preview-server-start ()
+  "Start the Markdown preview HTTP server if needed."
+  (unless (process-live-p jon/markdown-preview-server-process)
+    (make-directory jon/markdown-preview-server-root t)
+    (setq jon/markdown-preview-server-process
+          (make-network-process
+           :name "jon-markdown-preview-server"
+           :server t
+           :host "127.0.0.1"
+           :service 0
+           :filter #'jon/markdown-preview-server-filter
+           :noquery t)
+          jon/markdown-preview-server-port
+          (process-contact jon/markdown-preview-server-process :service))))
+
+(defun jon/markdown-preview-ensure-target ()
+  "Create preview files and URL for the current buffer if needed."
+  (jon/markdown-preview-server-start)
+  (unless jon/markdown-preview-file
+    (let ((base (file-name-nondirectory (make-temp-name "markdown-preview-"))))
+      (setq jon/markdown-preview-file
+            (expand-file-name (concat base ".html") jon/markdown-preview-server-root)
+            jon/markdown-preview-version-file
+            (expand-file-name (concat base ".version") jon/markdown-preview-server-root)
+            jon/markdown-preview-url
+            (format "http://127.0.0.1:%s/%s.html" jon/markdown-preview-server-port base)))))
+
+(defun jon/markdown-preview-normalize-tables (html-file)
+  "Wrap tables in HTML-FILE and remove Pandoc column width hints."
   (with-temp-buffer
     (insert-file-contents html-file)
+    (goto-char (point-min))
+    (while (re-search-forward "<colgroup[^>]*>" nil t)
+      (let ((start (match-beginning 0)))
+        (when (search-forward "</colgroup>" nil t)
+          (delete-region start (point))
+          (when (looking-at "\n")
+            (delete-char 1)))))
     (goto-char (point-min))
     (while (re-search-forward "<table\\([^>]*\\)>" nil t)
       (replace-match "<div class=\"table-wrapper\">\n<table\\1>" nil nil))
@@ -640,12 +783,13 @@ tr:nth-child(2n) {
       (replace-match "</table>\n</div>" nil nil))
     (write-region (point-min) (point-max) html-file nil 'silent)))
 
-(defun jon/markdown-preview-buffer ()
-  "Render current Markdown buffer with pandoc and open it in a browser."
-  (interactive)
+(defun jon/markdown-preview-render (&optional html-file)
+  "Render current Markdown buffer to HTML-FILE, or the buffer preview file."
   (unless (executable-find "pandoc")
     (user-error "pandoc not found"))
-  (let ((html-file (make-temp-file "markdown-preview-" nil ".html"))
+  (unless html-file
+    (jon/markdown-preview-ensure-target))
+  (let ((output-file (or html-file jon/markdown-preview-file))
         (header-file (make-temp-file "markdown-preview-style-" nil ".html")))
     (unwind-protect
         (progn
@@ -658,12 +802,32 @@ tr:nth-child(2n) {
                          "--to=html5"
                          "--metadata" (format "pagetitle=%s" (buffer-name))
                          "--include-in-header" header-file
-                         "--output" html-file)))
+                         "--output" output-file)))
             (unless (zerop status)
               (user-error "pandoc failed with exit code %s" status)))
-          (jon/markdown-preview-wrap-tables html-file))
+          (jon/markdown-preview-normalize-tables output-file)
+          (when (and jon/markdown-preview-version-file
+                     (equal output-file jon/markdown-preview-file))
+            (write-region (format "%s\n" (float-time)) nil jon/markdown-preview-version-file nil 'silent)))
       (delete-file header-file))
-    (browse-url-of-file html-file)))
+    output-file))
+
+(defun jon/markdown-preview-after-save ()
+  "Update this buffer's live Markdown preview after saving."
+  (when jon/markdown-preview-file
+    (jon/markdown-preview-render jon/markdown-preview-file)))
+
+(defun jon/markdown-preview-buffer ()
+  "Render current Markdown buffer with pandoc and open it in a browser.
+
+The preview uses a stable local HTTP URL for this buffer.  Once opened, saving
+this Markdown buffer rerenders the HTML.  The browser polls a small version file
+and updates only after a save changes the preview."
+  (interactive)
+  (jon/markdown-preview-ensure-target)
+  (jon/markdown-preview-render jon/markdown-preview-file)
+  (add-hook 'after-save-hook #'jon/markdown-preview-after-save nil t)
+  (browse-url jon/markdown-preview-url))
 
 (use-package markdown-ts-mode
   :ensure nil
