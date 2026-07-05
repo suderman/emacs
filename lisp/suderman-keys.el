@@ -18,6 +18,7 @@
   "Fallback keymap for the local leader key `,'.")
 
 (dolist (map (list evil-normal-state-map evil-motion-state-map))
+  (define-key map (kbd "<f5>") #'suderman/reload-config)
   (define-key map (kbd ";") #'evil-ex)
   (define-key map (kbd "j") #'evil-next-visual-line)
   (define-key map (kbd "k") #'evil-previous-visual-line)

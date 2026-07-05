@@ -24,6 +24,7 @@
 (require 'suderman-markdown)
 (require 'suderman-languages)
 (require 'suderman-keys)
+(require 'suderman-reload)
 
 ;; Keep Custom out of the hand-written config.
 (when (file-exists-p custom-file)
