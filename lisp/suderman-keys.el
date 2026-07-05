@@ -14,13 +14,10 @@
 (require 'suderman-windows)
 
 (defvar suderman/local-leader-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "q") #'delete-window)
-    map)
+  (make-sparse-keymap)
   "Fallback keymap for the local leader key `,'.")
 
 (dolist (map (list evil-normal-state-map evil-motion-state-map))
-  (define-key map (kbd "SPC") #'suderman/smart-picker)
   (define-key map (kbd ";") #'evil-ex)
   (define-key map (kbd "j") #'evil-next-visual-line)
   (define-key map (kbd "k") #'evil-previous-visual-line)
@@ -73,10 +70,14 @@
   (general-create-definer suderman/leader
     :states '(normal visual motion)
     :keymaps 'override
-    :prefix "\\")
+    :prefix "SPC")
 
   (suderman/leader
-    "SPC" '(execute-extended-command :which-key "M-x")
+    "SPC" '(suderman/find-file :which-key "find file/project file")
+    "."   '(find-file :which-key "find file")
+    "/"   '(suderman/search-project :which-key "grep project")
+    ","   '(suderman/switch-buffer :which-key "switch buffer")
+    ":"   '(execute-extended-command :which-key "M-x")
     "\\" '(suderman/alternate-buffer :which-key "last buffer")
     "="   '(suderman/treemacs-toggle :which-key "toggle explorer")
     "u"   '(suderman/split-window-below-and-focus :which-key "split below")
@@ -105,6 +106,7 @@
 
     ;; Pickers
     "t"   '(:ignore t :which-key "pickers")
+    "t t" '(suderman/smart-picker :which-key "smart picker")
     "t b" '(suderman/switch-buffer :which-key "buffers")
     "t f" '(suderman/find-file :which-key "files")
     "t g" '(suderman/search-project :which-key "grep")
