@@ -22,5 +22,11 @@
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
 
+;; GUI frame defaults need to be available before the first frame is built.
+(dolist (parameter '((font . "JetBrainsMono Nerd Font Mono-11")
+                     (alpha-background . 90)))
+  (add-to-list 'default-frame-alist parameter)
+  (add-to-list 'initial-frame-alist parameter))
+
 (provide 'early-init)
 ;;; early-init.el ends here

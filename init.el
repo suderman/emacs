@@ -13,6 +13,7 @@
 (require 'suderman-paths)
 (require 'suderman-packages)
 (require 'suderman-defaults)
+(require 'suderman-appearance)
 (require 'suderman-windows)
 
 ;; Editing building blocks.
