@@ -8,7 +8,6 @@
 
 (require 'subr-x)
 (require 'use-package)
-(require 'suderman-evil)
 
 (defconst suderman/markdown-preview-css
   "<style>
@@ -335,9 +334,8 @@ and updates only after a save changes the preview."
 (use-package markdown-ts-mode
   :ensure nil
   :mode "\\.\\(?:md\\|markdown\\)\\'"
-  :config
-  (evil-define-key '(normal motion visual) markdown-ts-mode-map
-    (kbd ", p") #'suderman/markdown-preview-buffer))
+  :bind (:map markdown-ts-mode-map
+              ("C-c C-p" . suderman/markdown-preview-buffer)))
 
 (provide 'suderman-markdown)
 ;;; suderman-markdown.el ends here

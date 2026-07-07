@@ -19,7 +19,7 @@
 (require 'suderman-projects)
 (require 'suderman-completion)
 (require 'suderman-pickers)
-(require 'suderman-evil)
+(require 'suderman-meow)
 (require 'suderman-files)
 (require 'suderman-markdown)
 (require 'suderman-languages)

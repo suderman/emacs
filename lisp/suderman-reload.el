@@ -9,14 +9,23 @@
 
 (require 'subr-x)
 
-(defvar suderman/local-leader-map)
-(defvar evil-mode)
-(declare-function evil-mode "evil" (&optional arg))
-(declare-function evil-get-auxiliary-keymap
-                  "evil-core" (map state &optional create ignore-parent))
+(defvar meow-global-mode)
+(defvar meow-motion-state-keymap)
+(defvar meow-normal-state-keymap)
+(defvar suderman/meow-leader-map)
+(declare-function meow-global-mode "meow-core" (&optional arg))
+(declare-function suderman/meow-reset-leader-map "suderman-meow" ())
 
 (defconst suderman/reload-excluded-features '(suderman-reload)
   "Suderman features that `suderman/reload-config' should not unload.")
+
+(defconst suderman/reload-modal-keys
+  '("<f5>"
+    "M-p" "M-g"
+    "M-h" "M-j" "M-k" "M-l" "M-;"
+    "M-H" "M-J" "M-K" "M-L"
+    "M-u" "M-i" "M-U" "M-I" "M-q")
+  "Meow modal keys rebuilt by `suderman-keys'.")
 
 (defun suderman/reload--quoted-symbol (form)
   "Return the quoted symbol in FORM, or nil."
@@ -25,11 +34,17 @@
              (symbolp (cadr form)))
     (cadr form)))
 
+(defun suderman/reload--user-init-file ()
+  "Return the init file path used by `suderman/reload-config'."
+  (or user-init-file
+      (expand-file-name "init.el" user-emacs-directory)))
+
 (defun suderman/reload--config-modules ()
-  "Return ordered `suderman-*' modules required by `user-init-file'."
-  (let (features)
+  "Return ordered `suderman-*' modules required by the user init file."
+  (let ((init-file (suderman/reload--user-init-file))
+        features)
     (with-temp-buffer
-      (insert-file-contents user-init-file)
+      (insert-file-contents init-file)
       (goto-char (point-min))
       (condition-case nil
           (while t
@@ -46,39 +61,23 @@
     (nreverse features)))
 
 (defun suderman/reload--clear-keymap (map)
-  "Remove leader bindings from MAP before rebuilding them."
+  "Remove rebuilt modal bindings from MAP."
   (when (keymapp map)
-    (dolist (key '("SPC" "\\" "," "<f5>"))
+    (dolist (key suderman/reload-modal-keys)
       (define-key map (kbd key) nil))))
 
-(defun suderman/reload--clear-evil-auxiliary-keymaps (map)
-  "Remove leader bindings from Evil auxiliary keymaps under MAP."
-  ;; `general' stores `:keymaps 'override' state bindings here, so direct
-  ;; `define-key' cleanup on the parent map does not remove stale leaders.
-  (when (and (keymapp map)
-             (fboundp 'evil-get-auxiliary-keymap))
-    (dolist (state '(normal motion visual))
-      (when-let ((aux (evil-get-auxiliary-keymap map state nil t)))
-        (suderman/reload--clear-keymap aux)))))
-
 (defun suderman/reload--clear-keymap-symbol (map-symbol)
-  "Remove leader bindings from MAP-SYMBOL and its Evil auxiliary maps."
+  "Remove rebuilt modal bindings from MAP-SYMBOL."
   (when (boundp map-symbol)
-    (let ((map (symbol-value map-symbol)))
-      (suderman/reload--clear-keymap map)
-      (suderman/reload--clear-evil-auxiliary-keymaps map))))
+    (suderman/reload--clear-keymap (symbol-value map-symbol))))
 
 (defun suderman/reload--clear-keys ()
   "Remove rebuilt key prefixes before unloading `suderman-keys'."
-  (dolist (map-symbol '(evil-normal-state-map
-                        evil-motion-state-map
-                        evil-visual-state-map
-                        evil-normal-state-local-map
-                        evil-motion-state-local-map
-                        evil-visual-state-local-map
-                        general-override-mode-map))
+  (dolist (map-symbol '(meow-normal-state-keymap meow-motion-state-keymap))
     (suderman/reload--clear-keymap-symbol map-symbol))
-  (setq suderman/local-leader-map (make-sparse-keymap)))
+  (global-set-key (kbd "<f5>") nil)
+  (when (fboundp 'suderman/meow-reset-leader-map)
+    (suderman/meow-reset-leader-map)))
 
 (defun suderman/reload--unload-feature (feature)
   "Unload FEATURE, clearing keymaps first when needed."
@@ -92,15 +91,16 @@
   "Reload Suderman config modules without restarting Emacs."
   (interactive)
   (let* ((modules (suderman/reload--config-modules))
-         (evil-was-enabled (bound-and-true-p evil-mode)))
+         (meow-was-enabled (bound-and-true-p meow-global-mode)))
     (unless modules
-      (user-error "No suderman modules found in %s" user-init-file))
+      (user-error "No suderman modules found in %s"
+                  (suderman/reload--user-init-file)))
     (dolist (feature (reverse modules))
       (suderman/reload--unload-feature feature))
     (dolist (feature modules)
       (require feature))
-    (when (and evil-was-enabled (fboundp 'evil-mode))
-      (evil-mode 1))
+    (when (and meow-was-enabled (fboundp 'meow-global-mode))
+      (meow-global-mode 1))
     (message "Reloaded %d modules: %s"
              (length modules)
              (mapconcat #'symbol-name modules ", "))))

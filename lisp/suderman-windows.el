@@ -1,23 +1,17 @@
 ;;; suderman-windows.el --- Window movement and split helpers -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Small commands used from Evil and leader maps.  They intentionally wrap core
+;; Small commands used from modal and leader maps.  They intentionally wrap core
 ;; Emacs window functions so keybindings read like intent instead of plumbing.
 
 ;;; Code:
 
 (require 'subr-x)
 
-(defun suderman/window-left-or-treemacs ()
-  "Move focus left, falling back to a visible Treemacs side window."
+(defun suderman/window-left ()
+  "Move focus to the window left of the selected window."
   (interactive)
-  (condition-case nil
-      (windmove-left)
-    (user-error
-     (if-let ((window (and (fboundp 'treemacs-get-local-window)
-                           (treemacs-get-local-window))))
-         (select-window window)
-       (user-error "No window left from selected window")))))
+  (windmove-left))
 
 (defun suderman/window-previous ()
   "Move focus to the previously selected window."

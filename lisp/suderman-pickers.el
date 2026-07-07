@@ -62,7 +62,7 @@
                     ("line" . consult-line)
                     ("symbols" . consult-imenu)
                     ("keymaps" . describe-bindings)
-                    ("explorer" . suderman/treemacs-toggle)))
+                    ("explorer" . dirvish-side)))
          (choice (let ((vertico-sort-override-function #'identity))
                    (minibuffer-with-setup-hook
                        (:append #'suderman/picker-minibuffer-setup)

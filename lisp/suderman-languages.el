@@ -1,7 +1,7 @@
 ;;; suderman-languages.el --- Language mode associations -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; General language-mode wiring that does not need a dedicated module yet.
+;; Broad language-mode wiring that does not need a dedicated module yet.
 ;; Promote sections out of here when they gain custom commands or larger setup.
 
 ;;; Code:
