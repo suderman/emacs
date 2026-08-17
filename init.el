@@ -9,6 +9,9 @@
 
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
+;; Support mouse in emacs terminal
+(xterm-mouse-mode 1)
+
 ;; Foundations: paths before packages, packages before use-package forms.
 (require 'suderman-paths)
 (require 'suderman-packages)
