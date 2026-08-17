@@ -1,14 +1,16 @@
 ;;; suderman-meow.el --- Meow modal editing setup -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Meow gives modal editing while leaving vanilla Emacs keymaps available through
-;; its keypad.  Keep the upstream QWERTY layout recognizable, then layer only the
-;; personal behavior that belongs to the modal core.
+;; Meow provides modal editing while retaining vanilla Emacs keymaps through its
+;; keypad.  This module owns custom selection and editing commands plus the
+;; normal and motion layouts; leader command bindings live in `suderman-keys'.
 
 ;;; Code:
 
 (require 'subr-x)
 (require 'use-package)
+
+;;;; Leader integration
 
 (defvar suderman/meow-leader-map (make-sparse-keymap)
   "Owned keymap for Suderman's Meow SPC leader bindings.")
@@ -21,31 +23,15 @@
           suderman/meow-leader-map))
   suderman/meow-leader-map)
 
-(defun suderman/meow-insert ()
-  "Enter insert state at the current point, discarding any selection."
-  (interactive)
+;;;; Selection and motion
+
+;; Selection construction is intentionally centralized here because exact
+;; selection type and history behavior require Meow's internal API.
+
+(defun suderman/meow--cancel-active-selection ()
+  "Cancel the current Meow selection when the region is active."
   (when (region-active-p)
-    (meow--cancel-selection))
-  (meow-insert))
-
-(defun suderman/meow-delete ()
-  "Delete selection, or one character forward.
-Deleted text is not added to the kill ring or clipboard."
-  (interactive)
-  (if (use-region-p)
-      (delete-active-region)
-    (unless (eobp)
-      (delete-forward-char 1))))
-
-(defun suderman/meow-kill ()
-  "Kill selection, or one character forward.
-Killed text is added to the kill ring and, if enabled, the clipboard."
-  (interactive)
-  (let ((select-enable-clipboard meow-use-clipboard))
-    (if (use-region-p)
-        (delete-active-region t)
-      (unless (eobp)
-        (kill-region (point) (1+ (point)))))))
+    (meow--cancel-selection)))
 
 (defun suderman/meow--move-line-selection (n)
   "Move the active end of a line selection by N lines.
@@ -117,42 +103,34 @@ Crossing the anchor reverses the selection naturally."
         (meow--make-selection '(expand . char) anchor pos)
       (meow--select t))))
 
+(defun suderman/meow--select-thing (thing n)
+  "Move forward N instances of THING, extending the current selection."
+  (let ((target
+         (save-excursion
+           (forward-thing thing n)
+           (point))))
+    (suderman/meow--select-to target)))
+
 (defun suderman/meow-next-word (n)
   "Move forward N words, extending the current selection."
   (interactive "p")
-  (let ((target
-         (save-excursion
-           (forward-thing meow-word-thing n)
-           (point))))
-    (suderman/meow--select-to target)))
+  (suderman/meow--select-thing meow-word-thing n))
 
 (defun suderman/meow-back-word (n)
   "Move backward N words, extending the current selection."
   (interactive "p")
-  (let ((target
-         (save-excursion
-           (forward-thing meow-word-thing (- n))
-           (point))))
-    (suderman/meow--select-to target)))
+  (suderman/meow--select-thing meow-word-thing (- n)))
 
 (defun suderman/meow-next-symbol (n)
   "Move forward N symbols, extending the current selection."
   (interactive "p")
-  (let ((target
-         (save-excursion
-           (forward-thing meow-symbol-thing n)
-           (point))))
-    (suderman/meow--select-to target)))
+  (suderman/meow--select-thing meow-symbol-thing n))
 
 (defun suderman/meow-back-symbol (n)
   "Move backward N symbols, extending the current selection."
   (interactive "p")
-  (let ((target
-         (save-excursion
-           (forward-thing meow-symbol-thing (- n))
-           (point))))
-    (suderman/meow--select-to target)))
- 
+  (suderman/meow--select-thing meow-symbol-thing (- n)))
+
 (defun suderman/meow-find (n char)
   "Find CHAR like Meow, leaving an expandable character selection."
   (interactive "p\ncFind: ")
@@ -218,27 +196,59 @@ Crossing the anchor reverses the selection naturally."
            (t eol))))
     (suderman/meow--select-to target)))
 
+(defun suderman/meow-visual ()
+  "Start or convert to an expandable character selection without moving."
+  (interactive)
+  (suderman/meow--select-to (point)))
+
+(defun suderman/meow-page-down ()
+  "Cancel the selection and scroll down without replaying `C-v'."
+  (interactive)
+  (meow--cancel-selection)
+  (call-interactively #'scroll-up-command))
+
+;;;; Editing
+
+(defun suderman/meow-insert ()
+  "Enter insert state at the current point, discarding any selection."
+  (interactive)
+  (suderman/meow--cancel-active-selection)
+  (meow-insert))
+
 (defun suderman/meow-insert-at-indentation ()
   "Enter Meow insert state at the first non-whitespace character."
   (interactive)
   (back-to-indentation)
   (suderman/meow-insert))
 
+(defun suderman/meow-delete ()
+  "Delete selection, or one character forward.
+Deleted text is not added to the kill ring or clipboard."
+  (interactive)
+  (if (use-region-p)
+      (delete-active-region)
+    (unless (eobp)
+      (delete-char 1))))
+
+(defun suderman/meow-kill ()
+  "Kill selection, or one character forward.
+Killed text is added to the kill ring and, if enabled, the clipboard."
+  (interactive)
+  (let ((select-enable-clipboard meow-use-clipboard))
+    (if (use-region-p)
+        (delete-active-region t)
+      (unless (eobp)
+        (kill-region (point) (1+ (point)))))))
+
 (defun suderman/meow-replace-char (char)
   "Replace the character immediately after point with CHAR."
   (interactive (list (read-char "Replace with: ")))
-  (when (region-active-p)
-    (meow--cancel-selection))
+  (suderman/meow--cancel-active-selection)
   (when (eolp)
     (user-error "No character to replace"))
   (delete-char 1)
   (insert-char char)
   (backward-char 1))
-
-(defun suderman/meow-visual ()
-  "Start or convert to an expandable character selection without moving."
-  (interactive)
-  (suderman/meow--select-to (point)))
 
 (defun suderman/meow-paste ()
   "Paste the current kill.
@@ -274,8 +284,7 @@ An active selection is replaced without modifying the kill ring."
 (defun suderman/meow-join-line ()
   "Join the current line with the following line, like Vim `J'."
   (interactive)
-  (when (region-active-p)
-    (meow--cancel-selection))
+  (suderman/meow--cancel-active-selection)
   (delete-indentation 1))
 
 (defun suderman/meow-save ()
@@ -296,8 +305,7 @@ An active selection is replaced without modifying the kill ring."
 (defun suderman/meow-delete-line ()
   "Delete the entire current line without adding it to the kill ring."
   (interactive)
-  (when (region-active-p)
-    (meow--cancel-selection))
+  (suderman/meow--cancel-active-selection)
   (pcase-let ((`(,beg . ,end) (suderman/meow--line-bounds)))
     (delete-region beg end)
     (goto-char beg)
@@ -306,22 +314,17 @@ An active selection is replaced without modifying the kill ring."
 (defun suderman/meow-kill-line ()
   "Kill the entire current line, adding it to the kill ring and clipboard."
   (interactive)
-  (when (region-active-p)
-    (meow--cancel-selection))
+  (suderman/meow--cancel-active-selection)
   (pcase-let ((`(,beg . ,end) (suderman/meow--line-bounds)))
     (let ((select-enable-clipboard meow-use-clipboard))
       (kill-region beg end))
     (goto-char beg)
     (back-to-indentation)))
 
-(defun suderman/meow-page-down ()
-  "Cancel the selection and scroll down without replaying `C-v'."
-  (interactive)
-  (meow--cancel-selection)
-  (call-interactively #'scroll-up-command))
+;;;; Keymaps and mode activation
 
 (defun suderman/meow-setup-qwerty ()
-  "Install Meow's upstream QWERTY layout with local paste/redo tweaks."
+  "Install Suderman's QWERTY Meow bindings."
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
   (meow-motion-define-key
    '("j" . meow-next)
@@ -363,7 +366,7 @@ An active selection is replaced without modifying the kill ring."
    '("I" . suderman/meow-insert-at-indentation)
    '("j" . suderman/meow-next)
    '("k" . suderman/meow-prev)
-   '("K" . ignore)
+   '("K" . suderman/switch-buffer)
    '("m" . meow-mark-word)
    '("M" . meow-mark-symbol)
    '("l" . meow-right)
@@ -404,8 +407,8 @@ An active selection is replaced without modifying the kill ring."
   :demand t
   :init
   (setq meow-use-clipboard t
-	meow-expand-selection-type 'expand
-	meow-expand-hint-counts
+        meow-expand-selection-type 'expand
+        meow-expand-hint-counts
         '((word . 0)
           (line . 30)
           (block . 30)
