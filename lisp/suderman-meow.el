@@ -269,11 +269,11 @@ An active selection is replaced without modifying the kill ring."
      ;; Linewise text: paste below current line.
      ((string-suffix-p "\n" text)
       (end-of-line)
-      (newline)
+      (if (eobp)
+          (insert "\n")
+        (forward-char 1))
       (let ((start (point)))
         (insert-for-yank text)
-        ;; Leave point on the pasted line so repeated `p'
-        ;; continues pasting below it.
         (goto-char start)
         (back-to-indentation)))
 
