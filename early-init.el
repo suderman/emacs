@@ -22,11 +22,9 @@
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
 
-;; GUI frame defaults need to be available before the first frame is built.
-(dolist (parameter '((font . "JetBrainsMono Nerd Font Mono-11")
-                     (alpha-background . 90)))
-  (add-to-list 'default-frame-alist parameter)
-  (add-to-list 'initial-frame-alist parameter))
+;; GUI frame opacity needs to be available before the first frame is built.
+(add-to-list 'default-frame-alist '(alpha-background . 90))
+(add-to-list 'initial-frame-alist '(alpha-background . 90))
 
 (provide 'early-init)
 ;;; early-init.el ends here
