@@ -401,6 +401,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-delete-line . "del line")
                    (suderman/meow-smart-end-of-line . "code end")
                    (end-of-line . "line end")
+                   (evilmi-jump-items-native . "match")
                    (suderman/meow-find . "find fwd")
                    (suderman/meow-find-backward . "find back")
                    (suderman/meow-indent . "indent")
@@ -442,6 +443,7 @@ An active selection is replaced without modifying the kill ring."
    '("1" . meow-expand-1)
    '("-" . negative-argument)
    '(";" . meow-reverse)
+   '("%" . evilmi-jump-items-native)
    '("<" . suderman/meow-outdent)
    '(">" . suderman/meow-indent)
    '("," . meow-inner-of-thing)
@@ -501,6 +503,9 @@ An active selection is replaced without modifying the kill ring."
    '("'" . repeat)
    '("/" . meow-visit)
    '("<escape>" . meow-cancel-selection)))
+
+(use-package evil-matchit
+  :commands evilmi-jump-items-native)
 
 (use-package meow
   :demand t
