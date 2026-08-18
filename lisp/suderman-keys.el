@@ -80,11 +80,11 @@
 (suderman/keys--define suderman/leader-project-map "f" #'project-find-file)
 (suderman/keys--define suderman/leader-project-map "k" #'project-kill-buffers)
 (suderman/keys--define suderman/leader-project-map "p" #'project-switch-project)
-(suderman/keys--define suderman/leader-project-map "s" #'suderman/search-project)
+(suderman/keys--define suderman/leader-project-map "s" #'consult-ripgrep)
 
 ;; Search
 (suderman/keys--define suderman/leader-search-map "c" #'suderman/clear-search)
-(suderman/keys--define suderman/leader-search-map "g" #'suderman/search-project)
+(suderman/keys--define suderman/leader-search-map "g" #'consult-ripgrep)
 (suderman/keys--define suderman/leader-search-map "i" #'consult-imenu)
 (suderman/keys--define suderman/leader-search-map "l" #'consult-line)
 
@@ -94,7 +94,7 @@
 (suderman/keys--define suderman/leader-tool-map "d" #'dirvish)
 (suderman/keys--define suderman/leader-tool-map "e" #'dirvish-side)
 (suderman/keys--define suderman/leader-tool-map "f" #'suderman/find-file)
-(suderman/keys--define suderman/leader-tool-map "g" #'suderman/search-project)
+(suderman/keys--define suderman/leader-tool-map "g" #'consult-ripgrep)
 (suderman/keys--define suderman/leader-tool-map "i" #'consult-imenu)
 (suderman/keys--define suderman/leader-tool-map "k" #'describe-bindings)
 (suderman/keys--define suderman/leader-tool-map "l" #'consult-line)
@@ -130,7 +130,7 @@
 
 (dolist (binding '(("<f5>" . suderman/reload-config)
                    ("M-p" . consult-recent-file)
-                   ("M-g" . suderman/search-project)
+                   ("M-g" . consult-ripgrep)
                    ("M-h" . suderman/window-left)
                    ("M-j" . windmove-down)
                    ("M-k" . windmove-up)
@@ -177,7 +177,7 @@
  '("9" . meow-digit-argument)
  '("0" . meow-digit-argument)
  '("?" . meow-cheatsheet)
- '("/" . suderman/search-project)
+ '("/" . consult-ripgrep)
  '("SPC" . suderman/find-file)
  '("." . find-file)
  '("," . suderman/switch-buffer)

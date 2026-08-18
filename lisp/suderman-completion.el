@@ -24,11 +24,9 @@
   (completion-category-overrides '((file (styles basic partial-completion orderless)))))
 
 (use-package consult
-  :init
-  (setq consult-project-function #'consult--default-project-function)
   :bind
   (("C-x b" . consult-buffer)
-   ("M-s r" . suderman/search-project)
+   ("M-s r" . consult-ripgrep)
    ("M-s l" . consult-line)
    ("M-s i" . consult-imenu)))
 

@@ -23,10 +23,5 @@
       (call-interactively #'project-find-file)
     (consult-fd (expand-file-name "~"))))
 
-(defun suderman/search-project ()
-  "Run ripgrep from the project root, or from default-directory outside a project."
-  (interactive)
-  (consult-ripgrep (or (suderman/project-root) default-directory)))
-
 (provide 'suderman-projects)
 ;;; suderman-projects.el ends here

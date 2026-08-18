@@ -55,7 +55,7 @@
   (interactive)
   (let* ((actions `(("buffers" . suderman/switch-buffer)
                     ("files" . suderman/find-file)
-                    ("grep" . suderman/search-project)
+                    ("grep" . consult-ripgrep)
                     ("recent" . consult-recent-file)
                     ("commands" . execute-extended-command)
                     ("command history" . consult-complex-command)
