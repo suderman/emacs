@@ -28,6 +28,9 @@
 ;; Selection construction is intentionally centralized here because exact
 ;; selection type and history behavior require Meow's internal API.
 
+(defvar-local suderman/meow-visual-stage 0
+  "Current consecutive `suderman/meow-visual' expansion stage.")
+
 (defun suderman/meow--cancel-active-selection ()
   "Cancel the current Meow selection when the region is active."
   (when (region-active-p)
@@ -103,60 +106,82 @@ Crossing the anchor reverses the selection naturally."
         (meow--make-selection '(expand . char) anchor pos)
       (meow--select t))))
 
+(defun suderman/meow--move-to (pos)
+  "Move to POS, extending the active selection when present."
+  (if (region-active-p)
+      (suderman/meow--select-to pos)
+    (goto-char pos)))
+
 (defun suderman/meow--select-thing (thing n)
-  "Move forward N instances of THING, extending the current selection."
+  "Move forward N instances of THING, extending an active selection."
   (let ((target
          (save-excursion
            (forward-thing thing n)
            (point))))
-    (suderman/meow--select-to target)))
+    (suderman/meow--move-to target)))
 
 (defun suderman/meow-next-word (n)
-  "Move forward N words, extending the current selection."
+  "Move forward N words, extending an active selection."
   (interactive "p")
   (suderman/meow--select-thing meow-word-thing n))
 
 (defun suderman/meow-back-word (n)
-  "Move backward N words, extending the current selection."
+  "Move backward N words, extending an active selection."
   (interactive "p")
   (suderman/meow--select-thing meow-word-thing (- n)))
 
 (defun suderman/meow-next-symbol (n)
-  "Move forward N symbols, extending the current selection."
+  "Move forward N symbols, extending an active selection."
   (interactive "p")
   (suderman/meow--select-thing meow-symbol-thing n))
 
 (defun suderman/meow-back-symbol (n)
-  "Move backward N symbols, extending the current selection."
+  "Move backward N symbols, extending an active selection."
   (interactive "p")
   (suderman/meow--select-thing meow-symbol-thing (- n)))
 
-(defun suderman/meow-find (n char)
-  "Find CHAR like Meow, leaving an expandable character selection."
-  (interactive "p\ncFind: ")
-  (meow-find n char t)
+(defun suderman/meow--finish-find-motion (selecting)
+  "Keep a find motion's selection only when SELECTING was already active."
   (when (region-active-p)
-    (suderman/meow--select-to (point))))
+    (if selecting
+        (suderman/meow--select-to (point))
+      (let ((target (point)))
+        (meow--cancel-selection)
+        (goto-char target)))))
+
+(defun suderman/meow-find (n char)
+  "Find CHAR like Meow, extending an active selection."
+  (interactive "p\ncFind: ")
+  (let ((selecting (region-active-p)))
+    (meow-find n char t)
+    (suderman/meow--finish-find-motion selecting)))
 
 (defun suderman/meow-till (n char)
-  "Move till CHAR like Meow, leaving an expandable character selection."
+  "Move till CHAR like Meow, extending an active selection."
   (interactive "p\ncTill: ")
-  (meow-till n char t)
-  (when (region-active-p)
-    (suderman/meow--select-to (point))))
+  (let ((selecting (region-active-p)))
+    (meow-till n char t)
+    (suderman/meow--finish-find-motion selecting)))
 
 (defun suderman/meow-find-backward (n char)
-  "Find backward to CHAR, leaving an expandable character selection."
+  "Find backward to CHAR, extending an active selection."
   (interactive "p\ncFind backward: ")
   (suderman/meow-find (- n) char))
 
 (defun suderman/meow-till-backward (n char)
-  "Move backward till CHAR, leaving an expandable character selection."
+  "Move backward till CHAR, extending an active selection."
   (interactive "p\ncTill backward: ")
   (suderman/meow-till (- n) char))
 
+(defun suderman/meow-search (arg)
+  "Search like Meow, leaving an expandable character selection."
+  (interactive "P")
+  (meow-search arg)
+  (when (region-active-p)
+    (suderman/meow--select-to (point))))
+
 (defun suderman/meow-smart-beginning-of-line ()
-  "Select to indentation, or to beginning of line if already there."
+  "Move to indentation, or to beginning of line if already there."
   (interactive)
   (let ((target
          (save-excursion
@@ -165,10 +190,10 @@ Crossing the anchor reverses the selection naturally."
              (if (= origin (point))
                  (line-beginning-position)
                (point))))))
-    (suderman/meow--select-to target)))
+    (suderman/meow--move-to target)))
 
 (defun suderman/meow-smart-end-of-line ()
-  "Select to end of code, or end of line if already there."
+  "Move to end of code, or end of line if already there."
   (interactive)
   (let* ((origin (point))
          (eol (line-end-position))
@@ -194,12 +219,27 @@ Crossing the anchor reverses the selection naturally."
 
            ;; No comment, or already inside comment.
            (t eol))))
-    (suderman/meow--select-to target)))
+    (suderman/meow--move-to target)))
 
 (defun suderman/meow-visual ()
-  "Start or convert to an expandable character selection without moving."
+  "Start a char selection, then expand repeated calls to word and symbol.
+
+Keep every result as a char selection so motion commands can fine-tune it."
   (interactive)
-  (suderman/meow--select-to (point)))
+  (setq suderman/meow-visual-stage
+        (if (eq last-command 'suderman/meow-visual)
+            (min 4 (1+ suderman/meow-visual-stage))
+          1))
+  (pcase suderman/meow-visual-stage
+    (1
+     (suderman/meow--select-to (point)))
+    (2
+     (meow-mark-word 1)
+     (suderman/meow--select-to (point)))
+    (3
+     (goto-char (region-beginning))
+     (meow-mark-symbol 1)
+     (suderman/meow--select-to (point)))))
 
 (defun suderman/meow-page-down ()
   "Cancel the selection and scroll down without replaying `C-v'."
@@ -340,13 +380,14 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-insert-at-indentation . "at indent")
                    (suderman/meow-next . "down")
                    (suderman/meow-prev . "up")
+                   (suderman/meow-search . "search")
                    (suderman/switch-buffer . "buffers")
                    (suderman/meow-join-line . "join line")
                    (suderman/meow-paste . "paste")
                    (suderman/meow-replace-char . "rep char")
                    (suderman/meow-till . "till fwd")
                    (suderman/meow-till-backward . "till back")
-                   (suderman/meow-visual . "char sel")
+                   (suderman/meow-visual . "select")
                    (suderman/meow-next-word . "word fwd")
                    (suderman/meow-next-symbol . "sym fwd")
                    (suderman/meow-kill . "cut")
@@ -396,12 +437,10 @@ An active selection is replaced without modifying the kill ring."
    '("j" . suderman/meow-next)
    '("k" . suderman/meow-prev)
    '("K" . suderman/switch-buffer)
-   '("m" . meow-mark-word)
-   '("M" . meow-mark-symbol)
    '("l" . meow-right)
    '("L" . meow-right-expand)
    '("J" . suderman/meow-join-line)
-   '("n" . meow-search)
+   '("n" . suderman/meow-search)
    '("o" . meow-open-below)
    '("O" . meow-open-above)
    '("p" . suderman/meow-paste)
