@@ -249,6 +249,33 @@ Keep every result as a char selection so motion commands can fine-tune it."
 
 ;;;; Editing
 
+(defun suderman/meow--shift-selection (columns)
+  "Shift every line touched by the active selection by COLUMNS."
+  (unless (region-active-p)
+    (user-error "No active selection"))
+  (let* ((selection-beg (region-beginning))
+         (selection-end (region-end))
+         (beg (save-excursion
+                (goto-char selection-beg)
+                (line-beginning-position)))
+         (end (if (= selection-beg selection-end)
+                  (save-excursion
+                    (goto-char selection-end)
+                    (line-end-position))
+                selection-end)))
+    (indent-rigidly beg end columns)
+    (setq deactivate-mark nil)))
+
+(defun suderman/meow-indent ()
+  "Indent every line touched by the active selection by two columns."
+  (interactive)
+  (suderman/meow--shift-selection 2))
+
+(defun suderman/meow-outdent ()
+  "Outdent every line touched by the active selection by two columns."
+  (interactive)
+  (suderman/meow--shift-selection -2))
+
 (defun suderman/meow-insert ()
   "Enter insert state at the current point, discarding any selection."
   (interactive)
@@ -376,9 +403,11 @@ An active selection is replaced without modifying the kill ring."
                    (end-of-line . "line end")
                    (suderman/meow-find . "find fwd")
                    (suderman/meow-find-backward . "find back")
+                   (suderman/meow-indent . "indent")
                    (suderman/meow-insert . "insert")
                    (suderman/meow-insert-at-indentation . "at indent")
                    (suderman/meow-next . "down")
+                   (suderman/meow-outdent . "outdent")
                    (suderman/meow-prev . "up")
                    (suderman/meow-search . "search")
                    (suderman/switch-buffer . "buffers")
@@ -413,6 +442,8 @@ An active selection is replaced without modifying the kill ring."
    '("1" . meow-expand-1)
    '("-" . negative-argument)
    '(";" . meow-reverse)
+   '("<" . suderman/meow-outdent)
+   '(">" . suderman/meow-indent)
    '("," . meow-inner-of-thing)
    '("." . meow-bounds-of-thing)
    '("[" . meow-beginning-of-thing)
