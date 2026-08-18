@@ -222,25 +222,23 @@ Crossing the anchor reverses the selection naturally."
     (suderman/meow--move-to target)))
 
 (defun suderman/meow-visual ()
-  "Start a char selection, then expand through word, symbol, and blocks.
+  "Select a word, then expand through symbol and blocks.
 
 Keep every result as a char selection so motion commands can fine-tune it."
   (interactive)
   (setq suderman/meow-visual-stage
         (if (eq last-command 'suderman/meow-visual)
-            (min 4 (1+ suderman/meow-visual-stage))
+            (min 3 (1+ suderman/meow-visual-stage))
           1))
   (pcase suderman/meow-visual-stage
     (1
-     (suderman/meow--select-to (point)))
-    (2
      (meow-mark-word 1)
      (suderman/meow--select-to (point)))
-    (3
+    (2
      (goto-char (region-beginning))
      (meow-mark-symbol 1)
      (suderman/meow--select-to (point)))
-    (4
+    (3
      (meow-block nil)
      (suderman/meow--select-to (point)))))
 
