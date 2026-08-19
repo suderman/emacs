@@ -10,6 +10,11 @@
 (require 'use-package)
 (require 'suderman-windows)
 
+(defun suderman/revert-buffer-no-confirm ()
+  "Revert the current buffer without confirmation or auto-save recovery."
+  (interactive)
+  (revert-buffer t t))
+
 (defun suderman/speedbar-select-editor-window ()
   "Select the most recently used normal editor window."
   (let ((window (get-mru-window nil nil t t)))

@@ -97,7 +97,7 @@
 (suderman/keys--define suderman/leader-buffer-map "l" #'suderman/alternate-buffer)
 (suderman/keys--define suderman/leader-buffer-map "n" #'next-buffer)
 (suderman/keys--define suderman/leader-buffer-map "p" #'previous-buffer)
-(suderman/keys--define suderman/leader-buffer-map "r" #'revert-buffer)
+(suderman/keys--define suderman/leader-buffer-map "r" #'suderman/revert-buffer-no-confirm)
 (suderman/keys--define suderman/leader-buffer-map "s" #'save-buffer)
 
 ;; Files
@@ -173,12 +173,10 @@
 
 (dolist (binding '(("<f5>" . suderman/reload-config)
                    ("M-p" . consult-recent-file)
-                   ("M-g" . consult-ripgrep)
                    ("M-h" . suderman/window-left)
                    ("M-j" . windmove-down)
                    ("M-k" . windmove-up)
                    ("M-l" . windmove-right)
-                   ("M-;" . suderman/window-previous)
                    ("M-H" . suderman/shrink-window-width)
                    ("M-J" . suderman/enlarge-window-height)
                    ("M-K" . suderman/shrink-window-height)

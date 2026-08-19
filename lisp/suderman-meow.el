@@ -355,6 +355,11 @@ An active selection is replaced without modifying the kill ring."
   (suderman/meow--cancel-active-selection)
   (delete-indentation 1))
 
+(defun suderman/meow-join-sexp-unavailable ()
+  "Report that no structural editing command is configured."
+  (interactive)
+  (user-error "No structural editing package configured"))
+
 (defun suderman/meow-save ()
   "Copy the active selection, or the current line if none is active."
   (interactive)
@@ -523,7 +528,9 @@ An active selection is replaced without modifying the kill ring."
   :demand t
   :init
   (setq meow-use-clipboard t
-        ;; Keep Meow copy commands independent from the modal M-w binding.
+        ;; Keep Meow editing commands independent from modal key overrides.
+        meow--kbd-delete-char #'delete-char
+        meow--kbd-join-sexp #'suderman/meow-join-sexp-unavailable
         meow--kbd-kill-ring-save #'kill-ring-save
         meow-expand-selection-type 'expand
         meow-expand-hint-counts
