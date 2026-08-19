@@ -33,15 +33,25 @@
   (setq speedbar-window-default-width 50)
   (setq speedbar-use-images nil)
 
-  ;; Example colors
-  (set-face-attribute 'speedbar-directory-face nil
-		      :inherit 'font-lock-keyword-face
-		      :weight 'bold)
-  (set-face-attribute 'speedbar-file-face nil
-		      :inherit 'default)
-  (set-face-attribute 'speedbar-selected-face nil
-		      :inherit 'highlight
-		      :weight 'bold)
+  ;; Inherit semantic faces so Speedbar follows the active Stylix theme.
+  (face-spec-set 'speedbar-button-face
+                 '((t (:inherit shadow))) 'face-defface-spec)
+  (face-spec-set 'speedbar-file-face
+                 '((t (:inherit default))) 'face-defface-spec)
+  (face-spec-set 'speedbar-directory-face
+                 '((t (:inherit dired-directory :weight bold)))
+                 'face-defface-spec)
+  (face-spec-set 'speedbar-tag-face
+                 '((t (:inherit font-lock-function-name-face)))
+                 'face-defface-spec)
+  (face-spec-set 'speedbar-selected-face
+                 '((t (:inherit (highlight default)
+                       :weight bold :underline nil)))
+                 'face-defface-spec)
+  (face-spec-set 'speedbar-highlight-face
+                 '((t (:inherit highlight))) 'face-defface-spec)
+  (face-spec-set 'speedbar-separator-face
+                 '((t (:inherit header-line))) 'face-defface-spec)
   
   ;; Tree appearance
   (setq speedbar-indentation-width 2)

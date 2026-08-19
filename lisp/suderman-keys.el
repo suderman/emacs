@@ -91,7 +91,7 @@
       suderman/leader-quit-map (make-sparse-keymap))
 
 ;; Buffers
-(suderman/keys--define suderman/leader-buffer-map "b" #'suderman/switch-buffer)
+(suderman/keys--define suderman/leader-buffer-map "b" #'consult-buffer)
 (suderman/keys--define suderman/leader-buffer-map "i" #'ibuffer)
 (suderman/keys--define suderman/leader-buffer-map "k" #'kill-current-buffer)
 (suderman/keys--define suderman/leader-buffer-map "l" #'suderman/alternate-buffer)
@@ -108,7 +108,7 @@
 (suderman/keys--define suderman/leader-file-map "S" #'write-file)
 
 ;; Projects
-(suderman/keys--define suderman/leader-project-map "b" #'project-switch-to-buffer)
+(suderman/keys--define suderman/leader-project-map "b" #'consult-project-buffer)
 (suderman/keys--define suderman/leader-project-map "f" #'project-find-file)
 (suderman/keys--define suderman/leader-project-map "k" #'project-kill-buffers)
 (suderman/keys--define suderman/leader-project-map "p" #'project-switch-project)
@@ -122,7 +122,7 @@
 
 ;; Tools and pickers
 (suderman/keys--define suderman/leader-tool-map "?" #'meow-keypad-describe-key)
-(suderman/keys--define suderman/leader-tool-map "b" #'suderman/switch-buffer)
+(suderman/keys--define suderman/leader-tool-map "b" #'consult-buffer)
 (suderman/keys--define suderman/leader-tool-map "d" #'dirvish)
 (suderman/keys--define suderman/leader-tool-map "e" #'dirvish-side)
 (suderman/keys--define suderman/leader-tool-map "f" #'suderman/find-file)
@@ -220,8 +220,8 @@
  '("?" . meow-cheatsheet)
  '("/" . consult-ripgrep)
  '("SPC" . execute-extended-command)
- '("." . find-file)
- '("," . suderman/switch-buffer)
+ '("." . suderman/find-file)
+ '("," . consult-buffer)
  '(":" . execute-extended-command)
  '("\\" . suderman/alternate-buffer)
  '("d" . dirvish)

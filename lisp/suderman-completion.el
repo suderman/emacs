@@ -28,7 +28,9 @@
   (("C-x b" . consult-buffer)
    ("M-s r" . consult-ripgrep)
    ("M-s l" . consult-line)
-   ("M-s i" . consult-imenu)))
+   ("M-s i" . consult-imenu))
+  :custom
+  (consult-narrow-key "<"))
 
 (use-package embark
   :bind
