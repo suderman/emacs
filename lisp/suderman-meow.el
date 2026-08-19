@@ -451,6 +451,8 @@ An active selection is replaced without modifying the kill ring."
    '("." . meow-bounds-of-thing)
    '("[" . meow-beginning-of-thing)
    '("]" . meow-end-of-thing)
+   '("\\ =" . speedbar)
+   '("\\ ]" . speedbar)
    '("a" . suderman/meow-smart-beginning-of-line)
    '("A" . beginning-of-line)
    '("b" . suderman/meow-back-word)

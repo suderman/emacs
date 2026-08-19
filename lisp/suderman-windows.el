@@ -7,6 +7,9 @@
 ;;; Code:
 
 (require 'subr-x)
+(require 'windmove)
+
+(setq windmove-allow-all-windows t)
 
 (defun suderman/window-left ()
   "Move focus to the window left of the selected window."

@@ -10,6 +10,15 @@
 (require 'use-package)
 (require 'suderman-windows)
 
+(use-package speedbar
+  :ensure nil
+  :if (> emacs-major-version 30)
+  :commands (speedbar)
+  :config
+  (setq speedbar-prefer-window t)
+  (setq speedbar-window-default-width 50)
+  (setq speedbar-use-images nil))
+
 (use-package dirvish
   :commands (dirvish dirvish-side)
   :init
