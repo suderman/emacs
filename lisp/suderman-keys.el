@@ -158,11 +158,17 @@
 ;; Quit/reload
 (suderman/keys--define suderman/leader-quit-map "r" #'suderman/reload-config)
 
+(setq tab-bar-close-last-tab-choice 'delete-frame)
+
 (global-set-key (kbd "<f5>") #'suderman/reload-config)
 (global-set-key (kbd "s-+") #'suderman/frame-text-scale-increase)
 (global-set-key (kbd "s-=") #'suderman/frame-text-scale-increase)
 (global-set-key (kbd "s--") #'suderman/frame-text-scale-decrease)
 (global-set-key (kbd "s-_") #'suderman/frame-text-scale-decrease)
+(global-set-key (kbd "s-t") #'tab-new)
+(global-set-key (kbd "s-[") #'tab-previous)
+(global-set-key (kbd "s-]") #'tab-next)
+(global-set-key (kbd "s-w") #'tab-close)
 
 (dolist (binding '(("<f5>" . suderman/reload-config)
                    ("M-p" . consult-recent-file)
