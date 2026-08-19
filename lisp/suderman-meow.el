@@ -427,10 +427,15 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-page-down . "page down")))
     (setf (alist-get (car entry) meow-command-to-short-name-list)
           (cdr entry)))
+  
   (meow-motion-define-key
+   '("\\ \\" . suderman/alternate-buffer)
+   '("h" . meow-left)
    '("j" . meow-next)
    '("k" . meow-prev)
+   '("l" . meow-right)
    '("<escape>" . ignore))
+  
   (meow-normal-define-key
    '("0" . meow-expand-0)
    '("9" . meow-expand-9)
@@ -444,13 +449,17 @@ An active selection is replaced without modifying the kill ring."
    '("1" . meow-expand-1)
    '("-" . negative-argument)
    '(";" . meow-reverse)
+   '(":" . execute-extended-command)
    '("%" . evilmi-jump-items-native)
    '("<" . suderman/meow-outdent)
    '(">" . suderman/meow-indent)
-   '("," . meow-inner-of-thing)
-   '("." . meow-bounds-of-thing)
-   '("[" . meow-beginning-of-thing)
-   '("]" . meow-end-of-thing)
+   '("," . ignore)
+   '("." . ignore)
+   '("[" . meow-inner-of-thing)
+   '("]" . meow-bounds-of-thing)
+   '("{" . meow-beginning-of-thing)
+   '("}" . meow-end-of-thing)
+   '("\\ \\" . suderman/alternate-buffer)
    '("\\ =" . speedbar)
    '("\\ ]" . speedbar)
    '("a" . suderman/meow-smart-beginning-of-line)
@@ -514,6 +523,8 @@ An active selection is replaced without modifying the kill ring."
   :demand t
   :init
   (setq meow-use-clipboard t
+        ;; Keep Meow copy commands independent from the modal M-w binding.
+        meow--kbd-kill-ring-save #'kill-ring-save
         meow-expand-selection-type 'expand
         meow-expand-hint-counts
         '((word . 0)

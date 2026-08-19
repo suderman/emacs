@@ -24,7 +24,7 @@
     "M-p" "M-g"
     "M-h" "M-j" "M-k" "M-l" "M-;"
     "M-H" "M-J" "M-K" "M-L"
-    "M-u" "M-i" "M-U" "M-I" "M-q")
+    "M-u" "M-i" "M-U" "M-I" "M-w")
   "Meow modal keys rebuilt by `suderman-keys'.")
 
 (defun suderman/reload--quoted-symbol (form)

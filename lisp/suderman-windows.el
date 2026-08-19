@@ -7,6 +7,7 @@
 ;;; Code:
 
 (require 'subr-x)
+(require 'tab-bar)
 (require 'windmove)
 
 (setq windmove-allow-all-windows t)
@@ -20,6 +21,17 @@
   "Move focus to the previously selected window."
   (interactive)
   (other-window -1))
+
+(defun suderman/delete-window-or-tab ()
+  "Delete the selected window, or close its tab when it is the only window."
+  (interactive)
+  (cond
+   ((not (one-window-p t))
+    (delete-window))
+   ((> (length (tab-bar-tabs (selected-frame))) 1)
+    (tab-bar-close-tab))
+   (t
+    (user-error "Cannot delete the only window in the only tab"))))
 
 (defun suderman/shrink-window-width ()
   "Shrink the selected window horizontally."

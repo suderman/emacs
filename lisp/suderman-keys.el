@@ -169,6 +169,7 @@
 (global-set-key (kbd "s-[") #'tab-previous)
 (global-set-key (kbd "s-]") #'tab-next)
 (global-set-key (kbd "s-w") #'tab-close)
+(global-set-key (kbd "C-x 0") #'suderman/delete-window-or-tab)
 
 (dolist (binding '(("<f5>" . suderman/reload-config)
                    ("M-p" . consult-recent-file)
@@ -186,7 +187,7 @@
                    ("M-i" . suderman/split-window-right-and-focus)
                    ("M-U" . suderman/split-window-below-and-focus)
                    ("M-I" . suderman/split-window-right-and-focus)
-                   ("M-q" . delete-window)))
+                   ("M-w" . suderman/delete-window-or-tab)))
   (suderman/keys--define-modal (car binding) (cdr binding)))
 
 (use-package which-key
@@ -220,7 +221,7 @@
  '("0" . meow-digit-argument)
  '("?" . meow-cheatsheet)
  '("/" . consult-ripgrep)
- '("SPC" . suderman/find-file)
+ '("SPC" . execute-extended-command)
  '("." . find-file)
  '("," . suderman/switch-buffer)
  '(":" . execute-extended-command)
