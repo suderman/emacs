@@ -349,6 +349,67 @@ An active selection is replaced without modifying the kill ring."
      (t
       (insert-for-yank text)))))
 
+(defun suderman/meow--move-selected-lines (command)
+  "Move complete lines in the active selection using COMMAND."
+  (let ((backward (meow--direction-backward-p))
+        (missing-final-newline
+         (and (> (point-max) (point-min))
+              (not (eq (char-before (point-max)) ?\n))))
+        moved-beg
+        moved-end)
+    ;; `move-text' needs a terminating newline to move a final line cleanly.
+    (when missing-final-newline
+      (save-excursion
+        (goto-char (point-max))
+        (insert "\n")))
+    (unwind-protect
+        (let* ((beg (save-excursion
+                      (goto-char (region-beginning))
+                      (line-beginning-position)))
+               (end (save-excursion
+                      (goto-char (region-end))
+                      (if (and (> (point) beg) (bolp))
+                          (point)
+                        (line-beginning-position 2)))))
+          (goto-char end)
+          (set-mark beg)
+          (activate-mark)
+          (funcall command beg end
+                   (prefix-numeric-value current-prefix-arg))
+          (setq moved-beg (copy-marker (region-beginning))
+                moved-end (copy-marker (region-end) t)))
+      (when missing-final-newline
+        (save-excursion
+          (goto-char (point-max))
+          (delete-char -1))))
+    (let ((beg (marker-position moved-beg))
+          (end (marker-position moved-end)))
+      (set-marker moved-beg nil)
+      (set-marker moved-end nil)
+      (when (and (> end beg) (eq (char-before end) ?\n))
+        (setq end (1- end)))
+      (thread-first
+          (meow--make-selection '(expand . line) beg end)
+        (meow--select t backward)))))
+
+(defun suderman/move-up ()
+  "Move the current Org element or ordinary lines upward."
+  (interactive)
+  (if (derived-mode-p 'org-mode)
+      (call-interactively #'org-metaup)
+    (if (use-region-p)
+        (suderman/meow--move-selected-lines #'move-text-up)
+      (call-interactively #'move-text-up))))
+
+(defun suderman/move-down ()
+  "Move the current Org element or ordinary lines downward."
+  (interactive)
+  (if (derived-mode-p 'org-mode)
+      (call-interactively #'org-metadown)
+    (if (use-region-p)
+        (suderman/meow--move-selected-lines #'move-text-down)
+      (call-interactively #'move-text-down))))
+
 (defun suderman/meow-join-line ()
   "Join the current line with the following line, like Vim `J'."
   (interactive)
@@ -418,6 +479,8 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-prev . "up")
                    (suderman/meow-search . "search")
                    (suderman/meow-join-line . "join line")
+                   (suderman/move-down . "move down")
+                   (suderman/move-up . "move up")
                    (suderman/meow-paste . "paste")
                    (suderman/meow-replace-char . "rep char")
                    (suderman/meow-till . "till fwd")
@@ -465,6 +528,7 @@ An active selection is replaced without modifying the kill ring."
    '("}" . meow-end-of-thing)
    '("\\ \\" . suderman/alternate-buffer)
    '("\\ =" . speedbar)
+   '("\\ J" . suderman/meow-join-line)
    '("\\ ]" . speedbar)
    '("a" . suderman/meow-smart-beginning-of-line)
    '("A" . beginning-of-line)
@@ -484,11 +548,11 @@ An active selection is replaced without modifying the kill ring."
    '("i" . suderman/meow-insert)
    '("I" . suderman/meow-insert-at-indentation)
    '("j" . suderman/meow-next)
+   '("J" . suderman/move-down)
    '("k" . suderman/meow-prev)
-   '("K" . ignore)
+   '("K" . suderman/move-up)
    '("l" . meow-right)
    '("L" . meow-right-expand)
-   '("J" . suderman/meow-join-line)
    '("n" . suderman/meow-search)
    '("o" . meow-open-below)
    '("O" . meow-open-above)
@@ -522,6 +586,9 @@ An active selection is replaced without modifying the kill ring."
 
 (use-package evil-matchit
   :commands evilmi-jump-items-native)
+
+(use-package move-text
+  :commands (move-text-up move-text-down))
 
 (use-package meow
   :demand t
