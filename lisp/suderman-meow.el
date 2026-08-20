@@ -221,6 +221,16 @@ Crossing the anchor reverses the selection naturally."
            (t eol))))
     (suderman/meow--move-to target)))
 
+(defun suderman/meow-buffer-beginning ()
+  "Move to the beginning of the buffer, extending an active selection."
+  (interactive)
+  (suderman/meow--move-to (point-min)))
+
+(defun suderman/meow-buffer-end ()
+  "Move to the end of the buffer, extending an active selection."
+  (interactive)
+  (suderman/meow--move-to (point-max)))
+
 (defun suderman/meow-visual ()
   "Select a word, then expand through symbol and blocks.
 
@@ -250,32 +260,41 @@ Keep every result as a char selection so motion commands can fine-tune it."
 
 ;;;; Editing
 
-(defun suderman/meow--shift-selection (columns)
-  "Shift every line touched by the active selection by COLUMNS."
-  (unless (region-active-p)
-    (user-error "No active selection"))
-  (let* ((selection-beg (region-beginning))
-         (selection-end (region-end))
+(defun suderman/meow--shift-lines (columns)
+  "Shift the selected lines or current line by COLUMNS."
+  (let* ((selection (region-active-p))
+         (selection-beg (if selection (region-beginning) (point)))
+         (selection-end (if selection (region-end) (point)))
          (beg (save-excursion
                 (goto-char selection-beg)
                 (line-beginning-position)))
-         (end (if (= selection-beg selection-end)
+         (end (if selection
+                  selection-end
                   (save-excursion
                     (goto-char selection-end)
-                    (line-end-position))
-                selection-end)))
-    (indent-rigidly beg end columns)
-    (setq deactivate-mark nil)))
+                    (line-beginning-position 2))))
+         (cursor (copy-marker (point) t)))
+    (unwind-protect
+        (progn
+          (indent-rigidly beg end columns)
+          (goto-char cursor)
+          (when selection
+            (setq deactivate-mark nil)))
+      (set-marker cursor nil))))
 
 (defun suderman/meow-indent ()
-  "Indent every line touched by the active selection by two columns."
+  "Demote the current Org element or indent ordinary lines."
   (interactive)
-  (suderman/meow--shift-selection 2))
+  (if (derived-mode-p 'org-mode)
+      (call-interactively #'org-metaright)
+    (suderman/meow--shift-lines 2)))
 
 (defun suderman/meow-outdent ()
-  "Outdent every line touched by the active selection by two columns."
+  "Promote the current Org element or outdent ordinary lines."
   (interactive)
-  (suderman/meow--shift-selection -2))
+  (if (derived-mode-p 'org-mode)
+      (call-interactively #'org-metaleft)
+    (suderman/meow--shift-lines -2)))
 
 (defun suderman/meow-insert ()
   "Enter insert state at the current point, discarding any selection."
@@ -471,6 +490,8 @@ An active selection is replaced without modifying the kill ring."
                    (evilmi-jump-items-native . "match")
                    (suderman/meow-find . "find fwd")
                    (suderman/meow-find-backward . "find back")
+                   (suderman/meow-buffer-beginning . "buffer beg")
+                   (suderman/meow-buffer-end . "buffer end")
                    (suderman/meow-indent . "indent")
                    (suderman/meow-insert . "insert")
                    (suderman/meow-insert-at-indentation . "at indent")
@@ -518,8 +539,8 @@ An active selection is replaced without modifying the kill ring."
    '(";" . meow-reverse)
    '(":" . execute-extended-command)
    '("%" . evilmi-jump-items-native)
-   '("<" . suderman/meow-outdent)
-   '(">" . suderman/meow-indent)
+   '("<" . meow-left-expand)
+   '(">" . meow-right-expand)
    '("," . ignore)
    '("." . ignore)
    '("[" . meow-inner-of-thing)
@@ -531,7 +552,7 @@ An active selection is replaced without modifying the kill ring."
    '("\\ J" . suderman/meow-join-line)
    '("\\ ]" . speedbar)
    '("a" . suderman/meow-smart-beginning-of-line)
-   '("A" . beginning-of-line)
+   '("A" . suderman/meow-buffer-beginning)
    '("b" . suderman/meow-back-word)
    '("B" . suderman/meow-back-symbol)
    '("c" . meow-change)
@@ -539,12 +560,12 @@ An active selection is replaced without modifying the kill ring."
    '("D" . suderman/meow-delete-line)
    '("e" . suderman/meow-smart-end-of-line)
    '("E" . end-of-line)
-   '("f" . suderman/meow-find)
-   '("F" . suderman/meow-find-backward)
+   '("f" . suderman/meow-next-word)
+   '("F" . suderman/meow-next-symbol)
    '("g" . meow-cancel-selection)
    '("G" . meow-grab)
    '("h" . meow-left)
-   '("H" . meow-left-expand)
+   '("H" . suderman/meow-outdent)
    '("i" . suderman/meow-insert)
    '("I" . suderman/meow-insert-at-indentation)
    '("j" . suderman/meow-next)
@@ -552,31 +573,35 @@ An active selection is replaced without modifying the kill ring."
    '("k" . suderman/meow-prev)
    '("K" . suderman/move-up)
    '("l" . meow-right)
-   '("L" . meow-right-expand)
+   '("L" . suderman/meow-indent)
+   '("m" . suderman/meow-find)
+   '("M" . suderman/meow-find-backward)
    '("n" . suderman/meow-search)
    '("o" . meow-open-below)
    '("O" . meow-open-above)
-   '("p" . suderman/meow-paste)
+   '("p" . ignore)
    '("P" . ignore)
    '("q" . meow-quit)
    '("Q" . meow-goto-line)
    '("r" . suderman/meow-replace-char)
    '("R" . meow-swap-grab)
-   '("s" . ignore)
+   '("s" . suderman/meow-visual)
+   '("S" . meow-line)
    '("t" . suderman/meow-till)
    '("T" . suderman/meow-till-backward)
    '("u" . meow-undo)
    '("U" . meow-undo-in-selection)
-   '("v" . suderman/meow-visual)
-   '("V" . meow-line)
+   '("v" . suderman/meow-paste)
+   '("V" . ignore)
    '("C-v" . rectangle-mark-mode)
-   '("w" . suderman/meow-next-word)
-   '("W" . suderman/meow-next-symbol)
+   '("w" . ignore)
+   '("W" . ignore)
    '("x" . suderman/meow-kill)
    '("X" . suderman/meow-kill-line)
    '("y" . suderman/meow-save)
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
+   '("Z" . suderman/meow-buffer-end)
    '("C-r" . undo-redo)
    '("C-u" . meow-page-up)
    '("C-d" . suderman/meow-page-down)
