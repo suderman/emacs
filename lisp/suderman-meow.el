@@ -173,12 +173,23 @@ Crossing the anchor reverses the selection naturally."
   (interactive "p\ncTill backward: ")
   (suderman/meow-till (- n) char))
 
-(defun suderman/meow-search (arg)
-  "Search like Meow, leaving an expandable character selection."
-  (interactive "P")
-  (meow-search arg)
+(defun suderman/meow-search (&optional backward)
+  "Search in the requested direction, leaving a character selection.
+Search backward when BACKWARD is non-nil, otherwise search forward."
+  (interactive)
+  (let ((selecting (region-active-p)))
+    (when selecting
+      (funcall (if backward
+                   #'meow--direction-backward
+                 #'meow--direction-forward)))
+    (meow-search (and backward (not selecting) -1)))
   (when (region-active-p)
     (suderman/meow--select-to (point))))
+
+(defun suderman/meow-search-backward ()
+  "Search backward, leaving an expandable character selection."
+  (interactive)
+  (suderman/meow-search t))
 
 (defun suderman/meow-smart-beginning-of-line ()
   "Move to indentation, or to beginning of line if already there."
@@ -389,6 +400,8 @@ An active selection is replaced without modifying the kill ring."
 
 (defun suderman/meow--move-selected-lines (command)
   "Move complete lines in the active selection using COMMAND."
+  (when (bound-and-true-p rectangle-mark-mode)
+    (rectangle-mark-mode -1))
   (let ((backward (meow--direction-backward-p))
         (missing-final-newline
          (and (> (point-max) (point-min))
@@ -520,7 +533,8 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-next . "down")
                    (suderman/meow-outdent . "outdent")
                    (suderman/meow-prev . "up")
-                   (suderman/meow-search . "search")
+                   (suderman/meow-search . "search next")
+                   (suderman/meow-search-backward . "search prev")
                    (suderman/meow-join-line . "join line")
                    (suderman/move-down . "move down")
                    (suderman/move-up . "move up")
@@ -601,7 +615,7 @@ An active selection is replaced without modifying the kill ring."
    '("n" . suderman/meow-search)
    '("o" . meow-open-below)
    '("O" . meow-open-above)
-   '("p" . ignore)
+   '("p" . suderman/meow-search-backward)
    '("P" . ignore)
    '("q" . meow-quit)
    '("Q" . meow-goto-line)
@@ -619,11 +633,10 @@ An active selection is replaced without modifying the kill ring."
    '("W" . ignore)
    '("x" . suderman/meow-kill)
    '("X" . suderman/meow-kill-line)
-   '("y" . ignore)
+   '("y" . undo-redo)
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
    '("Z" . suderman/meow-buffer-end)
-   '("C-r" . undo-redo)
    '("'" . repeat)
    '("/" . meow-visit)
    '("<escape>" . meow-cancel-selection)))

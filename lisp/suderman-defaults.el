@@ -19,6 +19,7 @@
 (recentf-mode 1)
 (global-auto-revert-mode 1)
 (electric-pair-mode 1)
+(global-visual-line-mode 1)
 
 (setq gc-cons-threshold (* 64 1024 1024)
       gc-cons-percentage 0.1)

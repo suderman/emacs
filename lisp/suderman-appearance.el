@@ -38,6 +38,10 @@
 (add-to-list 'default-frame-alist `(alpha-background . ,suderman/background-opacity))
 (add-to-list 'initial-frame-alist `(alpha-background . ,suderman/background-opacity))
 
+(global-hl-line-mode 1)
+(setq-default display-fill-column-indicator-column 100)
+(global-display-fill-column-indicator-mode 1)
+
 (suderman/set-nerd-font-fallbacks)
 (suderman/apply-gui-appearance)
 (add-hook 'after-make-frame-functions #'suderman/apply-gui-appearance)
