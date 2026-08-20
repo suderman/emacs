@@ -10,6 +10,8 @@
 (require 'use-package)
 (require 'suderman-windows)
 
+(defvar speedbar-buffer)
+
 (defun suderman/revert-buffer-no-confirm ()
   "Revert the current buffer without confirmation or auto-save recovery."
   (interactive)
@@ -21,6 +23,29 @@
     (when window
       (select-window window))))
 
+(defun suderman/speedbar-disable-meow ()
+  "Disable Meow in the current Speedbar buffer."
+  (when (bound-and-true-p meow-mode)
+    (meow-mode -1)))
+
+(defun suderman/speedbar-setup ()
+  "Use Speedbar's native navigation without visual line wrapping."
+  (visual-line-mode -1)
+  (add-hook 'meow-mode-hook #'suderman/speedbar-disable-meow nil t)
+  (suderman/speedbar-disable-meow))
+
+(defun suderman/speedbar-toggle ()
+  "Toggle Speedbar, selecting its window when opened."
+  (interactive)
+  (let ((visible (and (boundp 'speedbar-buffer)
+                      (buffer-live-p speedbar-buffer)
+                      (get-buffer-window speedbar-buffer (selected-frame)))))
+    (speedbar)
+    (unless visible
+      (when-let* ((window (get-buffer-window speedbar-buffer
+                                              (selected-frame))))
+        (select-window window)))))
+
 (use-package speedbar
   :ensure nil
   :if (> emacs-major-version 30)
@@ -28,10 +53,10 @@
   :config
   (add-hook 'speedbar-before-visiting-file-hook
             #'suderman/speedbar-select-editor-window)
+  (add-hook 'speedbar-mode-hook #'suderman/speedbar-setup)
   
   (setq speedbar-prefer-window t)
   (setq speedbar-window-default-width 50)
-  (setq speedbar-use-images nil)
 
   ;; Inherit semantic faces so Speedbar follows the active Stylix theme.
   (face-spec-set 'speedbar-button-face
@@ -64,10 +89,20 @@
   ;; Vim-ish tree controls
   (keymap-set speedbar-mode-map "j" #'speedbar-next)
   (keymap-set speedbar-mode-map "k" #'speedbar-prev)
+  (keymap-set speedbar-mode-map "S" #'suderman/speedbar-toggle)
+  (keymap-set speedbar-mode-map "q" #'suderman/speedbar-toggle)
 
   (keymap-set speedbar-file-key-map "l" #'speedbar-expand-line)
   (keymap-set speedbar-file-key-map "h" #'speedbar-contract-line)
   (keymap-set speedbar-file-key-map "RET" #'speedbar-edit-line))
+
+(use-package nerd-icons-speedbar
+  :vc (:url "https://github.com/Akane-6730/nerd-icons-speedbar.git")
+  :after speedbar
+  :demand t
+  :config
+  (unless nerd-icons-speedbar-mode
+    (nerd-icons-speedbar-mode 1)))
  
 (use-package dirvish
   :commands (dirvish dirvish-side)

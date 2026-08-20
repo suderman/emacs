@@ -8,6 +8,7 @@
 ;;; Code:
 
 (require 'color)
+(require 'use-package)
 
 (defconst suderman/font-family "JetBrainsMono Nerd Font Mono")
 (defconst suderman/font-size 11)
@@ -87,6 +88,15 @@
 (global-hl-line-mode 1)
 (setq-default display-fill-column-indicator-column 100)
 (global-display-fill-column-indicator-mode 1)
+
+(use-package doom-modeline
+  :demand t
+  :init
+  (setq doom-modeline-modal-icon nil
+        doom-modeline-buffer-file-name-style 'relative-to-project
+        doom-modeline-buffer-encoding 'nondefault)
+  :config
+  (doom-modeline-mode 1))
 
 (suderman/set-nerd-font-fallbacks)
 (suderman/apply-gui-appearance)
