@@ -106,6 +106,12 @@ Crossing the anchor reverses the selection naturally."
         (meow--make-selection '(expand . char) anchor pos)
       (meow--select t))))
 
+(defun suderman/meow--adopt-surround-selection (&rest _)
+  "Convert Surround's active region to a Meow character selection."
+  (when (and (bound-and-true-p meow-normal-mode)
+             (region-active-p))
+    (suderman/meow--select-to (point))))
+
 (defun suderman/meow--move-to (pos)
   "Move to POS, extending the active selection when present."
   (if (region-active-p)
@@ -509,6 +515,12 @@ An active selection is replaced without modifying the kill ring."
 
 ;;;; Keymaps and mode activation
 
+(use-package surround
+  :demand t
+  :config
+  (advice-add 'surround--op-mark :after
+              #'suderman/meow--adopt-surround-selection))
+
 (defun suderman/meow-setup-qwerty ()
   "Install Suderman's QWERTY Meow bindings."
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
@@ -578,7 +590,7 @@ An active selection is replaced without modifying the kill ring."
    '("%" . evilmi-jump-items-native)
    '("<" . meow-left-expand)
    '(">" . meow-right-expand)
-   '("," . ignore)
+   (cons "," surround-keymap)
    '("." . suderman/meow-repeat)
    '("[" . meow-inner-of-thing)
    '("]" . meow-bounds-of-thing)
