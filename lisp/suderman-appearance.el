@@ -7,6 +7,8 @@
 
 ;;; Code:
 
+(require 'color)
+
 (defconst suderman/font-family "JetBrainsMono Nerd Font Mono")
 (defconst suderman/font-size 11)
 (defconst suderman/nerd-symbol-font "Symbols Nerd Font Mono")
@@ -37,6 +39,50 @@
 
 (add-to-list 'default-frame-alist `(alpha-background . ,suderman/background-opacity))
 (add-to-list 'initial-frame-alist `(alpha-background . ,suderman/background-opacity))
+
+(defun suderman/theme-blend (face alpha)
+  "Blend FACE's foreground into the theme background by ALPHA."
+  (let ((accent (face-foreground face nil t))
+        (background (face-background 'default nil t)))
+    (when (and (stringp accent) (stringp background))
+      (when-let* ((accent-rgb (color-name-to-rgb accent))
+                  (background-rgb (color-name-to-rgb background)))
+        (apply #'color-rgb-to-hex
+               (append (color-blend accent-rgb background-rgb alpha)
+                       '(2)))))))
+
+(defun suderman/apply-selection-faces (&optional _theme)
+  "Derive selection faces from the active theme's semantic colors."
+  (let ((foreground (face-foreground 'default nil t))
+        (region-background
+         (suderman/theme-blend 'font-lock-function-name-face 0.4))
+        (grab-background
+         (suderman/theme-blend 'font-lock-keyword-face 0.3))
+        (match-accent (face-foreground 'font-lock-builtin-face nil t)))
+    (when (and (stringp foreground) region-background)
+      (set-face-attribute 'region nil
+                          :foreground foreground
+                          :background region-background
+                          :extend t))
+    (when (and (stringp foreground) grab-background)
+      (set-face-attribute 'secondary-selection nil
+                          :foreground foreground
+                          :background grab-background
+                          :extend t))
+    (when (and (facep 'meow-search-highlight)
+               (stringp match-accent))
+      (set-face-attribute 'meow-search-highlight nil
+                          :inherit nil
+                          :foreground 'unspecified
+                          :background 'unspecified
+                          :underline match-accent))
+    (when (fboundp 'meow--prepare-face)
+      (meow--prepare-face))))
+
+(add-hook 'enable-theme-functions #'suderman/apply-selection-faces t)
+(suderman/apply-selection-faces)
+(with-eval-after-load 'meow
+  (suderman/apply-selection-faces))
 
 (global-hl-line-mode 1)
 (setq-default display-fill-column-indicator-column 100)
