@@ -10,7 +10,9 @@
       use-short-answers t
       confirm-kill-emacs #'y-or-n-p
       read-process-output-max (* 1024 1024)
-      enable-recursive-minibuffers t)
+      enable-recursive-minibuffers t
+      scroll-preserve-screen-position 'always
+      scroll-error-top-bottom t)
 
 (savehist-mode 1)
 (save-place-mode 1)

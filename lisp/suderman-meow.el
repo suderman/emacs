@@ -231,6 +231,21 @@ Crossing the anchor reverses the selection naturally."
   (interactive)
   (suderman/meow--move-to (point-max)))
 
+(defun suderman/meow-line-or-rectangle (n)
+  "Select a rectangle, N lines, then the buffer when repeated."
+  (interactive "p")
+  (cond
+   ((not (eq last-command 'suderman/meow-line-or-rectangle))
+    (rectangle-mark-mode 1))
+   ((bound-and-true-p rectangle-mark-mode)
+    (meow--cancel-selection)
+    (rectangle-mark-mode -1)
+    (meow-line n))
+   (t
+    (thread-first
+        (meow--make-selection '(expand . char) (point-min) (point-max))
+      (meow--select t)))))
+
 (defun suderman/meow-visual ()
   "Select a word, then expand through symbol and blocks.
 
@@ -251,12 +266,6 @@ Keep every result as a char selection so motion commands can fine-tune it."
     (3
      (meow-block nil)
      (suderman/meow--select-to (point)))))
-
-(defun suderman/meow-page-down ()
-  "Cancel the selection and scroll down without replaying `C-v'."
-  (interactive)
-  (meow--cancel-selection)
-  (call-interactively #'scroll-up-command))
 
 ;;;; Editing
 
@@ -308,6 +317,12 @@ Keep every result as a char selection so motion commands can fine-tune it."
   (back-to-indentation)
   (suderman/meow-insert))
 
+(defun suderman/meow-insert-at-end-of-line ()
+  "Enter Meow insert state at the end of the current line."
+  (interactive)
+  (end-of-line)
+  (suderman/meow-insert))
+
 (defun suderman/meow-delete ()
   "Delete selection, or one character forward.
 Deleted text is not added to the kill ring or clipboard."
@@ -318,14 +333,18 @@ Deleted text is not added to the kill ring or clipboard."
       (delete-char 1))))
 
 (defun suderman/meow-kill ()
-  "Kill selection, or one character forward.
-Killed text is added to the kill ring and, if enabled, the clipboard."
+  "Cut a multi-character selection, then enter insert state.
+Delete a single selected character or one character forward without cutting."
   (interactive)
-  (let ((select-enable-clipboard meow-use-clipboard))
-    (if (use-region-p)
-        (delete-active-region t)
-      (unless (eobp)
-        (kill-region (point) (1+ (point)))))))
+  (cond
+   ((use-region-p)
+    (if (> (- (region-end) (region-beginning)) 1)
+        (let ((select-enable-clipboard meow-use-clipboard))
+          (delete-active-region t))
+      (delete-active-region)))
+   ((not (eobp))
+    (delete-char 1)))
+  (suderman/meow-insert))
 
 (defun suderman/meow-replace-char (char)
   "Replace the character immediately after point with CHAR."
@@ -472,7 +491,8 @@ An active selection is replaced without modifying the kill ring."
     (let ((select-enable-clipboard meow-use-clipboard))
       (kill-region beg end))
     (goto-char beg)
-    (back-to-indentation)))
+    (back-to-indentation)
+    (suderman/meow-insert)))
 
 ;;;; Keymaps and mode activation
 
@@ -495,6 +515,8 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-indent . "indent")
                    (suderman/meow-insert . "insert")
                    (suderman/meow-insert-at-indentation . "at indent")
+                   (suderman/meow-insert-at-end-of-line . "at line end")
+                   (suderman/meow-line-or-rectangle . "line/rect")
                    (suderman/meow-next . "down")
                    (suderman/meow-outdent . "outdent")
                    (suderman/meow-prev . "up")
@@ -511,8 +533,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-next-symbol . "sym fwd")
                    (suderman/meow-kill . "cut")
                    (suderman/meow-kill-line . "cut line")
-                   (suderman/meow-save . "copy")
-                   (suderman/meow-page-down . "page down")))
+                   (suderman/meow-save . "copy")))
     (setf (alist-get (car entry) meow-command-to-short-name-list)
           (cdr entry)))
   
@@ -555,11 +576,12 @@ An active selection is replaced without modifying the kill ring."
    '("A" . suderman/meow-buffer-beginning)
    '("b" . suderman/meow-back-word)
    '("B" . suderman/meow-back-symbol)
-   '("c" . meow-change)
+   '("c" . suderman/meow-save)
+   '("C" . meow-page-up)
    '("d" . suderman/meow-delete)
    '("D" . suderman/meow-delete-line)
    '("e" . suderman/meow-smart-end-of-line)
-   '("E" . end-of-line)
+   '("E" . suderman/meow-insert-at-end-of-line)
    '("f" . suderman/meow-next-word)
    '("F" . suderman/meow-next-symbol)
    '("g" . meow-cancel-selection)
@@ -586,25 +608,22 @@ An active selection is replaced without modifying the kill ring."
    '("r" . suderman/meow-replace-char)
    '("R" . meow-swap-grab)
    '("s" . suderman/meow-visual)
-   '("S" . meow-line)
+   '("S" . suderman/meow-line-or-rectangle)
    '("t" . suderman/meow-till)
    '("T" . suderman/meow-till-backward)
    '("u" . meow-undo)
    '("U" . meow-undo-in-selection)
    '("v" . suderman/meow-paste)
-   '("V" . ignore)
-   '("C-v" . rectangle-mark-mode)
+   '("V" . meow-page-down)
    '("w" . ignore)
    '("W" . ignore)
    '("x" . suderman/meow-kill)
    '("X" . suderman/meow-kill-line)
-   '("y" . suderman/meow-save)
+   '("y" . ignore)
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
    '("Z" . suderman/meow-buffer-end)
    '("C-r" . undo-redo)
-   '("C-u" . meow-page-up)
-   '("C-d" . suderman/meow-page-down)
    '("'" . repeat)
    '("/" . meow-visit)
    '("<escape>" . meow-cancel-selection)))
@@ -620,7 +639,6 @@ An active selection is replaced without modifying the kill ring."
   :init
   (setq meow-use-clipboard t
         ;; Keep Meow editing commands independent from modal key overrides.
-        meow--kbd-delete-char #'delete-char
         meow--kbd-join-sexp #'suderman/meow-join-sexp-unavailable
         meow--kbd-kill-ring-save #'kill-ring-save
         meow-expand-selection-type 'expand
@@ -652,6 +670,16 @@ An active selection is replaced without modifying the kill ring."
   (suderman/meow-reset-leader-map)
   (suderman/meow-setup-qwerty)
   (meow-global-mode 1))
+
+(use-package scroll-on-jump
+  :after meow
+  :demand t
+  :custom
+  (scroll-on-jump-duration 0.2)
+  (scroll-on-jump-curve 'linear)
+  :config
+  (scroll-on-jump-with-scroll-advice-add meow-page-up)
+  (scroll-on-jump-with-scroll-advice-add meow-page-down))
 
 (provide 'suderman-meow)
 ;;; suderman-meow.el ends here
