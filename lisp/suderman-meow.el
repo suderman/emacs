@@ -149,29 +149,29 @@ Crossing the anchor reverses the selection naturally."
         (meow--cancel-selection)
         (goto-char target)))))
 
-(defun suderman/meow-find (n char)
-  "Find CHAR like Meow, extending an active selection."
-  (interactive "p\ncFind: ")
-  (let ((selecting (region-active-p)))
-    (meow-find n char t)
-    (suderman/meow--finish-find-motion selecting)))
-
 (defun suderman/meow-till (n char)
   "Move till CHAR like Meow, extending an active selection."
   (interactive "p\ncTill: ")
   (let ((selecting (region-active-p)))
+    (setq meow--last-till nil)
     (meow-till n char t)
     (suderman/meow--finish-find-motion selecting)))
-
-(defun suderman/meow-find-backward (n char)
-  "Find backward to CHAR, extending an active selection."
-  (interactive "p\ncFind backward: ")
-  (suderman/meow-find (- n) char))
 
 (defun suderman/meow-till-backward (n char)
   "Move backward till CHAR, extending an active selection."
   (interactive "p\ncTill backward: ")
   (suderman/meow-till (- n) char))
+
+(defun suderman/meow-repeat (n)
+  "Repeat the previous till motion, or the last edit N times."
+  (interactive "p")
+  (if (and meow--last-till
+           (memq last-command
+                 '(suderman/meow-till suderman/meow-till-backward)))
+      (let ((command last-command))
+        (setq this-command command)
+        (funcall command n meow--last-till))
+    (repeat-fu-execute n)))
 
 (defun suderman/meow-search (&optional backward)
   "Search in the requested direction, leaving a character selection.
@@ -521,8 +521,6 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-smart-end-of-line . "code end")
                    (end-of-line . "line end")
                    (evilmi-jump-items-native . "match")
-                   (suderman/meow-find . "find fwd")
-                   (suderman/meow-find-backward . "find back")
                    (suderman/meow-buffer-beginning . "buffer beg")
                    (suderman/meow-buffer-end . "buffer end")
                    (suderman/meow-indent . "indent")
@@ -540,6 +538,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/move-up . "move up")
                    (suderman/meow-paste . "paste")
                    (suderman/meow-replace-char . "rep char")
+                   (suderman/meow-repeat . "repeat edit/till")
                    (suderman/meow-till . "till fwd")
                    (suderman/meow-till-backward . "till back")
                    (suderman/meow-visual . "select")
@@ -577,7 +576,7 @@ An active selection is replaced without modifying the kill ring."
    '("<" . meow-left-expand)
    '(">" . meow-right-expand)
    '("," . ignore)
-   '("." . ignore)
+   '("." . suderman/meow-repeat)
    '("[" . meow-inner-of-thing)
    '("]" . meow-bounds-of-thing)
    '("{" . meow-beginning-of-thing)
@@ -610,8 +609,8 @@ An active selection is replaced without modifying the kill ring."
    '("K" . suderman/move-up)
    '("l" . meow-right)
    '("L" . suderman/meow-indent)
-   '("m" . suderman/meow-find)
-   '("M" . suderman/meow-find-backward)
+   '("m" . ignore)
+   '("M" . ignore)
    '("n" . suderman/meow-search)
    '("o" . meow-open-below)
    '("O" . meow-open-above)
@@ -637,7 +636,7 @@ An active selection is replaced without modifying the kill ring."
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
    '("Z" . suderman/meow-buffer-end)
-   '("'" . repeat)
+   '("'" . ignore)
    '("/" . meow-visit)
    '("<escape>" . meow-cancel-selection)))
 
@@ -646,6 +645,21 @@ An active selection is replaced without modifying the kill ring."
 
 (use-package move-text
   :commands (move-text-up move-text-down))
+
+(defun suderman/repeat-fu-mode-maybe ()
+  "Enable Repeat-FU in buffers that start in Meow normal state."
+  (repeat-fu-mode
+   (if (and (bound-and-true-p meow-mode)
+            (bound-and-true-p meow-normal-mode))
+       1
+     -1)))
+
+(use-package repeat-fu
+  :commands (repeat-fu-mode repeat-fu-execute)
+  :init
+  (setq repeat-fu-preset 'meow
+        repeat-fu-global-mode t)
+  :hook (meow-mode . suderman/repeat-fu-mode-maybe))
 
 (use-package meow
   :demand t
