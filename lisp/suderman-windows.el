@@ -8,9 +8,33 @@
 
 (require 'subr-x)
 (require 'tab-bar)
+(require 'use-package)
 (require 'windmove)
 
 (setq windmove-allow-all-windows t)
+
+(use-package scroll-on-jump
+  :demand t
+  :custom
+  (scroll-on-jump-duration 0.2)
+  (scroll-on-jump-curve 'linear)
+  :config
+  (scroll-on-jump-with-scroll-advice-add scroll-up-command)
+  (scroll-on-jump-with-scroll-advice-add scroll-down-command)
+  (scroll-on-jump-with-scroll-advice-add recenter-top-bottom)
+  (scroll-on-jump-advice-add beginning-of-buffer)
+  (scroll-on-jump-advice-add end-of-buffer)
+  (scroll-on-jump-advice-add next-error)
+  (scroll-on-jump-advice-add previous-error)
+  (scroll-on-jump-advice-add pop-to-mark-command)
+  (scroll-on-jump-advice-add pop-global-mark)
+  (scroll-on-jump-advice-add xref-go-back)
+  (scroll-on-jump-advice-add xref-go-forward)
+  (with-eval-after-load 'suderman-meow
+    (scroll-on-jump-advice-add suderman/meow-buffer-beginning)
+    (scroll-on-jump-advice-add suderman/meow-buffer-end)
+    (scroll-on-jump-advice-add meow-goto-line)
+    (scroll-on-jump-advice-add suderman/meow-search)))
 
 (defun suderman/window-left ()
   "Move focus to the window left of the selected window."

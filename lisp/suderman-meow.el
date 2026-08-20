@@ -671,15 +671,5 @@ An active selection is replaced without modifying the kill ring."
   (suderman/meow-setup-qwerty)
   (meow-global-mode 1))
 
-(use-package scroll-on-jump
-  :after meow
-  :demand t
-  :custom
-  (scroll-on-jump-duration 0.2)
-  (scroll-on-jump-curve 'linear)
-  :config
-  (scroll-on-jump-with-scroll-advice-add meow-page-up)
-  (scroll-on-jump-with-scroll-advice-add meow-page-down))
-
 (provide 'suderman-meow)
 ;;; suderman-meow.el ends here
