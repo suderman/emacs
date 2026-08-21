@@ -58,7 +58,7 @@ The current modules have clear jobs.
 - `suderman-packages.el` owns `package.el` and `use-package` defaults.
 - `suderman-defaults.el` contains small built-in behavior changes.
 - `suderman-appearance.el` owns fonts, Stylix-derived faces, Doom Modeline,
-  current-line highlighting, and the 100-column guide.
+  current-line highlighting, line numbers, and the 100-column guide.
 - `suderman-windows.el` owns window helpers and smooth jump animation.
 - `suderman-projects.el` wraps built-in `project.el` behavior.
 - `suderman-buffers.el` owns project-grouped IBuffer.
@@ -132,13 +132,15 @@ job.
 ### IBuffer
 
 IBuffer is the project-oriented overview. It uses built-in `project.el`,
-`ibuffer-project`, and Nerd Icon columns. Non-project buffers remain visible in
-the default group. There is no broad hidden-buffer blacklist.
+`ibuffer-project`, and Nerd Icon columns. Non-project image buffers get their
+own group; other non-project buffers remain visible in the default group. There
+is no broad hidden-buffer blacklist.
 
 - Normal-state `,` opens it and highlights the invoking buffer.
 - IBuffer `,` closes it and restores the prior buffer and window.
 - `j` and `k` move by row.
-- `l` visits the selected buffer or toggles a group heading.
+- `l` visits the selected buffer and updates a visible Treemacs, or toggles a
+  group heading.
 - `h` visits the selected buffer, then focuses Treemacs on that file.
 - `SPC` and `H` toggle a contextual Treemacs view without leaving IBuffer.
 - `m` toggles the current buffer mark without moving. `M` marks every visible

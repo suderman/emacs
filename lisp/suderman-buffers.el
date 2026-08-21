@@ -82,7 +82,8 @@
   (suderman/ibuffer-disable-meow)
   (suderman/ibuffer-disable-visual-line-mode)
   (setq ibuffer-filter-groups
-        (ibuffer-project-generate-filter-groups))
+        (append (ibuffer-project-generate-filter-groups)
+                '(("Images" (derived-mode . image-mode)))))
   (unless (eq ibuffer-sorting-mode 'project-file-relative)
     (ibuffer-do-sort-by-project-file-relative)))
 

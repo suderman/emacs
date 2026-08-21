@@ -144,6 +144,14 @@
     (quit-window))
   (suderman/treemacs--show t))
 
+(defun suderman/ibuffer-open-with-treemacs ()
+  "Visit the buffer at point, updating Treemacs when it is visible."
+  (interactive)
+  (let ((buffer (ibuffer-current-buffer)))
+    (suderman/ibuffer-open)
+    (when (and buffer (treemacs-get-local-window))
+      (suderman/treemacs--show nil))))
+
 (defun suderman/ibuffer-toggle-treemacs ()
   "Toggle Treemacs for the buffer or project group at point."
   (interactive)
@@ -298,6 +306,7 @@ With prefix ARG, expand recursively."
 
   (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-focus-treemacs)
   (keymap-set ibuffer-mode-map "H" #'suderman/ibuffer-toggle-treemacs)
+  (keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open-with-treemacs)
   (keymap-unset ibuffer-mode-map "i" t)
   (keymap-set ibuffer-mode-map "SPC" #'suderman/ibuffer-toggle-treemacs)
   (keymap-set treemacs-mode-map "j" #'treemacs-next-line)
