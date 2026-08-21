@@ -110,7 +110,7 @@ Important parts of the current grammar follow.
 - `X` cuts the current line and enters insert state.
 - `n` and `p` search forward and backward.
 - `t` and `T` move till a character forward and backward.
-- `y` is redo. `u` is Meow undo. `U` is undo in selection.
+- `y` is redo. `u` is one-way Meow undo. `U` is one-way undo in selection.
 - `C` and `V` page up and down through Meow. Vanilla `C-u`, `C-d`, and `C-v`
   are deliberately not shadowed by Meow normal bindings.
 - `SPC` is both Meow's keypad and the owned leader map. `SPC h` focuses

@@ -760,6 +760,7 @@ An active selection is replaced without modifying the kill ring."
   :demand t
   :init
   (setq meow-use-clipboard t
+        meow--kbd-undo #'undo-only
         ;; Keep Meow editing commands independent from modal key overrides.
         meow--kbd-join-sexp #'suderman/meow-join-sexp-unavailable
         meow--kbd-kill-ring-save #'kill-ring-save
