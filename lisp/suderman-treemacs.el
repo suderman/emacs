@@ -99,31 +99,45 @@
     (with-selected-window window
       (treemacs-quit))))
 
+(defun suderman/treemacs--show (select)
+  "Show Treemacs and reveal the current file, selecting it when SELECT."
+  (let* ((selected-buffer (window-buffer (selected-window)))
+         (source-window
+          (if (with-current-buffer selected-buffer
+                (derived-mode-p 'speedbar-mode))
+              (get-mru-window (selected-frame) nil t t)
+            (selected-window)))
+         (source-buffer (window-buffer source-window))
+         (file (buffer-local-value 'buffer-file-name source-buffer)))
+    (when (suderman/speedbar-visible-p)
+      (suderman/speedbar-toggle))
+    (with-current-buffer source-buffer
+      (suderman/treemacs--ensure-frame-workspace)
+      (treemacs-add-and-display-current-project-exclusively))
+    (with-selected-window (treemacs-get-local-window)
+      (suderman/treemacs--repair-tree))
+    (when file
+      (with-current-buffer source-buffer
+        (treemacs-find-file)))
+    (when-let* ((window (treemacs-get-local-window)))
+      (select-window (if select window source-window)))))
+
+(defun suderman/treemacs-focus ()
+  "Focus Treemacs, or return to the editor when already inside it."
+  (interactive)
+  (if-let* ((window (treemacs-get-local-window)))
+      (if (eq window (selected-window))
+          (when-let* ((editor (get-mru-window (selected-frame) nil t t)))
+            (select-window editor))
+        (select-window window))
+    (suderman/treemacs--show t)))
+
 (defun suderman/treemacs-toggle ()
-  "Toggle Treemacs, exclusively showing and revealing the current project."
+  "Toggle Treemacs without moving focus into it when opened."
   (interactive)
   (if (treemacs-get-local-window)
       (suderman/treemacs-close)
-    (let* ((selected-buffer (window-buffer (selected-window)))
-           (source-window
-            (if (with-current-buffer selected-buffer
-                  (derived-mode-p 'speedbar-mode))
-                (get-mru-window (selected-frame) nil t t)
-              (selected-window)))
-            (source-buffer (window-buffer source-window))
-            (file (buffer-local-value 'buffer-file-name source-buffer)))
-      (when (suderman/speedbar-visible-p)
-        (suderman/speedbar-toggle))
-      (with-current-buffer source-buffer
-        (suderman/treemacs--ensure-frame-workspace)
-        (treemacs-add-and-display-current-project-exclusively))
-      (with-selected-window (treemacs-get-local-window)
-        (suderman/treemacs--repair-tree))
-      (when file
-        (with-current-buffer source-buffer
-          (treemacs-find-file)))
-      (when-let* ((window (treemacs-get-local-window)))
-        (select-window window)))))
+    (suderman/treemacs--show nil)))
 
 (defun suderman/treemacs-close-before-speedbar (&rest _)
   "Close the current frame's Treemacs before showing Speedbar."
@@ -246,7 +260,9 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "t" #'treemacs-filewatch-mode)
   (keymap-set treemacs-mode-map "?" #'treemacs-common-helpful-hydra)
   (keymap-set treemacs-mode-map "q" #'suderman/treemacs-toggle)
-  (keymap-set treemacs-mode-map "`" #'suderman/treemacs-toggle)
+  (keymap-set treemacs-mode-map "'" #'suderman/treemacs-focus)
+  (keymap-set treemacs-mode-map "\"" #'suderman/treemacs-toggle)
+  (keymap-set treemacs-mode-map "`" #'ignore)
   (keymap-set treemacs-mode-map "~" #'ignore)
   (keymap-set treemacs-mode-map "S" #'suderman/speedbar-toggle)
   (keymap-set treemacs-mode-map "M-h" #'suderman/window-left)
@@ -259,7 +275,9 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "M-L" #'suderman/enlarge-window-width)
 
   (with-eval-after-load 'speedbar
-    (keymap-set speedbar-mode-map "`" #'suderman/treemacs-toggle)
+    (keymap-set speedbar-mode-map "'" #'suderman/treemacs-focus)
+    (keymap-set speedbar-mode-map "\"" #'suderman/treemacs-toggle)
+    (keymap-set speedbar-mode-map "`" #'ignore)
     (keymap-set speedbar-mode-map "~" #'ignore)))
 
 (use-package treemacs-nerd-icons
