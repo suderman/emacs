@@ -598,6 +598,7 @@ An active selection is replaced without modifying the kill ring."
    '("]" . meow-bounds-of-thing)
    '("{" . meow-beginning-of-thing)
    '("}" . meow-end-of-thing)
+   '("`" . suderman/speedbar-toggle)
    '("\\ \\" . suderman/alternate-buffer)
    '("\\ =" . suderman/speedbar-toggle)
    '("\\ J" . suderman/meow-join-line)
