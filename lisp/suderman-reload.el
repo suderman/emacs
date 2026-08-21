@@ -86,11 +86,26 @@
   (when (featurep feature)
     (unload-feature feature t)))
 
+(defun suderman/reload--restore-major-modes (buffer-modes)
+  "Restore BUFFER-MODES changed while unloading configuration modules."
+  (dolist (entry buffer-modes)
+    (let ((buffer (car entry))
+          (mode (cdr entry)))
+      (when (and (buffer-live-p buffer)
+                 (not (eq (buffer-local-value 'major-mode buffer) mode))
+                 (fboundp mode))
+        (with-current-buffer buffer
+          (funcall mode))))))
+
 ;;;###autoload
 (defun suderman/reload-config ()
   "Reload Suderman config modules without restarting Emacs."
   (interactive)
   (let* ((modules (suderman/reload--config-modules))
+         (buffer-modes
+          (mapcar (lambda (buffer)
+                    (cons buffer (buffer-local-value 'major-mode buffer)))
+                  (buffer-list)))
          (meow-was-enabled (bound-and-true-p meow-global-mode)))
     (unless modules
       (user-error "No suderman modules found in %s"
@@ -99,6 +114,7 @@
       (suderman/reload--unload-feature feature))
     (dolist (feature modules)
       (require feature))
+    (suderman/reload--restore-major-modes buffer-modes)
     (when (and meow-was-enabled
                (not (bound-and-true-p meow-global-mode))
                (fboundp 'meow-global-mode))
