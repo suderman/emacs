@@ -6,6 +6,7 @@
 ;;; Code:
 
 (require 'use-package)
+(require 'suderman-buffers)
 (require 'suderman-speedbar)
 (require 'suderman-windows)
 
@@ -109,15 +110,17 @@
     (with-selected-window window
       (treemacs-quit))))
 
-(defun suderman/treemacs--show (select)
-  "Show Treemacs and reveal the current file, selecting it when SELECT."
+(defun suderman/treemacs--show (select &optional context-buffer)
+  "Show Treemacs for CONTEXT-BUFFER, selecting it when SELECT."
   (let* ((selected-buffer (window-buffer (selected-window)))
          (source-window
           (if (with-current-buffer selected-buffer
                 (derived-mode-p 'speedbar-mode))
               (get-mru-window (selected-frame) nil t t)
             (selected-window)))
-         (source-buffer (window-buffer source-window))
+         (source-buffer (if (buffer-live-p context-buffer)
+                            context-buffer
+                          (window-buffer source-window)))
          (file (buffer-local-value 'buffer-file-name source-buffer)))
     (when (suderman/speedbar-visible-p)
       (suderman/speedbar-toggle))
@@ -141,6 +144,27 @@
             (select-window editor))
         (select-window window))
     (suderman/treemacs--show t)))
+
+(defun suderman/ibuffer-focus-treemacs ()
+  "Visit the buffer at point, then reveal it in Treemacs."
+  (interactive)
+  (if (ibuffer-current-buffer)
+      (ibuffer-visit-buffer)
+    (quit-window))
+  (suderman/treemacs--show t))
+
+(defun suderman/ibuffer-toggle-treemacs ()
+  "Toggle Treemacs for the buffer or project group at point."
+  (interactive)
+  (if (treemacs-get-local-window)
+      (suderman/treemacs-close)
+    (let* ((group (get-text-property (line-beginning-position)
+                                     'ibuffer-filter-group-name))
+           (default-directory
+            (if (and (stringp group) (file-directory-p group))
+                (file-name-as-directory (expand-file-name group))
+              default-directory)))
+      (suderman/treemacs--show nil (ibuffer-current-buffer)))))
 
 (defun suderman/treemacs-toggle ()
   "Toggle Treemacs without moving focus into it when opened."
@@ -253,6 +277,9 @@ With prefix ARG, expand recursively."
   (advice-add 'suderman/speedbar-toggle :before
               #'suderman/treemacs-close-before-speedbar)
 
+  (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-focus-treemacs)
+  (keymap-unset ibuffer-mode-map "i" t)
+  (keymap-set ibuffer-mode-map "SPC" #'suderman/ibuffer-toggle-treemacs)
   (keymap-set treemacs-mode-map "j" #'treemacs-next-line)
   (keymap-set treemacs-mode-map "k" #'treemacs-previous-line)
   (keymap-set treemacs-mode-map "h" #'suderman/treemacs-smart-close)
