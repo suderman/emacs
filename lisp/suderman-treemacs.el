@@ -166,6 +166,27 @@
               default-directory)))
       (suderman/treemacs--show nil (ibuffer-current-buffer)))))
 
+(defun suderman/treemacs-ibuffer ()
+  "Visit the current file or tag, then focus IBuffer."
+  (interactive)
+  (let* ((button (treemacs-current-button))
+         (state (and button (treemacs-button-get button :state))))
+    (if (memq state '(file-node-open file-node-closed tag-node))
+        (progn
+          (treemacs-visit-node-in-most-recently-used-window)
+          (suderman/ibuffer-toggle))
+      (if-let* ((window
+                 (seq-find
+                  (lambda (candidate)
+                    (with-current-buffer (window-buffer candidate)
+                      (derived-mode-p 'ibuffer-mode)))
+                  (window-list (selected-frame) 'no-minibuffer))))
+          (select-window window)
+        (select-window
+         (or (get-mru-window (selected-frame) nil t t)
+             (user-error "No editor window available")))
+        (suderman/ibuffer-toggle)))))
+
 (defun suderman/treemacs-toggle ()
   "Toggle Treemacs without moving focus into it when opened."
   (interactive)
@@ -282,6 +303,7 @@ With prefix ARG, expand recursively."
   (keymap-set ibuffer-mode-map "SPC" #'suderman/ibuffer-toggle-treemacs)
   (keymap-set treemacs-mode-map "j" #'treemacs-next-line)
   (keymap-set treemacs-mode-map "k" #'treemacs-previous-line)
+  (keymap-set treemacs-mode-map "," #'suderman/treemacs-ibuffer)
   (keymap-set treemacs-mode-map "h" #'suderman/treemacs-smart-close)
   (keymap-set treemacs-mode-map "l" #'suderman/treemacs-smart-open)
   (keymap-set treemacs-mode-map "H" #'suderman/treemacs-collapse-recursively)
