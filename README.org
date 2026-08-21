@@ -1,50 +1,50 @@
-#+title: suderman/emacs
-#+subtitle: A project-focused, Meow-driven Emacs 31 configuration
+#+title: suderman/emacs 🐈
+#+subtitle: My Emacs 31 configuration for NixOS
 #+author: Jon Suderman
 #+options: toc:2 num:nil
 #+startup: content
 
-* What this is
+* About
 
-This is the Emacs half of my daily NixOS setup. It is a personal configuration,
-not a framework or a starter kit. The broad direction is settled, but the details
-are still changing as real use exposes rough edges.
+This is the Emacs config I use every day on NixOS. I tune it around how I edit,
+switch projects, and manage windows. It is not a starter kit, and I do not try
+to make it portable to systems I do not use.
 
-The setup is built around a custom [[https://github.com/meow-edit/meow][Meow]] editing model, =project.el=,
-project-grouped IBuffer, Treemacs, the Vertico completion stack, Doom Modeline,
-Nerd Icons, and tree-sitter modes.
+[[https://github.com/meow-edit/meow][Meow]] controls modal editing. Built-in =project.el= supplies project data.
+IBuffer shows open buffers by project, and Treemacs keeps the current project
+visible. Vertico, Orderless, Consult, Marginalia, and Embark handle minibuffer
+completion.
 
-Highlights include:
+Some choices are a little odd on purpose. Comma opens IBuffer. Dot repeats
+edits. =SPC= is both Meow's keypad and my leader key. IBuffer and Treemacs pass
+file and project context back and forth instead of acting like separate tools.
 
-- selection-first modal editing with Vim-inspired movement and repeat behavior;
-- project-aware buffer and file workflows without Projectile;
-- a frame-local Treemacs tree linked directly to IBuffer;
-- Vertico, Orderless, Consult, Marginalia, and Embark in the minibuffer;
-- Dirvish-enhanced Dired and a Pandoc-backed Markdown preview;
-- Stylix-derived colors, Doom Modeline, Nerd Icons, and smooth keyboard jumps;
-- Image mode browsing, transforms, and autoplaying animated images.
+The editing map starts with selections, then applies changes to them. Dirvish
+cleans up Dired. Markdown preview runs Pandoc and refreshes after each save.
+Stylix supplies the colors, while Doom Modeline and Nerd Icons handle the lower
+status bar and file symbols. Image mode cycles through a directory, transforms
+images in place, and starts animated images automatically.
 
-* Environment
+* NixOS owns half of it
 
-This repository is deliberately not self-contained. The matching
-[[https://github.com/suderman/nixos][suderman/nixos]] flake supplies Emacs 31 PGTK, the daemon and client,
+This repository cannot reproduce my Emacs on its own. The matching
+[[https://github.com/suderman/nixos][suderman/nixos]] flake installs Emacs 31 PGTK, the daemon and client,
 tree-sitter grammars, native packages, language servers, formatters, Pandoc,
-fonts, and other external tools. Stylix supplies the active theme and system
-typography.
+and fonts. Stylix chooses the theme and typography.
 
-This repository owns the mutable Elisp packages, commands, keymaps, and daily
-editing behavior. Package and runtime state follow XDG paths instead of living
-in the repository.
+This repository installs pure Elisp packages and defines commands, keymaps, and
+editing behavior. Package data and runtime state use XDG paths, so they do not
+end up in Git.
 
-See [[file:AGENTS.md][AGENTS.md]] before making structural changes. It records package ownership,
-module boundaries, settled workflow decisions, reload hazards, and verification
-expectations.
+Read [[file:AGENTS.md][AGENTS.md]] before changing the structure. It explains which repository owns
+each package, what each module does, where hot reload has failed before, and how
+I test changes.
 
 * Keymap reference
 
-This is the practical reference, not a dump of every binding. =SPC ?= opens
-Meow's full cheatsheet, and Which-Key describes leader prefixes as they are
-entered.
+These are the keys I want close at hand. They cover the daily map without
+copying every binding from the source. =SPC ?= opens Meow's full cheatsheet.
+Which-Key shows each leader prefix while I type it.
 
 ** Finding a command
 
@@ -109,13 +109,13 @@ then enters Insert state.
 | =.=     | Repeat the last till immediately after =t= or =T=       |
 | =/=     | Visit a selected thing                                  |
 
-Dot repeat is provided by Repeat-FU. It records edits across Insert-state
-transitions and keeps its history across buffers.
+Repeat-FU records edits across Insert-state transitions and keeps dot-repeat
+history across buffers.
 
 ** SPC leader
 
-=SPC= is both Meow's keypad and the owned leader map. Numeric arguments work in
-the same grammar, for example =SPC 3 f= moves forward three words.
+=SPC= does two jobs. It opens Meow's keypad and my leader map. Numeric arguments
+fit the same grammar. For example, =SPC 3 f= moves forward three words.
 
 | Key       | Action                              |
 |-----------+-------------------------------------|
@@ -137,7 +137,7 @@ the same grammar, for example =SPC 3 f= moves forward three words.
 | =SPC w=   | Window commands                     |
 | =SPC q=   | Quit and reload commands            |
 
-The most-used subcommands are:
+I use these subcommands most often:
 
 | Prefix  | Useful keys                                                   |
 |---------+---------------------------------------------------------------|
@@ -150,8 +150,10 @@ The most-used subcommands are:
 
 ** IBuffer and Treemacs
 
-IBuffer is the project overview. Treemacs is the persistent project tree. They
-share context deliberately, and Meow is disabled locally so their own maps win.
+I use IBuffer to answer "what is open?" and Treemacs to answer "where is this
+file?" Visiting a buffer can update the visible tree. Pressing comma on a tree
+node opens IBuffer on the same file. Meow stays off in both views so their own
+maps win.
 
 *** IBuffer
 
@@ -237,5 +239,5 @@ These bindings work in both Meow Normal and Motion states.
 | =lisp/suderman-reload.el=       | Safe modular hot reload                          |
 | [[file:AGENTS.md][AGENTS.md]]                   | Maintenance decisions and verification rules     |
 
-The source is the final authority. This reference is meant to make the daily
-shape of the configuration easy to understand without repeating every option.
+The source wins when this file falls behind. This reference only covers the
+parts I use often enough to want on one page.
