@@ -8,6 +8,24 @@
 (require 'use-package)
 (require 'ibuffer)
 
+(define-ibuffer-column suderman-name
+  (:name "Name"
+         :header-mouse-map ibuffer-name-header-map
+         :props
+         ('mouse-face 'highlight 'keymap ibuffer-name-map
+                      'ibuffer-name-column t
+                      'help-echo
+                      '(if tooltip-mode
+                           "mouse-1: visit this buffer\nmouse-2: toggle its mark\nmouse-3: operate on this buffer"
+                         "mouse-1: visit buffer   mouse-2: toggle mark   mouse-3: operate")))
+  (let ((string (propertize (buffer-name)
+                            'font-lock-face
+                            (ibuffer-buffer-name-face buffer mark))))
+    (if (not (seq-position string ?\n))
+        string
+      (string-replace
+       "\n" (propertize "^J" 'font-lock-face 'escape-glyph) string))))
+
 (defun suderman/ibuffer-toggle ()
   "Open IBuffer, or restore the previous buffer when already there."
   (interactive)
@@ -80,11 +98,13 @@
         ibuffer-formats
         '((mark modified read-only " "
                 (icon 2 2)
-                (name 24 32 :left :elide) " "
+                (suderman-name 24 32 :left :elide) " "
                 (mode+ 16 20 :left :elide) " "
                 (size-h 7 -1 :right) " "
                 suderman-project-file-relative)))
   :config
+  (keymap-set ibuffer-name-map "<mouse-1>" #'ibuffer-mouse-visit-buffer)
+  (keymap-set ibuffer-name-map "<mouse-2>" #'ibuffer-mouse-toggle-mark)
   (keymap-set ibuffer-mode-map "," #'suderman/ibuffer-toggle)
   (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-toggle)
   (keymap-set ibuffer-mode-map "j" #'ibuffer-forward-line)

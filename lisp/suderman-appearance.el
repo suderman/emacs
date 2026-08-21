@@ -85,6 +85,21 @@
 (with-eval-after-load 'meow
   (suderman/apply-selection-faces))
 
+(defun suderman/hl-line-range ()
+  "Return the current line range, except in one-line file buffers."
+  (let ((single-line-file
+         (and buffer-file-name
+              (save-restriction
+                (widen)
+                (save-excursion
+                  (goto-char (point-min))
+                  (not (and (search-forward "\n" nil t)
+                            (< (point) (point-max)))))))))
+    (unless single-line-file
+      (cons (line-beginning-position)
+            (line-beginning-position 2)))))
+
+(setq-default hl-line-range-function #'suderman/hl-line-range)
 (global-hl-line-mode 1)
 (setq-default display-fill-column-indicator-column 100)
 (global-display-fill-column-indicator-mode 1)

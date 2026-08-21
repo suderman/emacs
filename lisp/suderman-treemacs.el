@@ -25,9 +25,10 @@
       (meow--disable))))
 
 (defun suderman/treemacs-disable-visual-line-mode ()
-  "Keep visual line wrapping disabled in the current Treemacs buffer."
+  "Keep line wrapping disabled in the current Treemacs buffer."
   (when visual-line-mode
-    (visual-line-mode -1)))
+    (visual-line-mode -1))
+  (setq-local truncate-lines t))
 
 (defun suderman/treemacs-setup ()
   "Use Treemacs's native navigation in the current buffer."
@@ -247,6 +248,22 @@ With prefix ARG, expand recursively."
         (suderman/treemacs-root-down)
       (treemacs-visit-node-in-most-recently-used-window))))
 
+(defun suderman/treemacs-toggle-click (event)
+  "Toggle the expandable Treemacs node clicked with EVENT."
+  (interactive "e")
+  (select-window (posn-window (event-end event)))
+  (goto-char (posn-point (event-end event)))
+  (when (region-active-p)
+    (keyboard-quit))
+  (when-let* ((button (treemacs-current-button))
+              (state (treemacs-button-get button :state))
+              ((memq state '(root-node-open root-node-closed
+                              dir-node-open dir-node-closed
+                              file-node-open file-node-closed
+                              tag-node-open tag-node-closed))))
+    (treemacs-TAB-action))
+  (treemacs--evade-image))
+
 (defun suderman/treemacs-create-item ()
   "Create a file, or a directory when its name ends in a slash."
   (interactive)
@@ -293,6 +310,11 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "RET" #'suderman/treemacs-open)
   (keymap-set treemacs-mode-map "<return>" #'suderman/treemacs-open)
   (keymap-set treemacs-mode-map "o" #'suderman/treemacs-open)
+  (keymap-set treemacs-mode-map "<mouse-1>"
+              #'treemacs-single-click-expand-action)
+  (keymap-set treemacs-mode-map "<mouse-2>"
+              #'suderman/treemacs-toggle-click)
+  (keymap-set treemacs-mode-map "<double-mouse-1>" #'ignore)
   (keymap-set treemacs-mode-map "u" #'suderman/treemacs-root-up)
   (keymap-set treemacs-mode-map "n" #'suderman/treemacs-create-item)
   (keymap-set treemacs-mode-map "c" #'treemacs-copy-file)

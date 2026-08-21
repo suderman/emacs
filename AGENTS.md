@@ -98,7 +98,12 @@ Important parts of the current grammar follow.
 - `.` repeats the last Repeat-FU edit, except immediately after `t` or `T`,
   when it repeats that till motion.
 - `,` opens project-grouped IBuffer and selects the invoking buffer.
-- `S`, quote, double quote, backtick, and `~` are intentionally inert.
+- In normal state, `S`, quote, double quote, backtick, and `~` are
+  intentionally inert. Motion buffers let these keys fall through to their
+  major-mode maps.
+- Image buffers use Motion state. Their native `n` and `p` browse files while
+  `SPC` remains Meow's keypad and `,` opens IBuffer. `=`/`+` and `-` zoom, `r`
+  and `R` rotate, and `0` resets the image transformations.
 - `c` copies, `v` pastes, `d` deletes without filling the kill ring, and `x`
   cuts a real multi-character selection before entering insert state.
 - `X` cuts the current line and enters insert state.

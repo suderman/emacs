@@ -528,6 +528,8 @@ An active selection is replaced without modifying the kill ring."
         (assq-delete-all ?h meow-keypad-start-keys))
   (dolist (key '("\\ =" "\\ ]"))
     (define-key meow-normal-state-keymap (kbd key) nil))
+  (dolist (key '("S" "'" "\"" "`" "~"))
+    (define-key meow-motion-state-keymap (kbd key) nil))
   (dolist (entry '((suderman/meow-smart-beginning-of-line . "code beg")
                    (beginning-of-line . "line beg")
                    (suderman/meow-back-word . "word back")
@@ -573,11 +575,6 @@ An active selection is replaced without modifying the kill ring."
           (cdr entry)))
   
   (meow-motion-define-key
-   '("S" . ignore)
-   '("'" . ignore)
-   '("\"" . ignore)
-   '("`" . ignore)
-   '("~" . ignore)
    '("\\ \\" . suderman/alternate-buffer)
    '("h" . meow-left)
    '("j" . meow-next)
@@ -683,6 +680,36 @@ An active selection is replaced without modifying the kill ring."
        1
      -1)))
 
+(defvar image-mode-map)
+(declare-function image-transform-reset-to-initial "image-mode")
+
+(defun suderman/image-mode-reset-point ()
+  "Keep point on Image mode's display property."
+  (goto-char (point-min)))
+
+(defun suderman/image-rotate-counterclockwise ()
+  "Rotate the image at point 90 degrees counterclockwise."
+  (interactive)
+  (image-rotate -90))
+
+(defun suderman/meow-image-mode-setup ()
+  "Prepare Image mode for Meow motion state."
+  (suderman/image-mode-reset-point)
+  (local-set-key (kbd ",") #'suderman/ibuffer-toggle)
+  (add-hook 'save-place-after-find-file-hook
+            #'suderman/image-mode-reset-point nil t)
+  (when (bound-and-true-p meow-global-mode)
+    (meow-mode 1)))
+
+(with-eval-after-load 'image-mode
+  (keymap-set image-mode-map "," #'suderman/ibuffer-toggle)
+  (keymap-set image-mode-map "=" #'image-increase-size)
+  (keymap-set image-mode-map "+" #'image-increase-size)
+  (keymap-set image-mode-map "-" #'image-decrease-size)
+  (keymap-set image-mode-map "r" #'image-rotate)
+  (keymap-set image-mode-map "R" #'suderman/image-rotate-counterclockwise)
+  (keymap-set image-mode-map "0" #'image-transform-reset-to-initial))
+
 (use-package repeat-fu
   :commands (repeat-fu-mode repeat-fu-execute)
   :init
@@ -705,7 +732,8 @@ An active selection is replaced without modifying the kill ring."
           (find . 30)
           (till . 30))
         meow-mode-state-list
-        '((conf-mode . normal)
+        '((image-mode . motion)
+          (conf-mode . normal)
           (fundamental-mode . normal)
           (prog-mode . normal)
           (text-mode . normal)
@@ -725,7 +753,12 @@ An active selection is replaced without modifying the kill ring."
   :config
   (suderman/meow-reset-leader-map)
   (suderman/meow-setup-qwerty)
-  (meow-global-mode 1))
+  (add-hook 'image-mode-hook #'suderman/meow-image-mode-setup)
+  (meow-global-mode 1)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (derived-mode-p 'image-mode)
+        (suderman/meow-image-mode-setup)))))
 
 (provide 'suderman-meow)
 ;;; suderman-meow.el ends here
