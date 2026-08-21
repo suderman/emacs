@@ -21,13 +21,23 @@
 
 (defun suderman/treemacs-disable-meow ()
   "Disable Meow in the current Treemacs buffer."
-  (when (bound-and-true-p meow-mode)
-    (meow-mode -1)))
+  (if (bound-and-true-p meow-mode)
+      (meow-mode -1)
+    (when (fboundp 'meow--disable)
+      (meow--disable))))
+
+(defun suderman/treemacs-disable-visual-line-mode ()
+  "Keep visual line wrapping disabled in the current Treemacs buffer."
+  (when visual-line-mode
+    (visual-line-mode -1)))
 
 (defun suderman/treemacs-setup ()
   "Use Treemacs's native navigation in the current buffer."
   (add-hook 'meow-mode-hook #'suderman/treemacs-disable-meow nil t)
-  (suderman/treemacs-disable-meow))
+  (add-hook 'visual-line-mode-hook
+            #'suderman/treemacs-disable-visual-line-mode nil t)
+  (suderman/treemacs-disable-meow)
+  (suderman/treemacs-disable-visual-line-mode))
 
 (defun suderman/treemacs--rendered-project (&optional buffer)
   "Return the project rendered in BUFFER's tree."
@@ -250,6 +260,7 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "H" #'suderman/treemacs-collapse-recursively)
   (keymap-set treemacs-mode-map "L" #'suderman/treemacs-expand-recursively)
   (keymap-set treemacs-mode-map "RET" #'suderman/treemacs-open)
+  (keymap-set treemacs-mode-map "<return>" #'suderman/treemacs-open)
   (keymap-set treemacs-mode-map "o" #'suderman/treemacs-open)
   (keymap-set treemacs-mode-map "u" #'suderman/treemacs-root-up)
   (keymap-set treemacs-mode-map "n" #'suderman/treemacs-create-item)

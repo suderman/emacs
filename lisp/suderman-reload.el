@@ -99,7 +99,9 @@
       (suderman/reload--unload-feature feature))
     (dolist (feature modules)
       (require feature))
-    (when (and meow-was-enabled (fboundp 'meow-global-mode))
+    (when (and meow-was-enabled
+               (not (bound-and-true-p meow-global-mode))
+               (fboundp 'meow-global-mode))
       (meow-global-mode 1))
     (message "Reloaded %d modules: %s"
              (length modules)
