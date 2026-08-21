@@ -567,6 +567,8 @@ An active selection is replaced without modifying the kill ring."
           (cdr entry)))
   
   (meow-motion-define-key
+   '("S" . suderman/speedbar-toggle)
+   '("`" . suderman/speedbar-toggle)
    '("\\ \\" . suderman/alternate-buffer)
    '("h" . meow-left)
    '("j" . meow-next)
