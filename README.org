@@ -1,0 +1,241 @@
+#+title: suderman/emacs
+#+subtitle: A project-focused, Meow-driven Emacs 31 configuration
+#+author: Jon Suderman
+#+options: toc:2 num:nil
+#+startup: content
+
+* What this is
+
+This is the Emacs half of my daily NixOS setup. It is a personal configuration,
+not a framework or a starter kit. The broad direction is settled, but the details
+are still changing as real use exposes rough edges.
+
+The setup is built around a custom [[https://github.com/meow-edit/meow][Meow]] editing model, =project.el=,
+project-grouped IBuffer, Treemacs, the Vertico completion stack, Doom Modeline,
+Nerd Icons, and tree-sitter modes.
+
+Highlights include:
+
+- selection-first modal editing with Vim-inspired movement and repeat behavior;
+- project-aware buffer and file workflows without Projectile;
+- a frame-local Treemacs tree linked directly to IBuffer;
+- Vertico, Orderless, Consult, Marginalia, and Embark in the minibuffer;
+- Dirvish-enhanced Dired and a Pandoc-backed Markdown preview;
+- Stylix-derived colors, Doom Modeline, Nerd Icons, and smooth keyboard jumps;
+- Image mode browsing, transforms, and autoplaying animated images.
+
+* Environment
+
+This repository is deliberately not self-contained. The matching
+[[https://github.com/suderman/nixos][suderman/nixos]] flake supplies Emacs 31 PGTK, the daemon and client,
+tree-sitter grammars, native packages, language servers, formatters, Pandoc,
+fonts, and other external tools. Stylix supplies the active theme and system
+typography.
+
+This repository owns the mutable Elisp packages, commands, keymaps, and daily
+editing behavior. Package and runtime state follow XDG paths instead of living
+in the repository.
+
+See [[file:AGENTS.md][AGENTS.md]] before making structural changes. It records package ownership,
+module boundaries, settled workflow decisions, reload hazards, and verification
+expectations.
+
+* Keymap reference
+
+This is the practical reference, not a dump of every binding. =SPC ?= opens
+Meow's full cheatsheet, and Which-Key describes leader prefixes as they are
+entered.
+
+** Finding a command
+
+| Key       | Action                                  |
+|-----------+-----------------------------------------|
+| =SPC ?=   | Open the Meow cheatsheet                |
+| =SPC ...= | Show the current leader choices         |
+| =C-h k=   | Describe a key                          |
+| =C-h b=   | Show effective bindings in this buffer  |
+| =M-x=     | Run a command by name                   |
+| =F5=      | Reload the modular configuration        |
+
+** Meow normal state
+
+*** Movement and navigation
+
+| Keys        | Action                                         |
+|-------------+------------------------------------------------|
+| =h j k l=   | Move left, down, up, and right                  |
+| =a / e=     | Move to smart beginning / end of line           |
+| =A / Z=     | Move to beginning / end of buffer               |
+| =b / f=     | Move backward / forward by word                 |
+| =B / F=     | Move backward / forward by symbol               |
+| =#=         | Go to line                                      |
+| =%=         | Jump to matching delimiter or item              |
+| =C / V=     | Page up / down                                  |
+| =,=         | Open project-grouped IBuffer                    |
+| =q / Q=     | Quit the view / kill the current buffer         |
+
+Movement expands an active Meow selection.
+
+*** Selection and editing
+
+| Keys          | Action                                             |
+|---------------+----------------------------------------------------|
+| =m / mm / mmm=| Select word / symbol / enclosing block              |
+| =M / MM / MMM=| Select rectangle / line / whole buffer               |
+| =g / G=       | Cancel selection / grab another selection           |
+| =i / I / E=   | Insert here / at indentation / at end of line        |
+| =o / O=       | Open a line below / above                            |
+| =c / v=       | Copy / paste                                         |
+| =d / D=       | Delete selection or character / delete line          |
+| =x / X=       | Cut and insert / cut line and insert                  |
+| =r=           | Replace one character                                |
+| =s=           | Surround command prefix                              |
+| =s s=         | Add a surround                                       |
+| =H / L=       | Outdent / indent                                     |
+| =J / K=       | Move selected lines down / up                         |
+| =u / U=       | One-way undo / one-way undo inside selection         |
+| =y=           | Redo                                                 |
+| =.=           | Repeat the last edit                                 |
+
+=d= does not fill the kill ring. =x= cuts a real multi-character selection,
+then enters Insert state.
+
+*** Search and repeat
+
+| Keys    | Action                                                   |
+|---------+----------------------------------------------------------|
+| =n / p= | Search forward / backward                               |
+| =t / T= | Move till a character forward / backward                |
+| =.=     | Repeat the last till immediately after =t= or =T=       |
+| =/=     | Visit a selected thing                                  |
+
+Dot repeat is provided by Repeat-FU. It records edits across Insert-state
+transitions and keeps its history across buffers.
+
+** SPC leader
+
+=SPC= is both Meow's keypad and the owned leader map. Numeric arguments work in
+the same grammar, for example =SPC 3 f= moves forward three words.
+
+| Key       | Action                              |
+|-----------+-------------------------------------|
+| =SPC ?=   | Meow cheatsheet                     |
+| =SPC SPC= | =M-x=                               |
+| =SPC .=   | Find file                           |
+| =SPC ,=   | Consult buffer                      |
+| =SPC /=   | Ripgrep                             |
+| =SPC \=  | Alternate buffer                    |
+| =SPC h=   | Focus Treemacs                      |
+| =SPC H=   | Toggle Treemacs visibility          |
+| =SPC d=   | Open Dirvish                        |
+| =SPC e=   | Open the Dirvish side window        |
+| =SPC b=   | Buffer commands                     |
+| =SPC f=   | File commands                       |
+| =SPC p=   | Project commands                    |
+| =SPC s=   | Search commands                     |
+| =SPC t=   | Tools and pickers                   |
+| =SPC w=   | Window commands                     |
+| =SPC q=   | Quit and reload commands            |
+
+The most-used subcommands are:
+
+| Prefix  | Useful keys                                                   |
+|---------+---------------------------------------------------------------|
+| =SPC b= | =b= switch, =k= kill, =l= alternate, =r= revert, =s= save     |
+| =SPC f= | =f= find, =r= recent, =s= save, =S= save as                   |
+| =SPC p= | =b= buffers, =f= files, =p= switch, =s= ripgrep               |
+| =SPC s= | =c= clear, =g= ripgrep, =i= Imenu, =l= line                   |
+| =SPC w= | =hjkl= focus, =HJKL= resize, =s/v= split, =o= keep one        |
+| =SPC q= | =r= reload                                                     |
+
+** IBuffer and Treemacs
+
+IBuffer is the project overview. Treemacs is the persistent project tree. They
+share context deliberately, and Meow is disabled locally so their own maps win.
+
+*** IBuffer
+
+| Key       | Action                                                       |
+|-----------+--------------------------------------------------------------|
+| =j / k=   | Move by row                                                  |
+| =l=       | Visit buffer and update visible Treemacs, or toggle a group  |
+| =h=       | Visit buffer, then focus and reveal it in Treemacs           |
+| =SPC / H= | Toggle contextual Treemacs without leaving IBuffer           |
+| =m=       | Toggle the current mark without moving                       |
+| =M=       | Mark every visible buffer                                    |
+| =t=       | Invert marks; =M t= clears all marks                         |
+| =,=       | Close IBuffer and restore the previous window                |
+
+Left click visits a buffer. Middle click toggles its mark. Non-project images
+have their own group; other non-project buffers remain in the default group.
+
+*** Treemacs
+
+| Key          | Action                                              |
+|--------------+-----------------------------------------------------|
+| =j / k / n=  | Next / previous / next node                         |
+| =h / l=      | Smart collapse-or-parent / expand-or-open            |
+| =H / L=      | Collapse / expand recursively                        |
+| =RET / o=    | Open file or make a directory the root               |
+| =u=          | Move the root up                                     |
+| =a=          | Add a file, or a directory when the name ends in =/= |
+| =c / d / r=  | Copy / delete / rename                               |
+| =g=          | Refresh                                              |
+| =t=          | Toggle file watching                                 |
+| =,=          | Open IBuffer in the selected tree context            |
+| =q=          | Close Treemacs                                       |
+| =?=          | Treemacs help                                        |
+
+Single left click opens files and toggles directories. Middle click toggles a
+node without visiting it.
+
+** Dired and Image mode
+
+| Context | Keys                  | Action                                      |
+|---------+-----------------------+---------------------------------------------|
+| Dired   | =h / j / k / l=       | Parent / next / previous / open             |
+| Dired   | =q=                   | Close the Dired window                      |
+| Image   | =n / p=               | Browse images in cyclic alphabetical order |
+| Image   | =h=                   | Focus Treemacs                              |
+| Image   | =,=                   | Open IBuffer                                |
+| Image   | =SPC=                 | Keep Meow's keypad                         |
+| Image   | =+= / === / =-=       | Zoom in / zoom in / zoom out               |
+| Image   | =r / R=               | Rotate clockwise / counterclockwise        |
+| Image   | =0=                   | Reset image transformations                |
+
+Animated images autoplay and loop.
+
+** Windows and frames
+
+These bindings work in both Meow Normal and Motion states.
+
+| Key           | Action                              |
+|---------------+-------------------------------------|
+| =M-h/j/k/l=   | Focus the adjacent window           |
+| =M-H/J/K/L=   | Resize the selected window          |
+| =M-u / M-i=   | Split below / split right           |
+| =M-w=         | Delete the window or current tab    |
+| =s-+ / s--=   | Increase / decrease frame text size |
+| =s-t=         | New tab                             |
+| =s-[ / s-]=   | Previous / next tab                 |
+| =s-w=         | Close tab                           |
+
+* Repository map
+
+| Path                            | Role                                             |
+|---------------------------------+--------------------------------------------------|
+| [[file:early-init.el][early-init.el]]                 | Process-level startup and frame defaults         |
+| [[file:init.el][init.el]]                       | Boring dependency-ordered module loader          |
+| =lisp/suderman-paths.el=        | XDG state paths                                  |
+| =lisp/suderman-appearance.el=   | Fonts, faces, modeline, and visual guides        |
+| =lisp/suderman-meow.el=         | Modal editing and the Normal/Motion maps         |
+| =lisp/suderman-buffers.el=      | Project-grouped IBuffer                          |
+| =lisp/suderman-completion.el=   | Vertico, Orderless, Consult, Marginalia, Embark  |
+| =lisp/suderman-files.el=        | Dired and Dirvish                                |
+| =lisp/suderman-treemacs.el=     | Frame-local project tree and IBuffer integration |
+| =lisp/suderman-keys.el=         | Global, Meta, and =SPC= leader bindings          |
+| =lisp/suderman-reload.el=       | Safe modular hot reload                          |
+| [[file:AGENTS.md][AGENTS.md]]                   | Maintenance decisions and verification rules     |
+
+The source is the final authority. This reference is meant to make the daily
+shape of the configuration easy to understand without repeating every option.
