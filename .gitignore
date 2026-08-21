@@ -1,12 +1,9 @@
-# Emacs backup/autosave files
+# Emacs backup, auto-save, and lock files
 *~
 \#*\#
 .#*
 auto-save-list/
 tramp
-
-# Lock files
-.#*
 
 # Native compilation cache
 eln-cache/
@@ -23,8 +20,11 @@ package-quickstart.el
 package-quickstart.elc
 
 # Compiled Emacs Lisp
-*.elc *.eln
+*.elc
+*.eln
+
 # Runtime/history/cache files
+projects
 recentf
 recentf-save.el
 places
@@ -75,6 +75,7 @@ local.el
 .env.*
 
 # OS/editor junk
+.plans/
 .DS_Store
 Thumbs.db
-.cache
+.cache/
