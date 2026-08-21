@@ -101,9 +101,10 @@ Important parts of the current grammar follow.
 - In normal state, `S`, quote, double quote, backtick, and `~` are
   intentionally inert. Motion buffers let these keys fall through to their
   major-mode maps.
-- Image buffers use Motion state. Their native `n` and `p` browse files while
-  `SPC` remains Meow's keypad and `,` opens IBuffer. `=`/`+` and `-` zoom, `r`
-  and `R` rotate, and `0` resets the image transformations.
+- Image buffers use Motion state. Their native `n` and `p` browse files in
+  cyclic alphabetical order while `SPC` remains Meow's keypad, `,` opens
+  IBuffer, and `h` focuses Treemacs. `=`/`+` and `-` zoom, `r` and `R` rotate,
+  and `0` resets the image transformations. Animated images autoplay and loop.
 - `c` copies, `v` pastes, `d` deletes without filling the kill ring, and `x`
   cuts a real multi-character selection before entering insert state.
 - `X` cuts the current line and enters insert state.

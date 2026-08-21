@@ -576,7 +576,7 @@ An active selection is replaced without modifying the kill ring."
   
   (meow-motion-define-key
    '("\\ \\" . suderman/alternate-buffer)
-   '("h" . meow-left)
+   '("h" . suderman/meow-left-or-treemacs)
    '("j" . meow-next)
    '("k" . meow-prev)
    '("l" . meow-right)
@@ -681,7 +681,16 @@ An active selection is replaced without modifying the kill ring."
      -1)))
 
 (defvar image-mode-map)
+(defvar image-animate-loop)
+(defvar dired-movement-style)
+(declare-function image-next-file "image-mode")
+(declare-function image-previous-file "image-mode")
 (declare-function image-transform-reset-to-initial "image-mode")
+(declare-function image-get-display-property "image-mode")
+(declare-function image-toggle-animation "image-mode")
+(declare-function image-multi-frame-p "image")
+(declare-function image-animate-timer "image")
+(declare-function suderman/treemacs-focus "suderman-treemacs")
 
 (defun suderman/image-mode-reset-point ()
   "Keep point on Image mode's display property."
@@ -692,17 +701,47 @@ An active selection is replaced without modifying the kill ring."
   (interactive)
   (image-rotate -90))
 
+(defun suderman/image-next-file (n)
+  "Visit the Nth next image in cyclic directory order."
+  (interactive "p")
+  (let ((dired-movement-style 'cycle-files))
+    (image-next-file n)))
+
+(defun suderman/image-previous-file (n)
+  "Visit the Nth previous image in cyclic directory order."
+  (interactive "p")
+  (let ((dired-movement-style 'cycle-files))
+    (image-previous-file n)))
+
+(defun suderman/meow-left-or-treemacs ()
+  "Focus Treemacs in Image mode, or move left."
+  (interactive)
+  (if (derived-mode-p 'image-mode)
+      (suderman/treemacs-focus)
+    (meow-left)))
+
 (defun suderman/meow-image-mode-setup ()
   "Prepare Image mode for Meow motion state."
-  (suderman/image-mode-reset-point)
-  (local-set-key (kbd ",") #'suderman/ibuffer-toggle)
-  (add-hook 'save-place-after-find-file-hook
-            #'suderman/image-mode-reset-point nil t)
-  (when (bound-and-true-p meow-global-mode)
-    (meow-mode 1)))
+  (when (derived-mode-p 'image-mode)
+    (suderman/image-mode-reset-point)
+    (when-let* ((image (image-get-display-property))
+                ((image-multi-frame-p image))
+                ((not (image-animate-timer image))))
+      (image-toggle-animation))
+    (local-set-key (kbd ",") #'suderman/ibuffer-toggle)
+    (local-set-key (kbd "n") #'suderman/image-next-file)
+    (local-set-key (kbd "p") #'suderman/image-previous-file)
+    (when (and (bound-and-true-p meow-global-mode)
+               (not (and (bound-and-true-p meow-mode)
+                         (bound-and-true-p meow-motion-mode)
+                         (eq meow--current-state 'motion))))
+      (meow-mode 1))))
 
 (with-eval-after-load 'image-mode
+  (setq image-animate-loop t)
   (keymap-set image-mode-map "," #'suderman/ibuffer-toggle)
+  (keymap-set image-mode-map "n" #'suderman/image-next-file)
+  (keymap-set image-mode-map "p" #'suderman/image-previous-file)
   (keymap-set image-mode-map "=" #'image-increase-size)
   (keymap-set image-mode-map "+" #'image-increase-size)
   (keymap-set image-mode-map "-" #'image-decrease-size)
@@ -754,6 +793,7 @@ An active selection is replaced without modifying the kill ring."
   (suderman/meow-reset-leader-map)
   (suderman/meow-setup-qwerty)
   (add-hook 'image-mode-hook #'suderman/meow-image-mode-setup)
+  (add-hook 'find-file-hook #'suderman/meow-image-mode-setup t)
   (meow-global-mode 1)
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
