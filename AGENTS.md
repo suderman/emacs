@@ -68,9 +68,8 @@ The current modules have clear jobs.
 - `suderman-meow.el` owns modal editing, selections, editing commands, and the
   normal and motion maps.
 - `suderman-files.el` owns Dired and Dirvish.
-- `suderman-speedbar.el` owns the customized Speedbar workflow.
-- `suderman-treemacs.el` owns the project-focused Treemacs alternative and its
-  links to IBuffer and Speedbar.
+- `suderman-treemacs.el` owns the project-focused Treemacs tree and its links to
+  IBuffer.
 - `suderman-markdown.el` owns Markdown mode behavior and Pandoc preview.
 - `suderman-languages.el` owns broad language associations and tree-sitter
   setup.
@@ -99,10 +98,7 @@ Important parts of the current grammar follow.
 - `.` repeats the last Repeat-FU edit, except immediately after `t` or `T`,
   when it repeats that till motion.
 - `,` opens project-grouped IBuffer and selects the invoking buffer.
-- `S` toggles Speedbar.
-- `'` focuses Treemacs or shuttles focus back to the editor.
-- `"` toggles Treemacs visibility without the same focus behavior.
-- Backtick and `~` are intentionally inert.
+- `S`, quote, double quote, backtick, and `~` are intentionally inert.
 - `c` copies, `v` pastes, `d` deletes without filling the kill ring, and `x`
   cuts a real multi-character selection before entering insert state.
 - `X` cuts the current line and enters insert state.
@@ -111,20 +107,21 @@ Important parts of the current grammar follow.
 - `y` is redo. `u` is Meow undo. `U` is undo in selection.
 - `C` and `V` page up and down through Meow. Vanilla `C-u`, `C-d`, and `C-v`
   are deliberately not shadowed by Meow normal bindings.
-- `SPC` is both Meow's keypad and the owned leader map. Its numeric arguments
-  are useful, for example `SPC 3 f`.
+- `SPC` is both Meow's keypad and the owned leader map. `SPC h` focuses
+  Treemacs and `SPC H` toggles its visibility. Numeric arguments are useful,
+  for example `SPC 3 f`.
 
 The full map is the source of truth. Do not duplicate every binding here.
 
-IBuffer, Speedbar, and Treemacs disable Meow locally. Their major-mode maps own
-`hjkl` and related keys. Meow's emulation maps outrank ordinary major-mode
-maps, so forgetting this causes keys to appear correct in a keymap inspection
-while doing something else in a live buffer.
+IBuffer and Treemacs disable Meow locally. Their major-mode maps own `hjkl` and
+related keys. Meow's emulation maps outrank ordinary major-mode maps, so
+forgetting this causes keys to appear correct in a keymap inspection while
+doing something else in a live buffer.
 
 ## Buffer and explorer workflow
 
-The buffer list and the two sidebars overlap on purpose, but each has a
-different job.
+The buffer list and project tree overlap on purpose, but each has a different
+job.
 
 ### IBuffer
 
@@ -137,33 +134,20 @@ the default group. There is no broad hidden-buffer blacklist.
 - `j` and `k` move by row.
 - `l` visits the selected buffer or toggles a group heading.
 - `h` visits the selected buffer, then focuses Treemacs on that file.
-- `SPC` toggles a contextual Treemacs view without leaving IBuffer.
+- `SPC` and `H` toggle a contextual Treemacs view without leaving IBuffer.
+- `m` toggles the current buffer mark without moving. `M` marks every visible
+  buffer and `t` inverts the marks, so `M t` clears them all.
 
 IBuffer relies on native `quit-window` restoration. Do not add a custom window
 stack unless native restoration has been shown to fail.
 
-### Speedbar
-
-Speedbar remains useful as a light file and buffer tree. The current module is
-large because built-in Speedbar is process-global and forgets useful state.
-The custom code gives it per-frame saved state, open intent, focus syncing,
-tree restoration, current-file reveal, smart `h` and `l`, lowercase commands,
-and Nerd Icons.
-
-Speedbar and Treemacs are mutually exclusive in a frame.
-
-Speedbar uses private or old Emacs APIs in places. Those calls are not pretty,
-but they repair failures that were reproduced in real GUI and terminal frames.
-Do not replace them with a simpler-looking call without testing frame moves,
-expanded source tags, close and reopen, current-file reveal, and focus changes.
-
 ### Treemacs
 
-Treemacs is the heavier project tree. It reveals the current file, supports
-Git and file watching, and uses Nerd Icons. It keeps a private, non-persisted
-Treemacs workspace object per frame. This is necessary because upstream
-Treemacs otherwise shares one workspace object across frame-local buffers,
-which caused stale trees, blank trees, and root-navigation crashes.
+Treemacs is the project tree. It reveals the current file, supports Git and
+file watching, and uses Nerd Icons. It keeps a private, non-persisted Treemacs
+workspace object per frame. This is necessary because upstream Treemacs
+otherwise shares one workspace object across frame-local buffers, which caused
+stale trees, blank trees, and root-navigation crashes.
 
 The module contains repair code for stale or blank frame trees. It also uses
 some Treemacs internals. Preserve this behavior unless the installed Treemacs
@@ -189,8 +173,8 @@ These choices are not immutable, but replacing one needs a concrete benefit.
   pixel-scroll precision mode remains off because it is a different feature
   and interfered with cursor-preserving keyboard paging.
 - Doom Modeline supplies the modeline and native Meow state segment.
-- Nerd Icons packages decorate Doom Modeline, IBuffer, Speedbar, and Treemacs.
-- Dirvish improves Dired, but Speedbar and Treemacs remain separate sidebars.
+- Nerd Icons packages decorate Doom Modeline, IBuffer, and Treemacs.
+- Dirvish improves Dired, while Treemacs provides the persistent project tree.
 - Tree-sitter modes are preferred where the NixOS flake supplies grammars.
 - Markdown preview uses Pandoc and a small local HTTP server. It refreshes only
   after save and preserves browser scroll position.
@@ -268,12 +252,12 @@ At minimum:
 
 For interactive behavior, also reload or restart the daemon and exercise the
 real key sequence. Check GUI and terminal frames when frame handling or Nerd
-Font rendering changes. Check two frames when changing Speedbar or Treemacs.
+Font rendering changes. Check two frames when changing Treemacs.
 
 Known warnings are not a reason to ignore new warnings. Existing warnings have
-included obsolete `when-let`, deferred Speedbar functions, upstream package
-compatibility helpers, and Org movement functions that are unknown at compile
-time. Confirm that a warning is pre-existing before calling it harmless.
+included obsolete `when-let`, upstream package compatibility helpers, and Org
+movement functions that are unknown at compile time. Confirm that a warning is
+pre-existing before calling it harmless.
 
 ## Git and generated state
 

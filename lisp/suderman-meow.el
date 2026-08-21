@@ -523,7 +523,11 @@ An active selection is replaced without modifying the kill ring."
 
 (defun suderman/meow-setup-qwerty ()
   "Install Suderman's QWERTY Meow bindings."
-  (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
+  (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
+        meow-keypad-start-keys
+        (assq-delete-all ?h meow-keypad-start-keys))
+  (dolist (key '("\\ =" "\\ ]"))
+    (define-key meow-normal-state-keymap (kbd key) nil))
   (dolist (entry '((suderman/meow-smart-beginning-of-line . "code beg")
                    (beginning-of-line . "line beg")
                    (suderman/meow-back-word . "word back")
@@ -557,7 +561,6 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-till-backward . "till back")
                    (suderman/meow-visual . "select")
                    (suderman/ibuffer-toggle . "buffers")
-                   (suderman/speedbar-toggle . "speedbar")
                    (suderman/treemacs-focus . "tree jump")
                    (suderman/treemacs-toggle . "tree tog")
                    (surround-insert . "surround")
@@ -570,9 +573,9 @@ An active selection is replaced without modifying the kill ring."
           (cdr entry)))
   
   (meow-motion-define-key
-   '("S" . suderman/speedbar-toggle)
-   '("'" . suderman/treemacs-focus)
-   '("\"" . suderman/treemacs-toggle)
+   '("S" . ignore)
+   '("'" . ignore)
+   '("\"" . ignore)
    '("`" . ignore)
    '("~" . ignore)
    '("\\ \\" . suderman/alternate-buffer)
@@ -606,13 +609,11 @@ An active selection is replaced without modifying the kill ring."
    '("]" . meow-bounds-of-thing)
    '("{" . meow-beginning-of-thing)
    '("}" . meow-end-of-thing)
-   '("\"" . suderman/treemacs-toggle)
+   '("\"" . ignore)
    '("`" . ignore)
    '("~" . ignore)
    '("\\ \\" . suderman/alternate-buffer)
-   '("\\ =" . suderman/speedbar-toggle)
    '("\\ J" . suderman/meow-join-line)
-   '("\\ ]" . suderman/speedbar-toggle)
    '("a" . suderman/meow-smart-beginning-of-line)
    '("A" . suderman/meow-buffer-beginning)
    '("b" . suderman/meow-back-word)
@@ -649,7 +650,7 @@ An active selection is replaced without modifying the kill ring."
    '("r" . suderman/meow-replace-char)
    '("R" . meow-swap-grab)
    (cons "s" surround-keymap)
-   '("S" . suderman/speedbar-toggle)
+   '("S" . ignore)
    '("t" . suderman/meow-till)
    '("T" . suderman/meow-till-backward)
    '("u" . meow-undo)
@@ -664,7 +665,7 @@ An active selection is replaced without modifying the kill ring."
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
    '("Z" . suderman/meow-buffer-end)
-   '("'" . suderman/treemacs-focus)
+   '("'" . ignore)
    '("/" . meow-visit)
    '("<escape>" . meow-cancel-selection)))
 

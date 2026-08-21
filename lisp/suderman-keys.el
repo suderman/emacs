@@ -199,6 +199,8 @@
     "SPC d" "dirvish"
     "SPC e" "explorer"
     "SPC f" "files"
+    "SPC h" "focus tree"
+    "SPC H" "toggle tree"
     "SPC p" "projects"
     "SPC q" "quit/reload"
     "SPC s" "search"
@@ -224,6 +226,8 @@
  '("," . consult-buffer)
  '(":" . execute-extended-command)
  '("\\" . suderman/alternate-buffer)
+ '("h" . suderman/treemacs-focus)
+ '("H" . suderman/treemacs-toggle)
  '("d" . dirvish)
  '("e" . dirvish-side)
  (cons "b" suderman/leader-buffer-map)

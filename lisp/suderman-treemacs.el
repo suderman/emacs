@@ -1,16 +1,13 @@
 ;;; suderman-treemacs.el --- Project-focused Treemacs browsing -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Configure Treemacs as a project-focused alternative to Speedbar.
+;; Configure Treemacs as a project-focused file tree.
 
 ;;; Code:
 
 (require 'use-package)
 (require 'suderman-buffers)
-(require 'suderman-speedbar)
 (require 'suderman-windows)
-
-(defvar speedbar-mode-map)
 
 (use-package treemacs
   :demand t
@@ -112,18 +109,11 @@
 
 (defun suderman/treemacs--show (select &optional context-buffer)
   "Show Treemacs for CONTEXT-BUFFER, selecting it when SELECT."
-  (let* ((selected-buffer (window-buffer (selected-window)))
-         (source-window
-          (if (with-current-buffer selected-buffer
-                (derived-mode-p 'speedbar-mode))
-              (get-mru-window (selected-frame) nil t t)
-            (selected-window)))
+  (let* ((source-window (selected-window))
          (source-buffer (if (buffer-live-p context-buffer)
                             context-buffer
                           (window-buffer source-window)))
          (file (buffer-local-value 'buffer-file-name source-buffer)))
-    (when (suderman/speedbar-visible-p)
-      (suderman/speedbar-toggle))
     (with-current-buffer source-buffer
       (suderman/treemacs--ensure-frame-workspace)
       (treemacs-add-and-display-current-project-exclusively))
@@ -193,10 +183,6 @@
   (if (treemacs-get-local-window)
       (suderman/treemacs-close)
     (suderman/treemacs--show nil)))
-
-(defun suderman/treemacs-close-before-speedbar (&rest _)
-  "Close the current frame's Treemacs before showing Speedbar."
-  (suderman/treemacs-close))
 
 (defun suderman/treemacs-root-up ()
   "Move this frame's Treemacs root one directory upward."
@@ -293,12 +279,8 @@ With prefix ARG, expand recursively."
   (when (executable-find "git")
     (treemacs-git-mode (if (executable-find "python3") 'deferred 'simple)))
 
-  (advice-remove 'suderman/speedbar-toggle
-                 #'suderman/treemacs-close-before-speedbar)
-  (advice-add 'suderman/speedbar-toggle :before
-              #'suderman/treemacs-close-before-speedbar)
-
   (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-focus-treemacs)
+  (keymap-set ibuffer-mode-map "H" #'suderman/ibuffer-toggle-treemacs)
   (keymap-unset ibuffer-mode-map "i" t)
   (keymap-set ibuffer-mode-map "SPC" #'suderman/ibuffer-toggle-treemacs)
   (keymap-set treemacs-mode-map "j" #'treemacs-next-line)
@@ -320,11 +302,11 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "t" #'treemacs-filewatch-mode)
   (keymap-set treemacs-mode-map "?" #'treemacs-common-helpful-hydra)
   (keymap-set treemacs-mode-map "q" #'suderman/treemacs-toggle)
-  (keymap-set treemacs-mode-map "'" #'suderman/treemacs-focus)
-  (keymap-set treemacs-mode-map "\"" #'suderman/treemacs-toggle)
+  (keymap-set treemacs-mode-map "'" #'ignore)
+  (keymap-set treemacs-mode-map "\"" #'ignore)
   (keymap-set treemacs-mode-map "`" #'ignore)
   (keymap-set treemacs-mode-map "~" #'ignore)
-  (keymap-set treemacs-mode-map "S" #'suderman/speedbar-toggle)
+  (keymap-set treemacs-mode-map "S" #'ignore)
   (keymap-set treemacs-mode-map "M-h" #'suderman/window-left)
   (keymap-set treemacs-mode-map "M-j" #'windmove-down)
   (keymap-set treemacs-mode-map "M-k" #'windmove-up)
@@ -332,13 +314,7 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "M-H" #'suderman/shrink-window-width)
   (keymap-set treemacs-mode-map "M-J" #'suderman/enlarge-window-height)
   (keymap-set treemacs-mode-map "M-K" #'suderman/shrink-window-height)
-  (keymap-set treemacs-mode-map "M-L" #'suderman/enlarge-window-width)
-
-  (with-eval-after-load 'speedbar
-    (keymap-set speedbar-mode-map "'" #'suderman/treemacs-focus)
-    (keymap-set speedbar-mode-map "\"" #'suderman/treemacs-toggle)
-    (keymap-set speedbar-mode-map "`" #'ignore)
-    (keymap-set speedbar-mode-map "~" #'ignore)))
+  (keymap-set treemacs-mode-map "M-L" #'suderman/enlarge-window-width))
 
 (use-package treemacs-nerd-icons
   :after treemacs

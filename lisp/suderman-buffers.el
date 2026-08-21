@@ -36,6 +36,26 @@
       (ibuffer-visit-buffer)
     (ibuffer-toggle-filter-group)))
 
+(defun suderman/ibuffer-toggle-mark ()
+  "Toggle the ordinary mark at point without moving to another row."
+  (interactive)
+  (let ((group (get-text-property (point) 'ibuffer-filter-group-name)))
+    (cond
+     (group
+      (ibuffer-toggle-marks group))
+     ((ibuffer-current-buffer)
+      (ibuffer-set-mark
+       (if (eq (ibuffer-current-mark) ibuffer-marked-char)
+           ?\s
+         ibuffer-marked-char)))
+     (t
+      (user-error "No buffer at point")))))
+
+(defun suderman/ibuffer-mark-all ()
+  "Mark every visible buffer row."
+  (interactive)
+  (ibuffer-mark-on-buffer #'identity))
+
 (defun suderman/ibuffer-setup ()
   "Apply project grouping and display defaults to IBuffer."
   (add-hook 'meow-mode-hook #'suderman/ibuffer-disable-meow nil t)
@@ -69,7 +89,11 @@
   (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-toggle)
   (keymap-set ibuffer-mode-map "j" #'ibuffer-forward-line)
   (keymap-set ibuffer-mode-map "k" #'ibuffer-backward-line)
-  (keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open))
+  (keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open)
+  (keymap-set ibuffer-mode-map "m" #'suderman/ibuffer-toggle-mark)
+  (keymap-set ibuffer-mode-map "M" #'suderman/ibuffer-mark-all)
+  (keymap-unset ibuffer-mode-map "u")
+  (keymap-unset ibuffer-mode-map "U"))
 
 (use-package ibuffer-project
   :after ibuffer
