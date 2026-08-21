@@ -25,6 +25,7 @@
 (require 'suderman-pickers)
 (require 'suderman-meow)
 (require 'suderman-files)
+(require 'suderman-speedbar)
 (require 'suderman-markdown)
 (require 'suderman-languages)
 (require 'suderman-keys)
