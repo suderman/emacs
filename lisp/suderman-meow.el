@@ -557,6 +557,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-till-backward . "till back")
                    (suderman/meow-visual . "select")
                    (suderman/speedbar-toggle . "speedbar")
+                   (suderman/treemacs-toggle . "treemacs")
                    (surround-insert . "surround")
                    (suderman/meow-next-word . "word fwd")
                    (suderman/meow-next-symbol . "sym fwd")
@@ -568,7 +569,8 @@ An active selection is replaced without modifying the kill ring."
   
   (meow-motion-define-key
    '("S" . suderman/speedbar-toggle)
-   '("`" . suderman/speedbar-toggle)
+   '("`" . suderman/treemacs-toggle)
+   '("~" . ignore)
    '("\\ \\" . suderman/alternate-buffer)
    '("h" . meow-left)
    '("j" . meow-next)
@@ -600,7 +602,8 @@ An active selection is replaced without modifying the kill ring."
    '("]" . meow-bounds-of-thing)
    '("{" . meow-beginning-of-thing)
    '("}" . meow-end-of-thing)
-   '("`" . suderman/speedbar-toggle)
+   '("`" . suderman/treemacs-toggle)
+   '("~" . ignore)
    '("\\ \\" . suderman/alternate-buffer)
    '("\\ =" . suderman/speedbar-toggle)
    '("\\ J" . suderman/meow-join-line)

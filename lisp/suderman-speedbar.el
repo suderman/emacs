@@ -89,6 +89,11 @@
        (buffer-live-p speedbar-buffer)
        (get-buffer-window speedbar-buffer t)))
 
+(defun suderman/speedbar-visible-p (&optional frame)
+  "Return non-nil when Speedbar is visible in FRAME."
+  (when-let* ((window (suderman/speedbar--window)))
+    (eq (window-frame window) (or frame (selected-frame)))))
+
 (defun suderman/speedbar--hide ()
   "Save and close the visible Speedbar without changing open intent."
   (when-let* ((window (suderman/speedbar--window)))
@@ -405,7 +410,6 @@ With universal argument ARG, flush cached data while expanding."
   (keymap-set speedbar-mode-map "v" #'suderman/speedbar-previous-view)
   (keymap-set speedbar-mode-map "?" #'suderman/speedbar-show-keybindings)
   (keymap-set speedbar-mode-map "S" #'suderman/speedbar-toggle)
-  (keymap-set speedbar-mode-map "`" #'suderman/speedbar-toggle)
   (keymap-set speedbar-mode-map "q" #'suderman/speedbar-toggle)
   (keymap-set speedbar-mode-map "M-h" #'suderman/window-left)
   (keymap-set speedbar-mode-map "M-j" #'windmove-down)

@@ -26,6 +26,7 @@
 (require 'suderman-meow)
 (require 'suderman-files)
 (require 'suderman-speedbar)
+(require 'suderman-treemacs)
 (require 'suderman-markdown)
 (require 'suderman-languages)
 (require 'suderman-keys)
