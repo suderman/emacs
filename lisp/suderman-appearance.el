@@ -103,6 +103,18 @@
   "Disable line numbers in the current special-mode buffer."
   (display-line-numbers-mode -1))
 
+(defun suderman/disable-line-numbers-in-meow-cheatsheet (&rest _)
+  "Disable line numbers in Meow's read-only cheatsheet."
+  (display-line-numbers-mode -1))
+
+(defun suderman/meow-describe-keymap-without-line-numbers (function keymap)
+  "Call FUNCTION with KEYMAP without a line-number gutter."
+  (let ((line-numbers display-line-numbers))
+    (setq display-line-numbers nil)
+    (unwind-protect
+        (funcall function keymap)
+      (setq display-line-numbers line-numbers))))
+
 (setq-default hl-line-range-function #'suderman/hl-line-range)
 (global-hl-line-mode 1)
 (add-hook 'special-mode-hook #'suderman/disable-line-numbers-in-special-mode)
@@ -111,6 +123,12 @@
   (with-current-buffer buffer
     (when (derived-mode-p 'special-mode)
       (suderman/disable-line-numbers-in-special-mode))))
+(with-eval-after-load 'meow-cheatsheet
+  (advice-add 'meow-cheatsheet :after
+              #'suderman/disable-line-numbers-in-meow-cheatsheet))
+(with-eval-after-load 'meow-keypad
+  (advice-add 'meow-describe-keymap :around
+              #'suderman/meow-describe-keymap-without-line-numbers))
 (setq-default display-fill-column-indicator-column 100)
 (global-display-fill-column-indicator-mode 1)
 
