@@ -47,6 +47,15 @@
       (unless (file-directory-p target)
         (dired-goto-file target)))))
 
+(defun suderman/dirvish-ibuffer ()
+  "Replace full-frame Dirvish with IBuffer."
+  (interactive)
+  (when-let* ((session (dirvish-curr))
+              ((dv-curr-layout session)))
+    (dirvish-quit))
+  (set-buffer (window-buffer (selected-window)))
+  (suderman/ibuffer-toggle))
+
 (defun suderman/dired-disable-meow ()
   "Disable Meow in the current Dired or Dirvish buffer."
   (if (bound-and-true-p meow-mode)
@@ -260,7 +269,7 @@
   (add-hook 'dirvish-directory-view-mode-hook #'suderman/dired-setup)
   (dolist (map (list dired-mode-map dirvish-mode-map))
     (keymap-set map "SPC" #'meow-keypad)
-    (keymap-set map "," #'suderman/ibuffer-toggle)
+    (keymap-set map "," #'suderman/dirvish-ibuffer)
     (keymap-set map "." #'suderman/dirvish)
     (keymap-set map "?" #'dirvish-dispatch)
     (keymap-set map "H" #'dirvish-history-go-backward)

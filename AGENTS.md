@@ -130,12 +130,12 @@ Dirvish also disables Meow locally so Dired's map can own `hjkl`, marking, and
 file operations. `SPC` invokes Meow's keypad directly without enabling a Meow
 state. Its full-frame layout follows Yazi's parent/current/preview proportions,
 but its commands remain Dired commands rather than a second Yazi emulation.
-Comma opens IBuffer, period closes Dirvish, and dotfiles start hidden in the
-parent and current panes while `i` toggles them together without messages. The
-preview remains unfiltered. `c`, `x`, and `v` stage copy, stage cut, and paste
-operations through Dirvish's transfer engine. Deleting a file automatically
-kills its unmodified visiting buffer; modified buffers remain protected by a
-confirmation.
+Comma closes the full-frame layout before opening IBuffer, period closes
+Dirvish, and dotfiles start hidden in the parent and current panes while `i`
+toggles them together without messages. The preview remains unfiltered. `c`,
+`x`, and `v` stage copy, stage cut, and paste operations through Dirvish's
+transfer engine. Deleting a file automatically kills its unmodified visiting
+buffer; modified buffers remain protected by a confirmation.
 
 ## Buffer and explorer workflow
 

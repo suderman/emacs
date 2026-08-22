@@ -204,7 +204,7 @@ node without visiting it.
 | Dirvish | =c / x / v=           | Stage copy / stage cut / paste              |
 | Dirvish | =d / X=               | Flag for deletion / delete flagged files    |
 | Dirvish | =a / r=               | Create / rename                             |
-| Dirvish | =. / ,=               | Close Dirvish / open IBuffer                |
+| Dirvish | =. / ,=               | Close Dirvish / replace it with IBuffer     |
 | Dirvish | =g / i=               | File information / toggle dotfiles          |
 | Dirvish | =s / z=               | Sort / quick access                         |
 | Dirvish | =SPC=                 | Meow keypad                                 |
@@ -219,6 +219,8 @@ node without visiting it.
 
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
 marked. Copies remain staged after =v=; cuts clear once the move starts.
+Comma closes the full-frame Dirvish layout before opening IBuffer, so closing
+IBuffer restores the prior editor window.
 Dotfiles start hidden in the parent and current panes, and =i= toggles them
 together without status messages. The preview remains unfiltered. Deleting a
 file kills its unmodified visiting buffer, while modified buffers still require
