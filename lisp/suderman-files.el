@@ -14,8 +14,15 @@
 (defvar dirvish-quick-access-entries)
 (defvar dirvish-yank-sources)
 (defvar global-hl-line-mode)
+(declare-function dirvish--build-layout "dirvish")
+(declare-function dirvish--create-parent-buffer "dirvish")
+(declare-function dirvish "dirvish")
+(declare-function dirvish-curr "dirvish")
+(declare-function dirvish-quit "dirvish")
 (declare-function dirvish-move "dirvish-yank")
 (declare-function dirvish-yank "dirvish-yank")
+(declare-function dv-curr-layout "dirvish")
+(declare-function dv-index "dirvish")
 (declare-function global-hl-line-unhighlight "hl-line")
 (declare-function meow--disable "meow")
 (declare-function meow-keypad "meow-keypad")
@@ -25,6 +32,20 @@
   "Revert the current buffer without confirmation or auto-save recovery."
   (interactive)
   (revert-buffer t t))
+
+(defun suderman/dirvish (&optional path)
+  "Toggle full-frame Dirvish for PATH, selecting it when it is a file."
+  (interactive)
+  (if (and (fboundp 'dirvish-curr) (dirvish-curr))
+      (dirvish-quit)
+    (let* ((target (expand-file-name (or path buffer-file-name
+                                         default-directory)))
+           (directory (if (file-directory-p target)
+                          target
+                        (file-name-directory target))))
+      (dirvish directory)
+      (unless (file-directory-p target)
+        (dired-goto-file target)))))
 
 (defun suderman/dired-disable-meow ()
   "Disable Meow in the current Dired or Dirvish buffer."
@@ -58,7 +79,8 @@
 (defun suderman/dired-setup ()
   "Prepare a Dired or Dirvish directory buffer."
   (setq-local dired-omit-files "\\`\\."
-              dired-omit-extensions nil)
+              dired-omit-extensions nil
+              dired-omit-verbose nil)
   (add-hook 'meow-mode-hook #'suderman/dired-disable-meow nil t)
   (add-hook 'display-line-numbers-mode-hook
             #'suderman/dired-disable-line-numbers nil t)
@@ -75,6 +97,30 @@
 (defun suderman/dired-hide-dotfiles ()
   "Hide dotfiles when a directory buffer is first created."
   (dired-omit-mode 1))
+
+(defun suderman/dirvish-create-parent-buffer
+    (function session directory index level)
+  "Call FUNCTION and match the parent pane to SESSION's dotfile visibility."
+  (let ((buffer (funcall function session directory index level))
+        (omit (with-current-buffer (cdr (dv-index session))
+                (bound-and-true-p dired-omit-mode))))
+    (with-current-buffer buffer
+      (setq-local dired-directory directory
+                  dired-omit-files "\\`\\."
+                  dired-omit-extensions nil
+                  dired-omit-mode omit)
+      (when omit
+        (let ((dired-omit-verbose nil))
+          (dired-omit-expunge))))
+    buffer))
+
+(defun suderman/dirvish-toggle-dotfiles ()
+  "Toggle dotfiles in the current Dirvish layout."
+  (interactive)
+  (dired-omit-mode (if dired-omit-mode -1 1))
+  (when-let* ((session (dirvish-curr))
+              ((dv-curr-layout session)))
+    (dirvish--build-layout session)))
 
 (defun suderman/dired-toggle-mark ()
   "Toggle the current file's ordinary mark without moving."
@@ -155,6 +201,22 @@
           (and buffer (buffer-modified-p buffer))))
     (funcall function file)))
 
+(defun suderman/ibuffer-dirvish ()
+  "Open Dirvish for the buffer or project group at point."
+  (interactive)
+  (let* ((buffer (ibuffer-current-buffer))
+         (group (get-text-property (line-beginning-position)
+                                   'ibuffer-filter-group-name))
+         (target
+          (cond
+           ((buffer-live-p buffer)
+            (with-current-buffer buffer
+              (or buffer-file-name default-directory)))
+           ((and (stringp group) (file-directory-p group))
+            (file-name-as-directory (expand-file-name group)))
+           (t default-directory))))
+    (suderman/dirvish target)))
+
 (advice-remove 'dired-clean-up-after-deletion
                #'suderman/dired-clean-up-after-deletion)
 (advice-add 'dired-clean-up-after-deletion :around
@@ -162,6 +224,7 @@
 
 (add-hook 'dired-mode-hook #'suderman/dired-setup)
 (add-hook 'dired-mode-hook #'suderman/dired-hide-dotfiles t)
+(keymap-set ibuffer-mode-map "." #'suderman/ibuffer-dirvish)
 
 (use-package dirvish
   :commands (dirvish dirvish-side)
@@ -171,7 +234,7 @@
         dirvish-default-layout '(1 0.125 0.5)
         dirvish-mode-line-format
         '(:left (sort symlink yank) :right (file-size file-modes index))
-        dirvish-preview-dired-sync-omit t
+        dirvish-preview-dired-sync-omit nil
         dirvish-quick-access-entries
         '(("h" "~/" "Home")
           ("d" "~/Downloads/" "Downloads")
@@ -190,11 +253,15 @@
   :config
   (dirvish-override-dired-mode 1)
   (require 'dirvish-yank)
+  (advice-remove 'dirvish--create-parent-buffer
+                 #'suderman/dirvish-create-parent-buffer)
+  (advice-add 'dirvish--create-parent-buffer :around
+              #'suderman/dirvish-create-parent-buffer)
   (add-hook 'dirvish-directory-view-mode-hook #'suderman/dired-setup)
   (dolist (map (list dired-mode-map dirvish-mode-map))
     (keymap-set map "SPC" #'meow-keypad)
     (keymap-set map "," #'suderman/ibuffer-toggle)
-    (keymap-set map "." #'dired-omit-mode)
+    (keymap-set map "." #'suderman/dirvish)
     (keymap-set map "?" #'dirvish-dispatch)
     (keymap-set map "H" #'dirvish-history-go-backward)
     (keymap-set map "L" #'dirvish-history-go-forward)
@@ -203,7 +270,8 @@
     (keymap-set map "a" #'suderman/dired-create-item)
     (keymap-set map "c" #'suderman/dired-copy-files)
     (keymap-set map "h" #'dired-up-directory)
-    (keymap-set map "i" #'dirvish-file-info-menu)
+    (keymap-set map "g" #'dirvish-file-info-menu)
+    (keymap-set map "i" #'suderman/dirvish-toggle-dotfiles)
     (keymap-set map "j" #'dired-next-line)
     (keymap-set map "k" #'dired-previous-line)
     (keymap-set map "l" #'dired-find-file)

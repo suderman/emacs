@@ -95,16 +95,18 @@ Important parts of the current grammar follow.
 - `m`, `mm`, and `mmm` select a word, symbol, and enclosing block.
 - `M`, `MM`, and `MMM` select a rectangle, line, and whole buffer.
 - `s` is the full Surround prefix. `s s` inserts a surround.
-- `.` repeats the last Repeat-FU edit, except immediately after `t` or `T`,
+- `'` repeats the last Repeat-FU edit, except immediately after `t` or `T`,
   when it repeats that till motion.
 - `,` opens project-grouped IBuffer and selects the invoking buffer.
-- In normal state, `S`, quote, double quote, backtick, and `~` are
+- `.` opens full-frame Dirvish for the current file or directory.
+- In normal state, `S`, double quote, backtick, and `~` are
   intentionally inert. Motion buffers let these keys fall through to their
   major-mode maps.
 - Image buffers use Motion state. Their native `n` and `p` browse files in
   cyclic alphabetical order while `SPC` remains Meow's keypad, `,` opens
-  IBuffer, and `h` focuses Treemacs. `=`/`+` and `-` zoom, `r` and `R` rotate,
-  and `0` resets the image transformations. Animated images autoplay and loop.
+  IBuffer, `.` opens Dirvish, and `h` focuses Treemacs. `=`/`+` and `-` zoom,
+  `r` and `R` rotate, and `0` resets the image transformations. Animated images
+  autoplay and loop.
 - `c` copies, `v` pastes, `d` deletes without filling the kill ring, and `x`
   cuts a real multi-character selection before entering insert state.
 - `X` cuts the current line and enters insert state.
@@ -128,10 +130,12 @@ Dirvish also disables Meow locally so Dired's map can own `hjkl`, marking, and
 file operations. `SPC` invokes Meow's keypad directly without enabling a Meow
 state. Its full-frame layout follows Yazi's parent/current/preview proportions,
 but its commands remain Dired commands rather than a second Yazi emulation.
-Comma opens IBuffer, dotfiles start hidden and period toggles them, and `c`, `x`,
-and `v` stage copy, stage cut, and paste operations through Dirvish's transfer
-engine. Deleting a file automatically kills its unmodified visiting buffer;
-modified buffers remain protected by a confirmation.
+Comma opens IBuffer, period closes Dirvish, and dotfiles start hidden in the
+parent and current panes while `i` toggles them together without messages. The
+preview remains unfiltered. `c`, `x`, and `v` stage copy, stage cut, and paste
+operations through Dirvish's transfer engine. Deleting a file automatically
+kills its unmodified visiting buffer; modified buffers remain protected by a
+confirmation.
 
 ## Buffer and explorer workflow
 
@@ -152,6 +156,7 @@ is no broad hidden-buffer blacklist.
   group heading.
 - `h` visits the selected buffer, then focuses Treemacs on that file.
 - `SPC` and `H` toggle a contextual Treemacs view without leaving IBuffer.
+- `.` opens Dirvish for the selected buffer or project heading.
 - `m` toggles the current buffer mark without moving. `M` marks every visible
   buffer and `t` inverts the marks, so `M t` clears them all.
 
@@ -171,10 +176,10 @@ some Treemacs internals. Preserve this behavior unless the installed Treemacs
 version has fixed the underlying shared-workspace assumptions and the old
 failures have been retested.
 
-Treemacs and IBuffer have contextual transitions. A selected file, project
+Treemacs and IBuffer have contextual transitions. Period opens Dirvish for the
+selected buffer, project heading, or tree node. A selected file, project
 heading, current editor window, and current frame all matter. Test those flows
-with real windows instead of calling commands in an arbitrary temporary
-buffer.
+with real windows instead of calling commands in an arbitrary temporary buffer.
 
 ## Package choices that already have a reason
 
@@ -183,8 +188,8 @@ These choices are not immutable, but replacing one needs a concrete benefit.
 - Built-in `project.el` is the project API. Do not add Projectile alongside it.
 - Vertico, Orderless, Consult, Marginalia, and Embark form the minibuffer stack.
 - Meow owns modal editing.
-- Repeat-FU owns dot repeat. Its Meow preset records edits across insert-state
-  transitions and keeps history across buffers.
+- Repeat-FU owns edit repeat on apostrophe. Its Meow preset records edits across
+  insert-state transitions and keeps history across buffers.
 - `surround` owns pair insertion, deletion, change, and pair selection.
 - `scroll-on-jump` animates keyboard pages and selected jumps. Built-in
   pixel-scroll precision mode remains off because it is a different feature

@@ -10,6 +10,8 @@
 (require 'subr-x)
 (require 'use-package)
 
+(declare-function suderman/dirvish "suderman-files")
+
 ;;;; Leader integration
 
 (defvar suderman/meow-leader-map (make-sparse-keymap)
@@ -563,6 +565,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-till-backward . "till back")
                    (suderman/meow-visual . "select")
                    (suderman/ibuffer-toggle . "buffers")
+                   (suderman/dirvish . "files")
                    (suderman/treemacs-focus . "tree jump")
                    (suderman/treemacs-toggle . "tree tog")
                    (surround-insert . "surround")
@@ -601,7 +604,7 @@ An active selection is replaced without modifying the kill ring."
    '("<" . meow-left-expand)
    '(">" . meow-right-expand)
    '("," . suderman/ibuffer-toggle)
-   '("." . suderman/meow-repeat)
+   '("." . suderman/dirvish)
    '("[" . meow-inner-of-thing)
    '("]" . meow-bounds-of-thing)
    '("{" . meow-beginning-of-thing)
@@ -662,7 +665,7 @@ An active selection is replaced without modifying the kill ring."
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
    '("Z" . suderman/meow-buffer-end)
-   '("'" . ignore)
+   '("'" . suderman/meow-repeat)
    '("/" . meow-visit)
    '("<escape>" . meow-cancel-selection)))
 
@@ -729,6 +732,7 @@ An active selection is replaced without modifying the kill ring."
                 ((not (image-animate-timer image))))
       (image-toggle-animation))
     (local-set-key (kbd ",") #'suderman/ibuffer-toggle)
+    (local-set-key (kbd ".") #'suderman/dirvish)
     (local-set-key (kbd "n") #'suderman/image-next-file)
     (local-set-key (kbd "p") #'suderman/image-previous-file)
     (when (and (bound-and-true-p meow-global-mode)
@@ -740,6 +744,7 @@ An active selection is replaced without modifying the kill ring."
 (with-eval-after-load 'image-mode
   (setq image-animate-loop t)
   (keymap-set image-mode-map "," #'suderman/ibuffer-toggle)
+  (keymap-set image-mode-map "." #'suderman/dirvish)
   (keymap-set image-mode-map "n" #'suderman/image-next-file)
   (keymap-set image-mode-map "p" #'suderman/image-previous-file)
   (keymap-set image-mode-map "=" #'image-increase-size)

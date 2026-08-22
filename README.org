@@ -15,9 +15,10 @@ IBuffer shows open buffers by project, and Treemacs keeps the current project
 visible. Vertico, Orderless, Consult, Marginalia, and Embark handle minibuffer
 completion.
 
-Some choices are a little odd on purpose. Comma opens IBuffer. Dot repeats
-edits. =SPC= is both Meow's keypad and my leader key. IBuffer and Treemacs pass
-file and project context back and forth instead of acting like separate tools.
+Some choices are a little odd on purpose. Comma opens IBuffer, period opens
+Dirvish, and apostrophe repeats edits. =SPC= is both Meow's keypad and my leader
+key. IBuffer and Treemacs pass file and project context back and forth instead
+of acting like separate tools.
 
 The editing map starts with selections, then applies changes to them. Dirvish
 cleans up Dired. Markdown preview runs Pandoc and refreshes after each save.
@@ -71,7 +72,7 @@ Which-Key shows each leader prefix while I type it.
 | =#=         | Go to line                                      |
 | =%=         | Jump to matching delimiter or item              |
 | =C / V=     | Page up / down                                  |
-| =,=         | Open project-grouped IBuffer                    |
+| =, / .=     | Open project-grouped IBuffer / Dirvish          |
 | =q / Q=     | Quit the view / kill the current buffer         |
 
 Movement expands an active Meow selection.
@@ -95,7 +96,7 @@ Movement expands an active Meow selection.
 | =J / K=       | Move selected lines down / up                         |
 | =u / U=       | One-way undo / one-way undo inside selection         |
 | =y=           | Redo                                                 |
-| =.=           | Repeat the last edit                                 |
+| ='=           | Repeat the last edit                                 |
 
 =d= does not fill the kill ring. =x= cuts a real multi-character selection,
 then enters Insert state.
@@ -106,11 +107,11 @@ then enters Insert state.
 |---------+----------------------------------------------------------|
 | =n / p= | Search forward / backward                               |
 | =t / T= | Move till a character forward / backward                |
-| =.=     | Repeat the last till immediately after =t= or =T=       |
+| ='=     | Repeat the last till immediately after =t= or =T=       |
 | =/=     | Visit a selected thing                                  |
 
-Repeat-FU records edits across Insert-state transitions and keeps dot-repeat
-history across buffers.
+Repeat-FU records edits across Insert-state transitions and keeps repeat history
+across buffers.
 
 ** SPC leader
 
@@ -166,6 +167,7 @@ maps win.
 | =m=       | Toggle the current mark without moving                       |
 | =M=       | Mark every visible buffer                                    |
 | =t=       | Invert marks; =M t= clears all marks                         |
+| =.=       | Open Dirvish for the selected buffer or project              |
 | =,=       | Close IBuffer and restore the previous window                |
 
 Left click visits a buffer. Middle click toggles its mark. Non-project images
@@ -185,6 +187,7 @@ have their own group; other non-project buffers remain in the default group.
 | =g=          | Refresh                                              |
 | =t=          | Toggle file watching                                 |
 | =,=          | Open IBuffer in the selected tree context            |
+| =.=          | Open Dirvish in the selected tree context            |
 | =q=          | Close Treemacs                                       |
 | =?=          | Treemacs help                                        |
 
@@ -201,14 +204,14 @@ node without visiting it.
 | Dirvish | =c / x / v=           | Stage copy / stage cut / paste              |
 | Dirvish | =d / X=               | Flag for deletion / delete flagged files    |
 | Dirvish | =a / r=               | Create / rename                             |
-| Dirvish | =. / ,=               | Toggle dotfiles / open IBuffer              |
-| Dirvish | =g / s / z=           | Refresh / sort / quick access               |
-| Dirvish | =i / ?=               | File information / command menu             |
+| Dirvish | =. / ,=               | Close Dirvish / open IBuffer                |
+| Dirvish | =g / i=               | File information / toggle dotfiles          |
+| Dirvish | =s / z=               | Sort / quick access                         |
 | Dirvish | =SPC=                 | Meow keypad                                 |
 | Dirvish | =q=                   | Close Dirvish                               |
 | Image   | =n / p=               | Browse images in cyclic alphabetical order |
 | Image   | =h=                   | Focus Treemacs                              |
-| Image   | =,=                   | Open IBuffer                                |
+| Image   | =, / .=               | Open IBuffer / Dirvish                      |
 | Image   | =SPC=                 | Keep Meow's keypad                         |
 | Image   | =+= / === / =-=       | Zoom in / zoom in / zoom out               |
 | Image   | =r / R=               | Rotate clockwise / counterclockwise        |
@@ -216,8 +219,11 @@ node without visiting it.
 
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
 marked. Copies remain staged after =v=; cuts clear once the move starts.
-Dotfiles start hidden. Deleting a file kills its unmodified visiting buffer,
-while modified buffers still require confirmation.
+Dotfiles start hidden in the parent and current panes, and =i= toggles them
+together without status messages. The preview remains unfiltered. Deleting a
+file kills its unmodified visiting buffer, while modified buffers still require
+confirmation. Refresh is available through =? g= when another program changes
+the directory.
 
 Animated images autoplay and loop.
 

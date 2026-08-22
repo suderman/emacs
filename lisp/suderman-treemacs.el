@@ -7,6 +7,7 @@
 
 (require 'use-package)
 (require 'suderman-buffers)
+(require 'suderman-files)
 (require 'suderman-windows)
 
 (use-package treemacs
@@ -291,6 +292,15 @@ With prefix ARG, expand recursively."
     (treemacs-goto-file-node
      (if directoryp (directory-file-name path) path))))
 
+(defun suderman/treemacs-dirvish ()
+  "Open Dirvish for the file or directory at point."
+  (interactive)
+  (let* ((target (treemacs--nearest-path (treemacs-current-button)))
+         (editor (or (get-mru-window (selected-frame) nil t t)
+                     (user-error "No editor window available"))))
+    (select-window editor)
+    (suderman/dirvish target)))
+
 (use-package treemacs
   :config
   (add-hook 'treemacs-mode-hook #'suderman/treemacs-setup)
@@ -312,6 +322,7 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "j" #'treemacs-next-line)
   (keymap-set treemacs-mode-map "k" #'treemacs-previous-line)
   (keymap-set treemacs-mode-map "," #'suderman/treemacs-ibuffer)
+  (keymap-set treemacs-mode-map "." #'suderman/treemacs-dirvish)
   (keymap-set treemacs-mode-map "h" #'suderman/treemacs-smart-close)
   (keymap-set treemacs-mode-map "l" #'suderman/treemacs-smart-open)
   (keymap-set treemacs-mode-map "H" #'suderman/treemacs-collapse-recursively)
