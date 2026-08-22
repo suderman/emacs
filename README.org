@@ -207,6 +207,7 @@ node without visiting it.
 | Dirvish | =. / ,=               | Close Dirvish / replace it with IBuffer     |
 | Dirvish | =g / i=               | File information / toggle dotfiles          |
 | Dirvish | =s / z=               | Sort / quick access                         |
+| Dirvish | =/ / ?=               | Search here / show current bindings         |
 | Dirvish | =SPC=                 | Meow keypad                                 |
 | Dirvish | =q=                   | Close Dirvish                               |
 | Image   | =n / p=               | Browse images in cyclic alphabetical order |
@@ -224,8 +225,10 @@ IBuffer restores the prior editor window.
 Dotfiles start hidden in the parent and current panes, and =i= toggles them
 together without status messages. The preview remains unfiltered. Deleting a
 file kills its unmodified visiting buffer, while modified buffers still require
-confirmation. Refresh is available through =? g= when another program changes
-the directory.
+confirmation. Use =M-x revert-buffer= when another program changes the
+directory. The =?= popup reads the current bindings instead of Dirvish's default
+command menu. The original menu remains available through =M-x
+dirvish-dispatch=.
 
 Animated images autoplay and loop.
 

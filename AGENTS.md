@@ -135,7 +135,10 @@ Dirvish, and dotfiles start hidden in the parent and current panes while `i`
 toggles them together without messages. The preview remains unfiltered. `c`,
 `x`, and `v` stage copy, stage cut, and paste operations through Dirvish's
 transfer engine. Deleting a file automatically kills its unmodified visiting
-buffer; modified buffers remain protected by a confirmation.
+buffer; modified buffers remain protected by a confirmation. Slash searches
+below the current directory. Question mark shows a compact Which-Key view
+generated from the effective bindings; the upstream Dirvish dispatcher remains
+available through `M-x`.
 
 ## Buffer and explorer workflow
 
