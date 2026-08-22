@@ -124,6 +124,15 @@ related keys. Meow's emulation maps outrank ordinary major-mode maps, so
 forgetting this causes keys to appear correct in a keymap inspection while
 doing something else in a live buffer.
 
+Dirvish also disables Meow locally so Dired's map can own `hjkl`, marking, and
+file operations. `SPC` invokes Meow's keypad directly without enabling a Meow
+state. Its full-frame layout follows Yazi's parent/current/preview proportions,
+but its commands remain Dired commands rather than a second Yazi emulation.
+Comma opens IBuffer, dotfiles start hidden and period toggles them, and `c`, `x`,
+and `v` stage copy, stage cut, and paste operations through Dirvish's transfer
+engine. Deleting a file automatically kills its unmodified visiting buffer;
+modified buffers remain protected by a confirmation.
+
 ## Buffer and explorer workflow
 
 The buffer list and project tree overlap on purpose, but each has a different

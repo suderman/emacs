@@ -191,12 +191,21 @@ have their own group; other non-project buffers remain in the default group.
 Single left click opens files and toggles directories. Middle click toggles a
 node without visiting it.
 
-** Dired and Image mode
+** Dirvish and Image mode
 
 | Context | Keys                  | Action                                      |
 |---------+-----------------------+---------------------------------------------|
-| Dired   | =h / j / k / l=       | Parent / next / previous / open             |
-| Dired   | =q=                   | Close the Dired window                      |
+| Dirvish | =h / j / k / l=       | Parent / next / previous / open             |
+| Dirvish | =H / L=               | Directory history backward / forward        |
+| Dirvish | =m / M / t=           | Toggle mark / mark all / invert marks       |
+| Dirvish | =c / x / v=           | Stage copy / stage cut / paste              |
+| Dirvish | =d / X=               | Flag for deletion / delete flagged files    |
+| Dirvish | =a / r=               | Create / rename                             |
+| Dirvish | =. / ,=               | Toggle dotfiles / open IBuffer              |
+| Dirvish | =g / s / z=           | Refresh / sort / quick access               |
+| Dirvish | =i / ?=               | File information / command menu             |
+| Dirvish | =SPC=                 | Meow keypad                                 |
+| Dirvish | =q=                   | Close Dirvish                               |
 | Image   | =n / p=               | Browse images in cyclic alphabetical order |
 | Image   | =h=                   | Focus Treemacs                              |
 | Image   | =,=                   | Open IBuffer                                |
@@ -204,6 +213,11 @@ node without visiting it.
 | Image   | =+= / === / =-=       | Zoom in / zoom in / zoom out               |
 | Image   | =r / R=               | Rotate clockwise / counterclockwise        |
 | Image   | =0=                   | Reset image transformations                |
+
+Dirvish =c= and =x= stage the marked files, or the current file when nothing is
+marked. Copies remain staged after =v=; cuts clear once the move starts.
+Dotfiles start hidden. Deleting a file kills its unmodified visiting buffer,
+while modified buffers still require confirmation.
 
 Animated images autoplay and loop.
 
