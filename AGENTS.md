@@ -106,7 +106,7 @@ Important parts of the current grammar follow.
   Motion buffers let these keys fall through to their major-mode maps.
 - Image buffers use Motion state. Their native `n` and `p` browse files in
   cyclic alphabetical order while `SPC` remains Meow's keypad, `,` opens
-  IBuffer, `.` opens Dirvish, and `h` focuses Treemacs. `=`/`+` and `-` zoom,
+  IBuffer, `.` opens Dirvish, and `h` moves left. `=`/`+` and `-` zoom,
   `r` and `R` rotate, and `0` resets the image transformations. Animated images
   autoplay and loop.
 - `c` copies, `v` pastes, `d` deletes without filling the kill ring, and `x`
@@ -165,8 +165,8 @@ is no broad hidden-buffer blacklist.
 - `j` and `k` move by row.
 - `l` visits the selected buffer and updates a visible Treemacs, or toggles a
   group heading.
-- `h` visits the selected buffer, then focuses Treemacs on that file.
-- `SPC` and `H` toggle a contextual Treemacs view without leaving IBuffer.
+- `h` and `,` close IBuffer and restore the previous window.
+- `S` toggles a contextual Treemacs view without leaving IBuffer.
 - `.` opens Dirvish for the selected buffer or project heading.
 - `m` toggles the current buffer mark without moving. `M` marks every visible
   buffer and `t` inverts the marks, so `M t` clears them all.

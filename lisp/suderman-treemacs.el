@@ -128,24 +128,6 @@
     (when-let* ((window (treemacs-get-local-window)))
       (select-window (if select window source-window)))))
 
-(defun suderman/treemacs-focus ()
-  "Focus Treemacs, or return to the editor when already inside it."
-  (interactive)
-  (if-let* ((window (treemacs-get-local-window)))
-      (if (eq window (selected-window))
-          (when-let* ((editor (get-mru-window (selected-frame) nil t t)))
-            (select-window editor))
-        (select-window window))
-    (suderman/treemacs--show t)))
-
-(defun suderman/ibuffer-focus-treemacs ()
-  "Visit the buffer at point, then reveal it in Treemacs."
-  (interactive)
-  (if (ibuffer-current-buffer)
-      (ibuffer-visit-buffer)
-    (quit-window))
-  (suderman/treemacs--show t))
-
 (defun suderman/ibuffer-open-with-treemacs ()
   "Visit the buffer at point, updating Treemacs when it is visible."
   (interactive)
@@ -287,11 +269,11 @@
   (when (executable-find "git")
     (treemacs-git-mode (if (executable-find "python3") 'deferred 'simple)))
 
-  (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-focus-treemacs)
-  (keymap-set ibuffer-mode-map "H" #'suderman/ibuffer-toggle-treemacs)
   (keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open-with-treemacs)
   (keymap-unset ibuffer-mode-map "i" t)
-  (keymap-set ibuffer-mode-map "SPC" #'suderman/ibuffer-toggle-treemacs)
+  (keymap-set ibuffer-mode-map "S" #'suderman/ibuffer-toggle-treemacs)
+  (keymap-unset ibuffer-mode-map "H" t)
+  (keymap-unset ibuffer-mode-map "SPC" t)
   (keymap-set treemacs-mode-map "j" #'treemacs-next-line)
   (keymap-set treemacs-mode-map "k" #'treemacs-previous-line)
   (keymap-set treemacs-mode-map "," #'suderman/treemacs-ibuffer)

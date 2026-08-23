@@ -164,8 +164,8 @@ maps win.
 |-----------+--------------------------------------------------------------|
 | =j / k=   | Move by row                                                  |
 | =l=       | Visit buffer and update visible Treemacs, or toggle a group  |
-| =h=       | Visit buffer, then focus and reveal it in Treemacs           |
-| =SPC / H= | Toggle contextual Treemacs without leaving IBuffer           |
+| =h / ,=   | Close IBuffer and restore the previous window               |
+| =S=       | Toggle contextual Treemacs without leaving IBuffer           |
 | =m=       | Toggle the current mark without moving                       |
 | =M=       | Mark every visible buffer                                    |
 | =t=       | Invert marks; =M t= clears all marks                         |
@@ -220,7 +220,7 @@ including headings in Org files.
 | Dirvish | =SPC=                 | Meow keypad                                 |
 | Dirvish | =q=                   | Close Dirvish                               |
 | Image   | =n / p=               | Browse images in cyclic alphabetical order |
-| Image   | =h=                   | Focus Treemacs                              |
+| Image   | =h=                   | Move left                                   |
 | Image   | =, / .=               | Open IBuffer / Dirvish                      |
 | Image   | =SPC=                 | Keep Meow's keypad                         |
 | Image   | =+= / === / =-=       | Zoom in / zoom in / zoom out               |

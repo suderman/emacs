@@ -591,7 +591,7 @@ An active selection is replaced without modifying the kill ring."
   
   (meow-motion-define-key
    '("\\ \\" . suderman/alternate-buffer)
-   '("h" . suderman/meow-left-or-treemacs)
+   '("h" . meow-left)
    '("j" . meow-next)
    '("k" . meow-prev)
    '("l" . meow-right)
@@ -706,7 +706,6 @@ An active selection is replaced without modifying the kill ring."
 (declare-function image-toggle-animation "image-mode")
 (declare-function image-multi-frame-p "image")
 (declare-function image-animate-timer "image")
-(declare-function suderman/treemacs-focus "suderman-treemacs")
 (declare-function suderman/treemacs-toggle "suderman-treemacs")
 
 (defun suderman/image-mode-reset-point ()
@@ -729,13 +728,6 @@ An active selection is replaced without modifying the kill ring."
   (interactive "p")
   (let ((dired-movement-style 'cycle-files))
     (image-previous-file n)))
-
-(defun suderman/meow-left-or-treemacs ()
-  "Focus Treemacs in Image mode, or move left."
-  (interactive)
-  (if (derived-mode-p 'image-mode)
-      (suderman/treemacs-focus)
-    (meow-left)))
 
 (defun suderman/meow-image-mode-setup ()
   "Prepare Image mode for Meow motion state."
