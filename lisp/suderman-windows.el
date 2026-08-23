@@ -77,6 +77,33 @@
   (interactive)
   (shrink-window 3))
 
+(defun suderman/resize-window-in-direction (direction)
+  "Move the nearest window divider in DIRECTION."
+  (let* ((horizontal (memq direction '(left right)))
+         (amount (if horizontal 5 3))
+         (window (or (window-in-direction direction) (selected-window))))
+    (window-resize window (- amount) horizontal)))
+
+(defun suderman/resize-window-left ()
+  "Move the nearest window divider left."
+  (interactive)
+  (suderman/resize-window-in-direction 'left))
+
+(defun suderman/resize-window-down ()
+  "Move the nearest window divider down."
+  (interactive)
+  (suderman/resize-window-in-direction 'below))
+
+(defun suderman/resize-window-up ()
+  "Move the nearest window divider up."
+  (interactive)
+  (suderman/resize-window-in-direction 'above))
+
+(defun suderman/resize-window-right ()
+  "Move the nearest window divider right."
+  (interactive)
+  (suderman/resize-window-in-direction 'right))
+
 (defun suderman/split-window-below-and-focus ()
   "Split the selected window below and focus the new window."
   (interactive)

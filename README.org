@@ -251,7 +251,7 @@ These bindings work in Meow Normal and Motion states, IBuffer, and Dirvish.
 | Key           | Action                              |
 |---------------+-------------------------------------|
 | =M-h/j/k/l=   | Focus the adjacent window           |
-| =M-H/J/K/L=   | Resize the selected window          |
+| =M-H/J/K/L=   | Move divider left/down/up/right       |
 | =M-u / M-i=   | Split below / split right           |
 | =M-w=         | Delete the window or current tab    |
 | =s-+ / s--=   | Increase / decrease frame text size |

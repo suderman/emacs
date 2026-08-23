@@ -309,10 +309,10 @@
   (keymap-set treemacs-mode-map "M-j" #'windmove-down)
   (keymap-set treemacs-mode-map "M-k" #'windmove-up)
   (keymap-set treemacs-mode-map "M-l" #'windmove-right)
-  (keymap-set treemacs-mode-map "M-H" #'suderman/shrink-window-width)
-  (keymap-set treemacs-mode-map "M-J" #'suderman/enlarge-window-height)
-  (keymap-set treemacs-mode-map "M-K" #'suderman/shrink-window-height)
-  (keymap-set treemacs-mode-map "M-L" #'suderman/enlarge-window-width))
+  (keymap-set treemacs-mode-map "M-H" #'suderman/resize-window-left)
+  (keymap-set treemacs-mode-map "M-J" #'suderman/resize-window-down)
+  (keymap-set treemacs-mode-map "M-K" #'suderman/resize-window-up)
+  (keymap-set treemacs-mode-map "M-L" #'suderman/resize-window-right))
 
 (use-package treemacs-nerd-icons
   :after treemacs
