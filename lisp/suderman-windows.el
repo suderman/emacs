@@ -78,29 +78,36 @@
   (shrink-window 3))
 
 (defun suderman/resize-window-in-direction (direction)
-  "Move the nearest window divider in DIRECTION."
+  "Move a window divider in DIRECTION, favoring the selected window's edge."
   (let* ((horizontal (memq direction '(left right)))
          (amount (if horizontal 5 3))
-         (window (or (window-in-direction direction) (selected-window))))
-    (window-resize window (- amount) horizontal)))
+         (window (selected-window))
+         (delta (if (memq direction '(left above)) (- amount) amount))
+         (forward (if horizontal 'right 'below))
+         (backward (if horizontal 'left 'above)))
+    (if (window-in-direction forward window)
+        (adjust-window-trailing-edge window delta horizontal)
+      (if-let* ((neighbor (window-in-direction backward window)))
+          (adjust-window-trailing-edge neighbor delta horizontal)
+        (user-error "No neighboring window")))))
 
 (defun suderman/resize-window-left ()
-  "Move the nearest window divider left."
+  "Move a vertical window divider left."
   (interactive)
   (suderman/resize-window-in-direction 'left))
 
 (defun suderman/resize-window-down ()
-  "Move the nearest window divider down."
+  "Move a horizontal window divider down."
   (interactive)
   (suderman/resize-window-in-direction 'below))
 
 (defun suderman/resize-window-up ()
-  "Move the nearest window divider up."
+  "Move a horizontal window divider up."
   (interactive)
   (suderman/resize-window-in-direction 'above))
 
 (defun suderman/resize-window-right ()
-  "Move the nearest window divider right."
+  "Move a vertical window divider right."
   (interactive)
   (suderman/resize-window-in-direction 'right))
 
