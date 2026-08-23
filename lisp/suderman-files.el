@@ -18,7 +18,9 @@
 (declare-function dirvish--create-parent-buffer "dirvish")
 (declare-function dirvish "dirvish")
 (declare-function dirvish-curr "dirvish")
+(declare-function dirvish-dwim "dirvish")
 (declare-function dirvish-fd "dirvish-fd")
+(declare-function dirvish-layout-toggle "dirvish")
 (declare-function dirvish-quit "dirvish")
 (declare-function dirvish-move "dirvish-yank")
 (declare-function dirvish-yank "dirvish-yank")
@@ -36,7 +38,7 @@
   (revert-buffer t t))
 
 (defun suderman/dirvish (&optional path)
-  "Toggle full-frame Dirvish for PATH, selecting it when it is a file."
+  "Toggle Dirvish for PATH, selecting it when it is a file."
   (interactive)
   (if (and (fboundp 'dirvish-curr) (dirvish-curr))
       (dirvish-quit)
@@ -45,7 +47,7 @@
            (directory (if (file-directory-p target)
                           target
                         (file-name-directory target))))
-      (dirvish directory)
+      (dirvish-dwim directory)
       (unless (file-directory-p target)
         (dired-goto-file target)))))
 
@@ -63,11 +65,14 @@
     ("j" . "Next entry")
     ("k" . "Previous entry")
     ("l" . "Open entry")
+    ("f" . "Toggle fullscreen")
     ("H" . "History backward")
     ("L" . "History forward")
     ("m" . "Toggle mark")
     ("M" . "Mark all")
     ("t" . "Invert marks")
+    ("u" . "Unmark")
+    ("U" . "Unmark all")
     ("c" . "Stage copy")
     ("x" . "Stage cut")
     ("v" . "Paste staged files")
@@ -78,7 +83,8 @@
     ("Z" . "Compress")
     ("a" . "Create file or directory")
     ("r" . "Rename or move")
-    ("g" . "File information")
+    ("g" . "Refresh")
+    ("I" . "File information")
     ("i" . "Toggle dotfiles")
     ("s" . "Sort")
     ("z" . "Quick access")
@@ -204,6 +210,12 @@
   (interactive)
   (dired-mark-files-regexp "."))
 
+(defun suderman/dired-unmark ()
+  "Unmark at point without moving to another row."
+  (interactive)
+  (save-excursion
+    (call-interactively #'dired-unmark)))
+
 (defun suderman/dired-create-item ()
   "Create a file, or a directory when its name ends in a slash."
   (interactive)
@@ -294,7 +306,7 @@
 (keymap-set ibuffer-mode-map "." #'suderman/ibuffer-dirvish)
 
 (use-package dirvish
-  :commands (dirvish dirvish-side)
+  :commands (dirvish dirvish-dwim dirvish-side)
   :init
   (setq dired-listing-switches "-al --group-directories-first"
         dirvish-attributes '(nerd-icons file-modes)
@@ -332,13 +344,16 @@
     (keymap-set map "?" #'suderman/dirvish-help)
     (keymap-set map "/" #'suderman/dirvish-search)
     (keymap-set map "H" #'dirvish-history-go-backward)
+    (keymap-set map "I" #'dirvish-file-info-menu)
     (keymap-set map "L" #'dirvish-history-go-forward)
     (keymap-set map "M" #'suderman/dired-mark-all)
+    (keymap-set map "U" #'dired-unmark-all-marks)
     (keymap-set map "X" #'dired-do-flagged-delete)
     (keymap-set map "a" #'suderman/dired-create-item)
     (keymap-set map "c" #'suderman/dired-copy-files)
+    (keymap-set map "f" #'dirvish-layout-toggle)
     (keymap-set map "h" #'dired-up-directory)
-    (keymap-set map "g" #'dirvish-file-info-menu)
+    (keymap-set map "g" #'revert-buffer)
     (keymap-set map "i" #'suderman/dirvish-toggle-dotfiles)
     (keymap-set map "j" #'dired-next-line)
     (keymap-set map "k" #'dired-previous-line)
@@ -346,6 +361,7 @@
     (keymap-set map "m" #'suderman/dired-toggle-mark)
     (keymap-set map "r" #'dired-do-rename)
     (keymap-set map "s" #'dirvish-quicksort)
+    (keymap-set map "u" #'suderman/dired-unmark)
     (keymap-set map "v" #'suderman/dired-paste-files)
     (keymap-set map "x" #'suderman/dired-cut-files)
     (keymap-set map "z" #'dirvish-quick-access)

@@ -98,7 +98,8 @@ Important parts of the current grammar follow.
 - `'` repeats the last Repeat-FU edit, except immediately after `t` or `T`,
   when it repeats that till motion.
 - `,` opens project-grouped IBuffer and selects the invoking buffer.
-- `.` opens full-frame Dirvish for the current file or directory.
+- `.` opens Dirvish for the current file or directory. It uses the full-frame
+  layout when no other window is visible and the selected window otherwise.
 - In normal state, `S`, double quote, backtick, and `~` are
   intentionally inert. Motion buffers let these keys fall through to their
   major-mode maps.
@@ -128,17 +129,19 @@ doing something else in a live buffer.
 
 Dirvish also disables Meow locally so Dired's map can own `hjkl`, marking, and
 file operations. `SPC` invokes Meow's keypad directly without enabling a Meow
-state. Its full-frame layout follows Yazi's parent/current/preview proportions,
-but its commands remain Dired commands rather than a second Yazi emulation.
-Comma closes the full-frame layout before opening IBuffer, period closes
-Dirvish, and dotfiles start hidden in the parent and current panes while `i`
+state. Its optional full-frame layout follows Yazi's parent/current/preview
+proportions, but its commands remain Dired commands rather than a second Yazi
+emulation. `f` toggles between the selected-window and full-frame layouts.
+Comma closes a full-frame layout before opening IBuffer, period closes Dirvish,
+and dotfiles start hidden in the parent and current panes while `i`
 toggles them together without messages. The preview remains unfiltered. `c`,
 `x`, and `v` stage copy, stage cut, and paste operations through Dirvish's
 transfer engine. Deleting a file automatically kills its unmodified visiting
 buffer; modified buffers remain protected by a confirmation. Slash searches
 below the current directory. Question mark shows a compact Which-Key view
 generated from the effective bindings; the upstream Dirvish dispatcher remains
-available through `M-x`.
+available through `M-x`. `g` refreshes, `I` shows file information, `u` unmarks
+without moving, and `U` clears all marks.
 
 ## Buffer and explorer workflow
 
@@ -162,6 +165,7 @@ is no broad hidden-buffer blacklist.
 - `.` opens Dirvish for the selected buffer or project heading.
 - `m` toggles the current buffer mark without moving. `M` marks every visible
   buffer and `t` inverts the marks, so `M t` clears them all.
+- `u` unmarks the current buffer without moving and `U` clears all marks.
 
 IBuffer relies on native `quit-window` restoration. Do not add a custom window
 stack unless native restoration has been shown to fail.

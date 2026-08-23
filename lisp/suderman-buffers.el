@@ -74,6 +74,12 @@
   (interactive)
   (ibuffer-mark-on-buffer #'identity))
 
+(defun suderman/ibuffer-unmark ()
+  "Unmark at point without moving to another row."
+  (interactive)
+  (save-excursion
+    (call-interactively #'ibuffer-unmark-forward)))
+
 (defun suderman/ibuffer-setup ()
   "Apply project grouping and display defaults to IBuffer."
   (add-hook 'meow-mode-hook #'suderman/ibuffer-disable-meow nil t)
@@ -113,8 +119,8 @@
   (keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open)
   (keymap-set ibuffer-mode-map "m" #'suderman/ibuffer-toggle-mark)
   (keymap-set ibuffer-mode-map "M" #'suderman/ibuffer-mark-all)
-  (keymap-unset ibuffer-mode-map "u")
-  (keymap-unset ibuffer-mode-map "U"))
+  (keymap-set ibuffer-mode-map "u" #'suderman/ibuffer-unmark)
+  (keymap-set ibuffer-mode-map "U" #'ibuffer-unmark-all-marks))
 
 (use-package ibuffer-project
   :after ibuffer
