@@ -15,6 +15,7 @@
   :init
   (setq treemacs-position 'left
         treemacs-show-hidden-files nil
+        treemacs-tag-follow-delay 1.0
         treemacs-width 50
         treemacs-width-is-initially-locked nil))
 
@@ -206,47 +207,16 @@
   (suderman/treemacs--repair-tree)
   (treemacs-root-down))
 
-(defun suderman/treemacs-smart-open (&optional arg)
-  "Expand the current node, or visit it when already open or a leaf.
-With prefix ARG, expand recursively."
-  (interactive "P")
-  (when-let* ((button (treemacs-current-button)))
-    (let ((state (treemacs-button-get button :state)))
-      (pcase state
-        ('dir-node-open
-         (suderman/treemacs-root-down))
-        ((or 'file-node-open 'tag-node-open 'tag-node)
-         (treemacs-visit-node-in-most-recently-used-window arg))
-        ((or 'file-node-closed 'tag-node-closed)
-         (treemacs-TAB-action arg)
-         (when (eq state (treemacs-button-get button :state))
-           (treemacs-visit-node-in-most-recently-used-window arg)))
-        ((or 'root-node-closed 'dir-node-closed)
-         (treemacs-TAB-action arg))))))
-
-(defun suderman/treemacs-smart-close ()
-  "Collapse the current node, or move the single root upward."
+(defun suderman/treemacs-visit ()
+  "Visit the current directory, file, or leaf tag in the MRU editor."
   (interactive)
-  (if-let* ((button (treemacs-current-button))
-             ((treemacs-is-node-expanded? button)))
-      (treemacs-TAB-action)
-    (suderman/treemacs-root-up)))
-
-(defun suderman/treemacs-expand-recursively ()
-  "Expand the current node and its descendants."
-  (interactive)
-  (when-let* ((button (treemacs-current-button)))
-    (unless (eq (treemacs-button-get button :state) 'tag-node)
-      (when (treemacs-is-node-expanded? button)
-        (treemacs-TAB-action))
-      (treemacs-TAB-action '(4)))))
-
-(defun suderman/treemacs-collapse-recursively ()
-  "Collapse the current node and its descendants."
-  (interactive)
-  (when-let* ((button (treemacs-current-button)))
-    (when (treemacs-is-node-expanded? button)
-      (treemacs-TAB-action '(4)))))
+  (when-let* ((button (treemacs-current-button))
+              (state (treemacs-button-get button :state)))
+    (if (memq state '(root-node-open root-node-closed
+                      dir-node-open dir-node-closed
+                      file-node-open file-node-closed tag-node))
+        (treemacs-visit-node-in-most-recently-used-window)
+      (user-error "No file or directory at point"))))
 
 (defun suderman/treemacs-open ()
   "Enter the directory at point, or visit the current file or tag."
@@ -309,7 +279,8 @@ With prefix ARG, expand recursively."
     (with-current-buffer buffer
       (when (derived-mode-p 'treemacs-mode)
         (suderman/treemacs-setup))))
-  (treemacs-follow-mode 1)
+  (unless treemacs-tag-follow-mode
+    (treemacs-tag-follow-mode 1))
   (treemacs-filewatch-mode 1)
   (when (executable-find "git")
     (treemacs-git-mode (if (executable-find "python3") 'deferred 'simple)))
@@ -323,10 +294,10 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "k" #'treemacs-previous-line)
   (keymap-set treemacs-mode-map "," #'suderman/treemacs-ibuffer)
   (keymap-set treemacs-mode-map "." #'suderman/treemacs-dirvish)
-  (keymap-set treemacs-mode-map "h" #'suderman/treemacs-smart-close)
-  (keymap-set treemacs-mode-map "l" #'suderman/treemacs-smart-open)
-  (keymap-set treemacs-mode-map "H" #'suderman/treemacs-collapse-recursively)
-  (keymap-set treemacs-mode-map "L" #'suderman/treemacs-expand-recursively)
+  (keymap-set treemacs-mode-map "h" #'suderman/treemacs-root-up)
+  (keymap-set treemacs-mode-map "l" #'suderman/treemacs-visit)
+  (keymap-set treemacs-mode-map "H" #'ignore)
+  (keymap-set treemacs-mode-map "L" #'ignore)
   (keymap-set treemacs-mode-map "RET" #'suderman/treemacs-open)
   (keymap-set treemacs-mode-map "<return>" #'suderman/treemacs-open)
   (keymap-set treemacs-mode-map "o" #'suderman/treemacs-open)
@@ -349,7 +320,7 @@ With prefix ARG, expand recursively."
   (keymap-set treemacs-mode-map "\"" #'ignore)
   (keymap-set treemacs-mode-map "`" #'ignore)
   (keymap-set treemacs-mode-map "~" #'ignore)
-  (keymap-set treemacs-mode-map "S" #'ignore)
+  (keymap-set treemacs-mode-map "S" #'suderman/treemacs-toggle)
   (keymap-set treemacs-mode-map "M-h" #'suderman/window-left)
   (keymap-set treemacs-mode-map "M-j" #'windmove-down)
   (keymap-set treemacs-mode-map "M-k" #'windmove-up)

@@ -100,9 +100,10 @@ Important parts of the current grammar follow.
 - `,` opens project-grouped IBuffer and selects the invoking buffer.
 - `.` opens Dirvish for the current file or directory. It uses the full-frame
   layout when no other window is visible and the selected window otherwise.
-- In normal state, `S`, double quote, backtick, and `~` are
-  intentionally inert. Motion buffers let these keys fall through to their
-  major-mode maps.
+- `S` toggles Treemacs visibility in Normal and Motion states without moving
+  editor focus when it opens. Inside Treemacs, it hides the tree.
+- In normal state, double quote, backtick, and `~` are intentionally inert.
+  Motion buffers let these keys fall through to their major-mode maps.
 - Image buffers use Motion state. Their native `n` and `p` browse files in
   cyclic alphabetical order while `SPC` remains Meow's keypad, `,` opens
   IBuffer, `.` opens Dirvish, and `h` focuses Treemacs. `=`/`+` and `-` zoom,
@@ -119,9 +120,9 @@ Important parts of the current grammar follow.
 - `y` is redo. `u` is one-way Meow undo. `U` is one-way undo in selection.
 - `C` and `V` page up and down through Meow. Vanilla `C-u`, `C-d`, and `C-v`
   are deliberately not shadowed by Meow normal bindings.
-- `SPC` is both Meow's keypad and the owned leader map. `SPC h` focuses
-  Treemacs and `SPC H` toggles its visibility. Numeric arguments are useful,
-  for example `SPC 3 f`.
+- `SPC` is both Meow's keypad and the owned leader map. Its native `h`
+  translation starts a `C-h` key sequence. Numeric arguments are useful, for
+  example `SPC 3 f`.
 
 The full map is the source of truth. Do not duplicate every binding here.
 
@@ -177,8 +178,9 @@ stack unless native restoration has been shown to fail.
 
 ### Treemacs
 
-Treemacs is the project tree. It reveals the current file, supports Git and
-file watching, and uses Nerd Icons. It keeps a private, non-persisted Treemacs
+Treemacs is the project tree. It follows the current file and Imenu tag after
+one second of idle time, including Org headings. It supports Git and file
+watching and uses Nerd Icons. It keeps a private, non-persisted Treemacs
 workspace object per frame. This is necessary because upstream Treemacs
 otherwise shares one workspace object across frame-local buffers, which caused
 stale trees, blank trees, and root-navigation crashes.
@@ -192,6 +194,10 @@ Treemacs and IBuffer have contextual transitions. Period opens Dirvish for the
 selected buffer, project heading, or tree node. A selected file, project
 heading, current editor window, and current frame all matter. Test those flows
 with real windows instead of calling commands in an arbitrary temporary buffer.
+Inside Treemacs, `h` and `u` move the private root upward, while `l` visits the
+selected file or directory in the most recently used editor window. `TAB` is
+the only keyboard expansion control; `H` and `L` are intentionally inert.
+`RET` and `o` still make a selected directory the tree root or visit a file.
 
 ## Package choices that already have a reason
 

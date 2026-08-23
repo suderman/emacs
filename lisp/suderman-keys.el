@@ -8,6 +8,7 @@
 ;;; Code:
 
 (require 'use-package)
+(require 'seq)
 (require 'suderman-meow)
 (require 'suderman-files)
 (require 'suderman-markdown)
@@ -194,13 +195,17 @@
   (setq which-key-idle-delay 0.35)
   :config
   (which-key-mode 1)
+  (dolist (key '("SPC b" "SPC d" "SPC e" "SPC f" "SPC h" "SPC H"
+                 "SPC p" "SPC q" "SPC s" "SPC t" "SPC w"))
+    (let ((regexp (concat "\\`" (regexp-quote key) "\\'")))
+      (setq which-key-replacement-alist
+            (seq-remove (lambda (entry) (equal (caar entry) regexp))
+                        which-key-replacement-alist))))
   (which-key-add-key-based-replacements
     "SPC b" "buffers"
     "SPC d" "dirvish"
     "SPC e" "explorer"
     "SPC f" "files"
-    "SPC h" "focus tree"
-    "SPC H" "toggle tree"
     "SPC p" "projects"
     "SPC q" "quit/reload"
     "SPC s" "search"
@@ -226,8 +231,6 @@
  '("," . consult-buffer)
  '(":" . execute-extended-command)
  '("\\" . suderman/alternate-buffer)
- '("h" . suderman/treemacs-focus)
- '("H" . suderman/treemacs-toggle)
  '("d" . dirvish)
  '("e" . dirvish-side)
  (cons "b" suderman/leader-buffer-map)

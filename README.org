@@ -73,9 +73,13 @@ Which-Key shows each leader prefix while I type it.
 | =%=         | Jump to matching delimiter or item              |
 | =C / V=     | Page up / down                                  |
 | =, / .=     | Open project-grouped IBuffer / Dirvish          |
+| =S=         | Toggle Treemacs without moving editor focus      |
 | =q / Q=     | Quit the view / kill the current buffer         |
 
 Movement expands an active Meow selection.
+
+=S= has the same visibility-only behavior in Meow Motion and inside Treemacs.
+IBuffer and Dirvish retain their own =S= commands.
 
 *** Selection and editing
 
@@ -126,8 +130,6 @@ fit the same grammar. For example, =SPC 3 f= moves forward three words.
 | =SPC ,=   | Consult buffer                      |
 | =SPC /=   | Ripgrep                             |
 | =SPC \=  | Alternate buffer                    |
-| =SPC h=   | Focus Treemacs                      |
-| =SPC H=   | Toggle Treemacs visibility          |
 | =SPC d=   | Open Dirvish                        |
 | =SPC e=   | Open the Dirvish side window        |
 | =SPC b=   | Buffer commands                     |
@@ -179,21 +181,24 @@ have their own group; other non-project buffers remain in the default group.
 | Key          | Action                                              |
 |--------------+-----------------------------------------------------|
 | =j / k / n=  | Next / previous / next node                         |
-| =h / l=      | Smart collapse-or-parent / expand-or-open            |
-| =H / L=      | Collapse / expand recursively                        |
+| =h / u=      | Move the root up                                     |
+| =l=          | Visit a file or directory in the previous editor     |
+| =TAB=        | Expand or collapse the current node                   |
 | =RET / o=    | Open file or make a directory the root               |
-| =u=          | Move the root up                                     |
 | =a=          | Add a file, or a directory when the name ends in =/= |
 | =c / d / r=  | Copy / delete / rename                               |
 | =g=          | Refresh                                              |
 | =t=          | Toggle file watching                                 |
 | =,=          | Open IBuffer in the selected tree context            |
 | =.=          | Open Dirvish in the selected tree context            |
+| =S=          | Toggle Treemacs visibility                            |
 | =q=          | Close Treemacs                                       |
 | =?=          | Treemacs help                                        |
 
-Single left click opens files and toggles directories. Middle click toggles a
-node without visiting it.
+TAB is the only keyboard expansion control; =H= and =L= are inert. Single left
+click opens files and toggles directories. Middle click toggles a node without
+visiting it. Treemacs follows the current file and Imenu tag after one second
+of idle time, including headings in Org files.
 
 ** Dirvish and Image mode
 

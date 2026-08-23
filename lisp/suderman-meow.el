@@ -525,12 +525,11 @@ An active selection is replaced without modifying the kill ring."
 
 (defun suderman/meow-setup-qwerty ()
   "Install Suderman's QWERTY Meow bindings."
-  (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
-        meow-keypad-start-keys
-        (assq-delete-all ?h meow-keypad-start-keys))
+  (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
+  (setf (alist-get ?h meow-keypad-start-keys) ?h)
   (dolist (key '("\\ =" "\\ ]"))
     (define-key meow-normal-state-keymap (kbd key) nil))
-  (dolist (key '("S" "'" "\"" "`" "~"))
+  (dolist (key '("'" "\"" "`" "~"))
     (define-key meow-motion-state-keymap (kbd key) nil))
   (dolist (entry '((suderman/meow-smart-beginning-of-line . "code beg")
                    (beginning-of-line . "line beg")
@@ -566,8 +565,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-visual . "select")
                    (suderman/ibuffer-toggle . "buffers")
                    (suderman/dirvish . "files")
-                   (suderman/treemacs-focus . "tree jump")
-                   (suderman/treemacs-toggle . "tree tog")
+                   (suderman/treemacs-toggle . "tree")
                    (surround-insert . "surround")
                    (suderman/meow-next-word . "word fwd")
                    (suderman/meow-next-symbol . "sym fwd")
@@ -583,6 +581,7 @@ An active selection is replaced without modifying the kill ring."
    '("j" . meow-next)
    '("k" . meow-prev)
    '("l" . meow-right)
+   '("S" . suderman/treemacs-toggle)
    '("<escape>" . ignore))
   
   (meow-normal-define-key
@@ -650,7 +649,7 @@ An active selection is replaced without modifying the kill ring."
    '("r" . suderman/meow-replace-char)
    '("R" . meow-swap-grab)
    (cons "s" surround-keymap)
-   '("S" . ignore)
+   '("S" . suderman/treemacs-toggle)
    '("t" . suderman/meow-till)
    '("T" . suderman/meow-till-backward)
    '("u" . meow-undo)
@@ -694,6 +693,7 @@ An active selection is replaced without modifying the kill ring."
 (declare-function image-multi-frame-p "image")
 (declare-function image-animate-timer "image")
 (declare-function suderman/treemacs-focus "suderman-treemacs")
+(declare-function suderman/treemacs-toggle "suderman-treemacs")
 
 (defun suderman/image-mode-reset-point ()
   "Keep point on Image mode's display property."
