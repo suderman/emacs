@@ -331,11 +331,37 @@ and updates only after a save changes the preview."
   (add-hook 'after-save-hook #'suderman/markdown-preview-after-save nil t)
   (browse-url suderman/markdown-preview-url))
 
+(defun suderman/markdown-ts-imenu-heading-p (node)
+  "Return non-nil when NODE is an ATX heading's inline content."
+  (and (equal (treesit-node-type node) "inline")
+       (equal (treesit-node-type (treesit-node-parent node))
+              "atx_heading")))
+
+(defun suderman/markdown-ts-imenu-heading-name (node)
+  "Return the complete heading containing NODE."
+  (car (split-string (treesit-node-text (treesit-node-parent node))
+                     "\n" t " ")))
+
+(defun suderman/markdown-ts-imenu-setup ()
+  "Use one Imenu entry per Markdown heading."
+  (setq-local treesit-simple-imenu-settings
+              `(("Headings" ,#'suderman/markdown-ts-imenu-heading-p
+                 nil ,#'suderman/markdown-ts-imenu-heading-name))
+              imenu--index-alist nil)
+  (when (boundp 'treemacs--imenu-cache)
+    (setq-local treemacs--imenu-cache nil)))
+
 (use-package markdown-ts-mode
   :ensure nil
   :mode "\\.\\(?:md\\|markdown\\)\\'"
+  :hook (markdown-ts-mode . suderman/markdown-ts-imenu-setup)
   :bind (:map markdown-ts-mode-map
-              ("C-c C-p" . suderman/markdown-preview-buffer)))
+              ("C-c C-p" . suderman/markdown-preview-buffer))
+  :config
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (derived-mode-p 'markdown-ts-mode)
+        (suderman/markdown-ts-imenu-setup)))))
 
 (provide 'suderman-markdown)
 ;;; suderman-markdown.el ends here

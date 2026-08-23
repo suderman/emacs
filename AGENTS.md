@@ -178,12 +178,14 @@ stack unless native restoration has been shown to fail.
 
 ### Treemacs
 
-Treemacs is the project tree. It follows the current file and Imenu tag after
-one second of idle time, including Org headings. It supports Git and file
-watching and uses Nerd Icons. It keeps a private, non-persisted Treemacs
-workspace object per frame. This is necessary because upstream Treemacs
-otherwise shares one workspace object across frame-local buffers, which caused
-stale trees, blank trees, and root-navigation crashes.
+Treemacs is the project tree. It follows the selected buffer's file, then its
+Imenu tag after one second of idle time, including Org headings. Both native
+follow modes stay enabled because tag follow alone skips buffers without an
+Imenu index. It supports Git and file watching and uses Nerd Icons. It keeps a
+private, non-persisted Treemacs workspace object per frame. This is necessary
+because upstream Treemacs otherwise shares one workspace object across
+frame-local buffers, which caused stale trees, blank trees, and root-navigation
+crashes.
 
 The module contains repair code for stale or blank frame trees. It also uses
 some Treemacs internals. Preserve this behavior unless the installed Treemacs
@@ -218,6 +220,9 @@ These choices are not immutable, but replacing one needs a concrete benefit.
 - Tree-sitter modes are preferred where the NixOS flake supplies grammars.
 - Markdown preview uses Pandoc and a small local HTTP server. It refreshes only
   after save and preserves browser scroll position.
+- The Nix-supplied `markdown-ts-mode` currently accepts two tree-sitter
+  children for every ATX heading in its Imenu predicate. The local Markdown
+  setup restricts Imenu to the inline child so Treemacs shows each heading once.
 
 Avoid adding a package when an existing package or Emacs itself already covers
 the request. This config has enough moving pieces.

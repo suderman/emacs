@@ -197,8 +197,9 @@ have their own group; other non-project buffers remain in the default group.
 
 TAB is the only keyboard expansion control; =H= and =L= are inert. Single left
 click opens files and toggles directories. Middle click toggles a node without
-visiting it. Treemacs follows the current file and Imenu tag after one second
-of idle time, including headings in Org files.
+visiting it. Treemacs follows the selected buffer's file, even when it has no
+Imenu tags. After one second of idle time it follows the current Imenu tag,
+including headings in Org files.
 
 ** Dirvish and Image mode
 
