@@ -25,6 +25,12 @@
           suderman/meow-leader-map))
   suderman/meow-leader-map)
 
+(defun suderman/meow-keypad-once ()
+  "Run one keypad command without applying it to BEACON cursors."
+  (interactive)
+  (let (meow--beacon-overlays)
+    (meow-keypad)))
+
 ;;;; Selection and motion
 
 ;; Selection construction is intentionally centralized here because exact
@@ -325,10 +331,12 @@ Keep every result as a char selection so motion commands can fine-tune it."
     (suderman/meow--shift-lines -2)))
 
 (defun suderman/meow-insert ()
-  "Enter insert state at the current point, discarding any selection."
+  "Enter insert state, recording edits when in BEACON state."
   (interactive)
-  (suderman/meow--cancel-active-selection)
-  (meow-insert))
+  (if (bound-and-true-p meow-beacon-mode)
+      (meow-beacon-insert)
+    (suderman/meow--cancel-active-selection)
+    (meow-insert)))
 
 (defun suderman/meow-insert-at-indentation ()
   "Enter Meow insert state at the first non-whitespace character."
@@ -574,6 +582,10 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-save . "copy")))
     (setf (alist-get (car entry) meow-command-to-short-name-list)
           (cdr entry)))
+
+  (meow-define-keys
+    'beacon
+    '("SPC" . suderman/meow-keypad-once))
   
   (meow-motion-define-key
    '("\\ \\" . suderman/alternate-buffer)
