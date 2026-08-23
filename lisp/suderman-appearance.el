@@ -54,31 +54,33 @@
 
 (defun suderman/apply-selection-faces (&optional _theme)
   "Derive selection faces from the active theme's semantic colors."
-  (let ((foreground (face-foreground 'default nil t))
-        (region-background
-         (suderman/theme-blend 'font-lock-function-name-face 0.4))
-        (grab-background
-         (suderman/theme-blend 'font-lock-keyword-face 0.3))
-        (match-accent (face-foreground 'font-lock-builtin-face nil t)))
-    (when (and (stringp foreground) region-background)
-      (set-face-attribute 'region nil
-                          :foreground foreground
-                          :background region-background
-                          :extend t))
-    (when (and (stringp foreground) grab-background)
-      (set-face-attribute 'secondary-selection nil
-                          :foreground foreground
-                          :background grab-background
-                          :extend t))
-    (when (and (facep 'meow-search-highlight)
-               (stringp match-accent))
-      (set-face-attribute 'meow-search-highlight nil
-                          :inherit nil
-                          :foreground 'unspecified
-                          :background 'unspecified
-                          :underline match-accent))
-    (when (fboundp 'meow--prepare-face)
-      (meow--prepare-face))))
+  (when-let* ((frame (car (filtered-frame-list #'display-graphic-p))))
+    (with-selected-frame frame
+      (let ((foreground (face-foreground 'default nil t))
+            (region-background
+             (suderman/theme-blend 'font-lock-function-name-face 0.4))
+            (grab-background
+             (suderman/theme-blend 'font-lock-keyword-face 0.3))
+            (match-accent (face-foreground 'font-lock-builtin-face nil t)))
+        (when (and (stringp foreground) region-background)
+          (set-face-attribute 'region nil
+                              :foreground foreground
+                              :background region-background
+                              :extend t))
+        (when (and (stringp foreground) grab-background)
+          (set-face-attribute 'secondary-selection nil
+                              :foreground foreground
+                              :background grab-background
+                              :extend t))
+        (when (and (facep 'meow-search-highlight)
+                   (stringp match-accent))
+          (set-face-attribute 'meow-search-highlight nil
+                              :inherit nil
+                              :foreground 'unspecified
+                              :background 'unspecified
+                              :underline match-accent))
+        (when (fboundp 'meow--prepare-face)
+          (meow--prepare-face))))))
 
 (add-hook 'enable-theme-functions #'suderman/apply-selection-faces t)
 (suderman/apply-selection-faces)
@@ -143,6 +145,7 @@
 
 (suderman/set-nerd-font-fallbacks)
 (suderman/apply-gui-appearance)
+(add-hook 'after-make-frame-functions #'suderman/apply-selection-faces)
 (add-hook 'after-make-frame-functions #'suderman/apply-gui-appearance)
 
 (provide 'suderman-appearance)
