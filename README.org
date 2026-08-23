@@ -240,7 +240,7 @@ Animated images autoplay and loop.
 
 ** Windows and frames
 
-These bindings work in both Meow Normal and Motion states.
+These bindings work in Meow Normal and Motion states, IBuffer, and Dirvish.
 
 | Key           | Action                              |
 |---------------+-------------------------------------|

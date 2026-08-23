@@ -7,6 +7,7 @@
 
 (require 'use-package)
 (require 'ibuffer)
+(require 'suderman-windows)
 
 (define-ibuffer-column suderman-name
   (:name "Name"
@@ -120,7 +121,18 @@
   (keymap-set ibuffer-mode-map "m" #'suderman/ibuffer-toggle-mark)
   (keymap-set ibuffer-mode-map "M" #'suderman/ibuffer-mark-all)
   (keymap-set ibuffer-mode-map "u" #'suderman/ibuffer-unmark)
-  (keymap-set ibuffer-mode-map "U" #'ibuffer-unmark-all-marks))
+  (keymap-set ibuffer-mode-map "U" #'ibuffer-unmark-all-marks)
+  (keymap-set ibuffer-mode-map "M-h" #'suderman/window-left)
+  (keymap-set ibuffer-mode-map "M-j" #'windmove-down)
+  (keymap-set ibuffer-mode-map "M-k" #'windmove-up)
+  (keymap-set ibuffer-mode-map "M-l" #'windmove-right)
+  (keymap-set ibuffer-mode-map "M-H" #'suderman/shrink-window-width)
+  (keymap-set ibuffer-mode-map "M-J" #'suderman/enlarge-window-height)
+  (keymap-set ibuffer-mode-map "M-K" #'suderman/shrink-window-height)
+  (keymap-set ibuffer-mode-map "M-L" #'suderman/enlarge-window-width)
+  (keymap-set ibuffer-mode-map "M-u" #'suderman/split-window-below-and-focus)
+  (keymap-set ibuffer-mode-map "M-i" #'suderman/split-window-right-and-focus)
+  (keymap-set ibuffer-mode-map "M-w" #'suderman/delete-window-or-tab))
 
 (use-package ibuffer-project
   :after ibuffer

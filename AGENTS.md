@@ -110,6 +110,9 @@ Important parts of the current grammar follow.
   autoplay and loop.
 - `c` copies, `v` pastes, `d` deletes without filling the kill ring, and `x`
   cuts a real multi-character selection before entering insert state.
+- `M-w` closes the current window or tab in Meow, IBuffer, and Dirvish. Meow's
+  internal copy backend calls `kill-ring-save` directly instead of replaying
+  `M-w`.
 - `X` cuts the current line and enters insert state.
 - `n` and `p` search forward and backward.
 - `t` and `T` move till a character forward and backward.
@@ -132,6 +135,7 @@ file operations. `SPC` invokes Meow's keypad directly without enabling a Meow
 state. Its optional full-frame layout follows Yazi's parent/current/preview
 proportions, but its commands remain Dired commands rather than a second Yazi
 emulation. `f` toggles between the selected-window and full-frame layouts.
+Meta window navigation, resizing, splitting, and closing remain available.
 Comma closes a full-frame layout before opening IBuffer, period closes Dirvish,
 and dotfiles start hidden in the parent and current panes while `i`
 toggles them together without messages. The preview remains unfiltered. `c`,
@@ -166,6 +170,7 @@ is no broad hidden-buffer blacklist.
 - `m` toggles the current buffer mark without moving. `M` marks every visible
   buffer and `t` inverts the marks, so `M t` clears them all.
 - `u` unmarks the current buffer without moving and `U` clears all marks.
+- Meta window navigation, resizing, splitting, and closing mirror editor buffers.
 
 IBuffer relies on native `quit-window` restoration. Do not add a custom window
 stack unless native restoration has been shown to fail.
