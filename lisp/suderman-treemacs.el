@@ -16,7 +16,7 @@
   (setq treemacs-position 'left
         treemacs-show-hidden-files nil
         treemacs-tag-follow-delay 1.0
-        treemacs-width 50
+        treemacs-width 30
         treemacs-width-is-initially-locked nil))
 
 (defun suderman/treemacs-disable-meow ()
