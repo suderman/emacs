@@ -124,8 +124,8 @@ Important parts of the current grammar follow.
 - `SPC` is both Meow's keypad and the owned leader map. Its native `h`
   translation starts a `C-h` key sequence. Numeric arguments are useful, for
   example `SPC 3 f`.
-- `SPC v` owns Git commands because Meow reserves keypad `g` for the `C-M-`
-  prefix. Hunks are under `SPC v h`, and conflict resolution is under `SPC v c`.
+- `SPC .` owns Git commands. Status is `SPC . .`, hunks are under `SPC . h`,
+  and conflict resolution is under `SPC . c`.
 
 The full map is the source of truth. Do not duplicate every binding here.
 
@@ -155,7 +155,7 @@ Magit disables Meow locally because its single-letter commands and Transient
 menus are the interface. `j/k` move between visible sections, while native
 `n/p` remain equivalent alternatives. Keep Magit's native `h/l`, `TAB`, `RET`,
 and `^` bindings for dispatch, logs, expansion, visiting, and parent movement.
-The displaced jump and discard commands remain under `h j` and `h k`. Comma
+The displaced jump and discard commands remain under `h j` and `h k`. Period
 buries Magit, while Meta window commands and `M-z` remain available. An isolated
 `<escape>` quits one Transient level without replacing raw `ESC` as the Meta
 prefix. Conflict commands use upper/lower terminology because ours/theirs

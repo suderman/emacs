@@ -14,7 +14,12 @@
     (apply #'process-file "git" nil nil nil arguments)))
 
 (ert-deftest suderman/git-leader-map-is-project-aware ()
-  (should (eq (lookup-key suderman/leader-git-map (kbd "v"))
+  (should (eq (lookup-key suderman/meow-leader-map (kbd "."))
+              suderman/leader-git-map))
+  (should-not (lookup-key suderman/meow-leader-map (kbd "v")))
+  (should (eq (lookup-key meow-normal-state-keymap (kbd "."))
+              #'suderman/dirvish))
+  (should (eq (lookup-key suderman/leader-git-map (kbd "."))
               #'magit-status))
   (should (eq (lookup-key suderman/leader-git-map (kbd "d"))
               #'magit-diff-buffer-file))
@@ -34,7 +39,7 @@
       (with-temp-buffer
         (text-mode)
         (meow-normal-mode 1)
-        (execute-kbd-macro (kbd "SPC v v"))
+        (execute-kbd-macro (kbd "SPC . ."))
         (should called)))))
 
 (ert-deftest suderman/magit-uses-native-keys-with-shared-window-commands ()
@@ -52,9 +57,12 @@
       (should (eq (key-binding (kbd "p")) #'magit-section-backward))
       (should (eq (key-binding (kbd "h")) #'magit-dispatch))
       (should (eq (key-binding (kbd "l")) #'magit-log))
-      (should (eq (key-binding (kbd ",")) #'magit-mode-bury-buffer))
+      (should (eq (key-binding (kbd ".")) #'magit-mode-bury-buffer))
       (should (eq (key-binding (kbd "M-w")) #'suderman/delete-window-or-tab))
-      (should (eq (key-binding (kbd "M-z")) #'suderman/zoom-window-toggle)))))
+      (should (eq (key-binding (kbd "M-z")) #'suderman/zoom-window-toggle))))
+  (with-temp-buffer
+    (magit-log-select-mode)
+    (should (eq (key-binding (kbd ".")) #'magit-log-select-pick))))
 
 (ert-deftest suderman/git-refresh-and-live-diff-hooks-are-enabled-once ()
   (should global-diff-hl-mode)

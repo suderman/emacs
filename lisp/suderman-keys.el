@@ -74,11 +74,11 @@
 (defvar suderman/leader-file-map nil
   "SPC f file command keymap.")
 (defvar suderman/leader-git-map nil
-  "SPC v Git command keymap.")
+  "SPC . Git command keymap.")
 (defvar suderman/leader-git-conflict-map nil
-  "SPC v c conflict command keymap.")
+  "SPC . c conflict command keymap.")
 (defvar suderman/leader-git-hunk-map nil
-  "SPC v h hunk command keymap.")
+  "SPC . h hunk command keymap.")
 (defvar suderman/leader-project-map nil
   "SPC p project command keymap.")
 (defvar suderman/leader-search-map nil
@@ -124,7 +124,7 @@
 (suderman/keys--define suderman/leader-git-map "c" suderman/leader-git-conflict-map)
 (suderman/keys--define suderman/leader-git-map "d" #'magit-diff-buffer-file)
 (suderman/keys--define suderman/leader-git-map "f" #'magit-file-dispatch)
-(suderman/keys--define suderman/leader-git-map "v" #'magit-status)
+(suderman/keys--define suderman/leader-git-map "." #'magit-status)
 (suderman/keys--define suderman/leader-git-map "h" suderman/leader-git-hunk-map)
 (suderman/keys--define suderman/leader-git-map "l" #'magit-log-buffer-file)
 (suderman/keys--define suderman/leader-git-map "m" #'magit-dispatch)
@@ -237,21 +237,21 @@
   (setq which-key-idle-delay 0.35)
   :config
   (which-key-mode 1)
-  (dolist (key '("SPC b" "SPC d" "SPC e" "SPC f" "SPC h" "SPC H"
-                 "SPC p" "SPC q" "SPC s" "SPC v" "SPC v c" "SPC v h"
+  (dolist (key '("SPC ." "SPC . c" "SPC . h" "SPC b" "SPC d" "SPC e"
+                 "SPC f" "SPC h" "SPC H" "SPC p" "SPC q" "SPC s"
                  "SPC t" "SPC w"))
     (let ((regexp (concat "\\`" (regexp-quote key) "\\'")))
       (setq which-key-replacement-alist
             (seq-remove (lambda (entry) (equal (caar entry) regexp))
                         which-key-replacement-alist))))
   (which-key-add-key-based-replacements
+    "SPC ." "git"
+    "SPC . c" "conflicts"
+    "SPC . h" "hunks"
     "SPC b" "buffers"
     "SPC d" "dirvish"
     "SPC e" "explorer"
     "SPC f" "files"
-    "SPC v" "git"
-    "SPC v c" "conflicts"
-    "SPC v h" "hunks"
     "SPC p" "projects"
     "SPC q" "quit/reload"
     "SPC s" "search"
@@ -273,15 +273,13 @@
  '("?" . meow-cheatsheet)
  '("/" . consult-ripgrep)
  '("SPC" . execute-extended-command)
- '("." . suderman/find-file)
- '("," . consult-buffer)
  '(":" . execute-extended-command)
  '("\\" . suderman/alternate-buffer)
  '("d" . dirvish)
  '("e" . dirvish-side)
+ (cons "." suderman/leader-git-map)
  (cons "b" suderman/leader-buffer-map)
  (cons "f" suderman/leader-file-map)
- (cons "v" suderman/leader-git-map)
  (cons "p" suderman/leader-project-map)
  (cons "q" suderman/leader-quit-map)
  (cons "s" suderman/leader-search-map)

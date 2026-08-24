@@ -53,7 +53,7 @@
   (add-hook 'after-save-hook #'magit-after-save-refresh-status)
   (add-hook 'magit-mode-hook #'suderman/magit-setup)
   (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
-  (keymap-set magit-mode-map "," #'magit-mode-bury-buffer)
+  (keymap-set magit-mode-map "." #'magit-mode-bury-buffer)
   (keymap-set magit-mode-map "M-h" #'suderman/window-left)
   (keymap-set magit-mode-map "M-j" #'windmove-down)
   (keymap-set magit-mode-map "M-k" #'windmove-up)
