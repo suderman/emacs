@@ -7,7 +7,6 @@
 ;;; Code:
 
 (require 'use-package)
-(require 'suderman-projects)
 
 (use-package vertico
   :init

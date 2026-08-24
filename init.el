@@ -20,7 +20,6 @@
 (require 'suderman-windows)
 
 ;; Editing building blocks.
-(require 'suderman-projects)
 (require 'suderman-buffers)
 (require 'suderman-completion)
 (require 'suderman-pickers)

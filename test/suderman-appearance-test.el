@@ -25,5 +25,34 @@
       (should (equal (face-background 'region nil t) "#112233"))
       (should (equal (face-background 'secondary-selection nil t) "#445566")))))
 
+(ert-deftest suderman/line-number-toggle-preserves-special-buffer-exclusions ()
+  (let ((original-state global-display-line-numbers-mode)
+        (text-buffer (generate-new-buffer " *suderman-line-numbers-text*"))
+        (special-buffer (generate-new-buffer " *suderman-line-numbers-special*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer text-buffer
+            (text-mode))
+          (with-current-buffer special-buffer
+            (special-mode))
+          (unless global-display-line-numbers-mode
+            (global-display-line-numbers-mode 1)
+            (suderman/disable-line-numbers-in-special-buffers))
+
+          (suderman/toggle-line-numbers)
+          (should-not global-display-line-numbers-mode)
+          (should-not (buffer-local-value 'display-line-numbers-mode text-buffer))
+          (should-not (buffer-local-value 'display-line-numbers-mode special-buffer))
+
+          (suderman/toggle-line-numbers)
+          (should global-display-line-numbers-mode)
+          (should (buffer-local-value 'display-line-numbers-mode text-buffer))
+          (should-not (buffer-local-value 'display-line-numbers-mode special-buffer)))
+      (global-display-line-numbers-mode (if original-state 1 -1))
+      (when original-state
+        (suderman/disable-line-numbers-in-special-buffers))
+      (kill-buffer text-buffer)
+      (kill-buffer special-buffer))))
+
 (provide 'suderman-appearance-test)
 ;;; suderman-appearance-test.el ends here

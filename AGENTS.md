@@ -60,7 +60,6 @@ The current modules have clear jobs.
 - `suderman-appearance.el` owns fonts, Stylix-derived faces, Doom Modeline,
   current-line highlighting, line numbers, and the 100-column guide.
 - `suderman-windows.el` owns window helpers and smooth jump animation.
-- `suderman-projects.el` wraps built-in `project.el` behavior.
 - `suderman-buffers.el` owns project-grouped IBuffer.
 - `suderman-completion.el` owns Vertico, Orderless, Consult, Marginalia, and
   Embark.

@@ -126,16 +126,11 @@ fit the same grammar. For example, =SPC 3 f= moves forward three words.
 |-----------+-------------------------------------|
 | =SPC ?=   | Meow cheatsheet                     |
 | =SPC SPC= | =M-x=                               |
-| =SPC /=   | Ripgrep                             |
-| =SPC \=  | Alternate buffer                    |
-| =SPC d=   | Open Dirvish                        |
-| =SPC e=   | Open the Dirvish side window        |
 | =SPC .=   | Git commands                        |
 | =SPC b=   | Buffer commands                     |
 | =SPC f=   | File commands                       |
-| =SPC p=   | Project commands                    |
 | =SPC s=   | Search commands                     |
-| =SPC t=   | Tools and pickers                   |
+| =SPC t=   | Toggles                             |
 | =SPC w=   | Window commands                     |
 | =SPC q=   | Quit and reload commands            |
 
@@ -144,10 +139,10 @@ I use these subcommands most often:
 | Prefix  | Useful keys                                                   |
 |---------+---------------------------------------------------------------|
 | =SPC b= | =b= switch, =k= kill, =l= alternate, =r= revert, =s= save     |
-| =SPC f= | =f= find, =r= recent, =s= save, =S= save as                   |
+| =SPC f= | =.= Dirvish, =f= find with consult-fd, =g= ripgrep, =r= recent, =s= save, =S= save as |
 | =SPC .= | =.= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts |
-| =SPC p= | =b= buffers, =f= files, =p= switch, =s= ripgrep               |
-| =SPC s= | =c= clear, =g= ripgrep, =i= Imenu, =l= line                   |
+| =SPC s= | =c= clear, =i= Imenu, =l= line                                |
+| =SPC t= | =c= column indicator, =h= current line, =l= line numbers, =r= read only, =s= spelling, =t= Treemacs, =v= visual lines, =w= whitespace |
 | =SPC w= | =hjkl= focus, =HJKL= resize, =s/v= split, =o= keep one        |
 | =SPC q= | =r= reload                                                     |
 

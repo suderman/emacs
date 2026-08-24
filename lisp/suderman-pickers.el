@@ -7,7 +7,6 @@
 ;;; Code:
 
 (require 'suderman-completion)
-(require 'suderman-projects)
 
 (defun suderman/picker-minibuffer-setup ()
   "Use Vim-style navigation in a picker selection minibuffer."
@@ -30,15 +29,14 @@
   "Pick a high-level source, then launch its picker."
   (interactive)
   (let* ((actions `(("buffers" . consult-buffer)
-                    ("files" . suderman/find-file)
+                    ("files" . consult-fd)
                     ("grep" . consult-ripgrep)
                     ("recent" . consult-recent-file)
                     ("commands" . execute-extended-command)
                     ("command history" . consult-complex-command)
                     ("line" . consult-line)
                     ("symbols" . consult-imenu)
-                    ("keymaps" . describe-bindings)
-                    ("explorer" . dirvish-side)))
+                    ("keymaps" . describe-bindings)))
          (choice (let ((vertico-sort-override-function #'identity))
                    (minibuffer-with-setup-hook
                        (:append #'suderman/picker-minibuffer-setup)

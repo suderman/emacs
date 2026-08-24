@@ -8,13 +8,13 @@
 ;;; Code:
 
 (require 'use-package)
+(require 'suderman-appearance)
 (require 'suderman-meow)
 (require 'suderman-files)
 (require 'suderman-git)
-(require 'suderman-markdown)
 (require 'suderman-pickers)
-(require 'suderman-projects)
 (require 'suderman-reload)
+(require 'suderman-treemacs)
 (require 'suderman-windows)
 
 (defun suderman/clear-search ()
@@ -78,12 +78,10 @@
   "SPC . c conflict command keymap.")
 (defvar suderman/leader-git-hunk-map nil
   "SPC . h hunk command keymap.")
-(defvar suderman/leader-project-map nil
-  "SPC p project command keymap.")
 (defvar suderman/leader-search-map nil
   "SPC s search command keymap.")
-(defvar suderman/leader-tool-map nil
-  "SPC t tool command keymap.")
+(defvar suderman/leader-toggle-map nil
+  "SPC t toggle command keymap.")
 (defvar suderman/leader-window-map nil
   "SPC w window command keymap.")
 (defvar suderman/leader-quit-map nil
@@ -94,9 +92,8 @@
       suderman/leader-git-map (make-sparse-keymap)
       suderman/leader-git-conflict-map (make-sparse-keymap)
       suderman/leader-git-hunk-map (make-sparse-keymap)
-      suderman/leader-project-map (make-sparse-keymap)
       suderman/leader-search-map (make-sparse-keymap)
-      suderman/leader-tool-map (make-sparse-keymap)
+      suderman/leader-toggle-map (make-sparse-keymap)
       suderman/leader-window-map (make-sparse-keymap)
       suderman/leader-quit-map (make-sparse-keymap))
 
@@ -111,8 +108,9 @@
 (suderman/keys--define suderman/leader-buffer-map "s" #'save-buffer)
 
 ;; Files
-(suderman/keys--define suderman/leader-file-map "." #'find-file)
-(suderman/keys--define suderman/leader-file-map "f" #'suderman/find-file)
+(suderman/keys--define suderman/leader-file-map "." #'suderman/dirvish)
+(suderman/keys--define suderman/leader-file-map "f" #'consult-fd)
+(suderman/keys--define suderman/leader-file-map "g" #'consult-ripgrep)
 (suderman/keys--define suderman/leader-file-map "r" #'consult-recent-file)
 (suderman/keys--define suderman/leader-file-map "s" #'save-buffer)
 (suderman/keys--define suderman/leader-file-map "S" #'write-file)
@@ -148,33 +146,20 @@
 (suderman/keys--define suderman/leader-git-conflict-map "r" #'smerge-refine)
 (suderman/keys--define suderman/leader-git-conflict-map "u" #'smerge-keep-upper)
 
-;; Projects
-(suderman/keys--define suderman/leader-project-map "b" #'consult-project-buffer)
-(suderman/keys--define suderman/leader-project-map "f" #'project-find-file)
-(suderman/keys--define suderman/leader-project-map "k" #'project-kill-buffers)
-(suderman/keys--define suderman/leader-project-map "p" #'project-switch-project)
-(suderman/keys--define suderman/leader-project-map "s" #'consult-ripgrep)
-
 ;; Search
 (suderman/keys--define suderman/leader-search-map "c" #'suderman/clear-search)
-(suderman/keys--define suderman/leader-search-map "g" #'consult-ripgrep)
 (suderman/keys--define suderman/leader-search-map "i" #'consult-imenu)
 (suderman/keys--define suderman/leader-search-map "l" #'consult-line)
 
-;; Tools and pickers
-(suderman/keys--define suderman/leader-tool-map "?" #'meow-keypad-describe-key)
-(suderman/keys--define suderman/leader-tool-map "b" #'consult-buffer)
-(suderman/keys--define suderman/leader-tool-map "d" #'dirvish)
-(suderman/keys--define suderman/leader-tool-map "e" #'dirvish-side)
-(suderman/keys--define suderman/leader-tool-map "f" #'suderman/find-file)
-(suderman/keys--define suderman/leader-tool-map "g" #'consult-ripgrep)
-(suderman/keys--define suderman/leader-tool-map "i" #'consult-imenu)
-(suderman/keys--define suderman/leader-tool-map "k" #'describe-bindings)
-(suderman/keys--define suderman/leader-tool-map "l" #'consult-line)
-(suderman/keys--define suderman/leader-tool-map "p" #'suderman/markdown-preview-buffer)
-(suderman/keys--define suderman/leader-tool-map "q" #'consult-complex-command)
-(suderman/keys--define suderman/leader-tool-map "r" #'consult-recent-file)
-(suderman/keys--define suderman/leader-tool-map "t" #'suderman/smart-picker)
+;; Toggles
+(suderman/keys--define suderman/leader-toggle-map "c" #'display-fill-column-indicator-mode)
+(suderman/keys--define suderman/leader-toggle-map "h" #'hl-line-mode)
+(suderman/keys--define suderman/leader-toggle-map "l" #'suderman/toggle-line-numbers)
+(suderman/keys--define suderman/leader-toggle-map "r" #'read-only-mode)
+(suderman/keys--define suderman/leader-toggle-map "s" #'jinx-mode)
+(suderman/keys--define suderman/leader-toggle-map "t" #'suderman/treemacs-toggle)
+(suderman/keys--define suderman/leader-toggle-map "v" #'visual-line-mode)
+(suderman/keys--define suderman/leader-toggle-map "w" #'whitespace-mode)
 
 ;; Windows
 (suderman/keys--define suderman/leader-window-map "=" #'balance-windows)
@@ -250,19 +235,13 @@
  '("9" . meow-digit-argument)
  '("0" . meow-digit-argument)
  '("?" . meow-cheatsheet)
- '("/" . consult-ripgrep)
  '("SPC" . execute-extended-command)
- '(":" . execute-extended-command)
- '("\\" . suderman/alternate-buffer)
- '("d" . dirvish)
- '("e" . dirvish-side)
  (cons "." suderman/leader-git-map)
  (cons "b" suderman/leader-buffer-map)
  (cons "f" suderman/leader-file-map)
- (cons "p" suderman/leader-project-map)
  (cons "q" suderman/leader-quit-map)
  (cons "s" suderman/leader-search-map)
- (cons "t" suderman/leader-tool-map)
+ (cons "t" suderman/leader-toggle-map)
  (cons "w" suderman/leader-window-map))
 
 (which-key-add-keymap-based-replacements
@@ -270,11 +249,21 @@
   "." (cons "git" suderman/leader-git-map)
   "b" (cons "buffers" suderman/leader-buffer-map)
   "f" (cons "files" suderman/leader-file-map)
-  "p" (cons "projects" suderman/leader-project-map)
   "q" (cons "quit/reload" suderman/leader-quit-map)
   "s" (cons "search" suderman/leader-search-map)
-  "t" (cons "tools" suderman/leader-tool-map)
+  "t" (cons "toggles" suderman/leader-toggle-map)
   "w" (cons "windows" suderman/leader-window-map))
+
+(which-key-add-keymap-based-replacements
+  suderman/leader-toggle-map
+  "c" "column indicator"
+  "h" "current line"
+  "l" "line numbers"
+  "r" "read only"
+  "s" "spelling"
+  "t" "treemacs"
+  "v" "visual lines"
+  "w" "whitespace")
 
 (which-key-add-keymap-based-replacements
   suderman/leader-git-map

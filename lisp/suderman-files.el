@@ -313,7 +313,7 @@
 (keymap-set ibuffer-mode-map "." #'suderman/ibuffer-dirvish)
 
 (use-package dirvish
-  :commands (dirvish dirvish-dwim dirvish-side)
+  :commands (dirvish dirvish-dwim)
   :init
   (setq dired-listing-switches "-al --group-directories-first"
         dirvish-attributes '(nerd-icons file-modes)
