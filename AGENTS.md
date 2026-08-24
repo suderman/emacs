@@ -74,6 +74,7 @@ The current modules have clear jobs.
 - `suderman-languages.el` owns broad language associations and tree-sitter
   setup.
 - `suderman-git.el` owns Magit, diff-hl, and conflict handling.
+- `suderman-org.el` owns Org agenda, capture, and refile behavior.
 - `suderman-keys.el` owns global keys and the Meow `SPC` leader maps.
 - `suderman-reload.el` owns hot reload behavior.
 
@@ -127,6 +128,8 @@ Important parts of the current grammar follow.
   example `SPC 3 f`.
 - `SPC .` owns Git commands. Status is `SPC . .`, hunks are under `SPC . h`,
   and conflict resolution is under `SPC . c`.
+- `SPC o` owns the focused Org agenda, capture, scheduling, linking, and refile
+  commands.
 
 The full map is the source of truth. Do not duplicate every binding here.
 

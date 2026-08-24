@@ -28,6 +28,7 @@
 (require 'suderman-dashboard)
 (require 'suderman-treemacs)
 (require 'suderman-markdown)
+(require 'suderman-org)
 (require 'suderman-languages)
 (require 'suderman-git)
 (require 'suderman-keys)

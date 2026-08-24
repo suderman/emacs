@@ -130,6 +130,7 @@ fit the same grammar. For example, =SPC 3 f= moves forward three words.
 | =SPC .=   | Git commands                        |
 | =SPC b=   | Buffer commands                     |
 | =SPC f=   | File commands                       |
+| =SPC o=   | Org commands                        |
 | =SPC s=   | Search commands                     |
 | =SPC t=   | Toggles                             |
 | =SPC w=   | Window commands                     |
@@ -142,6 +143,7 @@ I use these subcommands most often:
 | =SPC b= | =b= switch, =k= kill, =l= alternate, =r= revert, =s= save     |
 | =SPC f= | =.= Dirvish, =f= find with consult-fd, =g= ripgrep, =r= recent, =s= save, =S= save as |
 | =SPC .= | =.= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts |
+| =SPC o= | =a= agenda, =c= capture, =d/s= deadline/schedule, =g= headings, =i/l= insert/store link, =r= refile, =t/T= TODO item/list, =x= checkbox, =e= export |
 | =SPC s= | =c= clear, =i= Imenu, =l= line                                |
 | =SPC t= | =c= column indicator, =h= current line, =l= line numbers, =r= read only, =s= spelling, =t= Treemacs, =v= visual lines, =w= whitespace |
 | =SPC w= | =hjkl= focus, =HJKL= resize, =s/v= split, =o= keep one        |
@@ -342,6 +344,7 @@ Dirvish.
 | =lisp/suderman-dashboard.el=    | Startup dashboard and common destinations       |
 | =lisp/suderman-treemacs.el=     | Frame-local project tree and IBuffer integration |
 | =lisp/suderman-git.el=          | Magit, live hunks, and conflict handling          |
+| =lisp/suderman-org.el=          | Org agenda, capture, and refile workflow           |
 | =lisp/suderman-keys.el=         | Global, Meta, and =SPC= leader bindings          |
 | =lisp/suderman-reload.el=       | Safe modular hot reload                          |
 | [[file:AGENTS.md][AGENTS.md]]                   | Maintenance decisions and verification rules     |

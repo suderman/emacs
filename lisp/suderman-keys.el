@@ -12,6 +12,7 @@
 (require 'suderman-meow)
 (require 'suderman-files)
 (require 'suderman-git)
+(require 'suderman-org)
 (require 'suderman-pickers)
 (require 'suderman-reload)
 (require 'suderman-treemacs)
@@ -78,6 +79,8 @@
   "SPC . c conflict command keymap.")
 (defvar suderman/leader-git-hunk-map nil
   "SPC . h hunk command keymap.")
+(defvar suderman/leader-org-map nil
+  "SPC o Org command keymap.")
 (defvar suderman/leader-search-map nil
   "SPC s search command keymap.")
 (defvar suderman/leader-toggle-map nil
@@ -92,6 +95,7 @@
       suderman/leader-git-map (make-sparse-keymap)
       suderman/leader-git-conflict-map (make-sparse-keymap)
       suderman/leader-git-hunk-map (make-sparse-keymap)
+      suderman/leader-org-map (make-sparse-keymap)
       suderman/leader-search-map (make-sparse-keymap)
       suderman/leader-toggle-map (make-sparse-keymap)
       suderman/leader-window-map (make-sparse-keymap)
@@ -145,6 +149,20 @@
 (suderman/keys--define suderman/leader-git-conflict-map "p" #'smerge-prev)
 (suderman/keys--define suderman/leader-git-conflict-map "r" #'smerge-refine)
 (suderman/keys--define suderman/leader-git-conflict-map "u" #'smerge-keep-upper)
+
+;; Org
+(suderman/keys--define suderman/leader-org-map "a" #'org-agenda)
+(suderman/keys--define suderman/leader-org-map "c" #'org-capture)
+(suderman/keys--define suderman/leader-org-map "d" #'org-deadline)
+(suderman/keys--define suderman/leader-org-map "e" #'org-export-dispatch)
+(suderman/keys--define suderman/leader-org-map "g" #'consult-org-heading)
+(suderman/keys--define suderman/leader-org-map "i" #'org-insert-link)
+(suderman/keys--define suderman/leader-org-map "l" #'org-store-link)
+(suderman/keys--define suderman/leader-org-map "r" #'org-refile)
+(suderman/keys--define suderman/leader-org-map "s" #'org-schedule)
+(suderman/keys--define suderman/leader-org-map "t" #'org-todo)
+(suderman/keys--define suderman/leader-org-map "T" #'org-todo-list)
+(suderman/keys--define suderman/leader-org-map "x" #'org-toggle-checkbox)
 
 ;; Search
 (suderman/keys--define suderman/leader-search-map "c" #'suderman/clear-search)
@@ -239,6 +257,7 @@
  (cons "." suderman/leader-git-map)
  (cons "b" suderman/leader-buffer-map)
  (cons "f" suderman/leader-file-map)
+ (cons "o" suderman/leader-org-map)
  (cons "q" suderman/leader-quit-map)
  (cons "s" suderman/leader-search-map)
  (cons "t" suderman/leader-toggle-map)
@@ -249,6 +268,7 @@
   "." (cons "git" suderman/leader-git-map)
   "b" (cons "buffers" suderman/leader-buffer-map)
   "f" (cons "files" suderman/leader-file-map)
+  "o" (cons "org" suderman/leader-org-map)
   "q" (cons "quit/reload" suderman/leader-quit-map)
   "s" (cons "search" suderman/leader-search-map)
   "t" (cons "toggles" suderman/leader-toggle-map)
