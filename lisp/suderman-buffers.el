@@ -9,6 +9,8 @@
 (require 'ibuffer)
 (require 'suderman-windows)
 
+(declare-function suderman/dashboard "suderman-dashboard")
+
 (define-ibuffer-column suderman-name
   (:name "Name"
          :header-mouse-map ibuffer-name-header-map
@@ -113,6 +115,7 @@
   :config
   (keymap-set ibuffer-name-map "<mouse-1>" #'ibuffer-mouse-visit-buffer)
   (keymap-set ibuffer-name-map "<mouse-2>" #'ibuffer-mouse-toggle-mark)
+  (keymap-set ibuffer-mode-map "`" #'suderman/dashboard)
   (keymap-set ibuffer-mode-map "," #'suderman/ibuffer-toggle)
   (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-toggle)
   (keymap-set ibuffer-mode-map "j" #'ibuffer-forward-line)

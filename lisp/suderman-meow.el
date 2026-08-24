@@ -10,6 +10,7 @@
 (require 'subr-x)
 (require 'use-package)
 
+(declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/dirvish "suderman-files")
 
 ;;;; Leader integration
@@ -575,6 +576,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-till-backward . "till back")
                    (suderman/meow-visual . "select")
                    (suderman/ibuffer-toggle . "buffers")
+                   (suderman/dashboard . "dashboard")
                    (suderman/dirvish . "files")
                    (suderman/treemacs-toggle . "tree")
                    (surround-insert . "surround")
@@ -597,6 +599,7 @@ An active selection is replaced without modifying the kill ring."
    '("k" . meow-prev)
    '("l" . meow-right)
    '("S" . suderman/treemacs-toggle)
+   '("`" . suderman/dashboard)
    '("<escape>" . ignore))
   
   (meow-normal-define-key
@@ -625,7 +628,7 @@ An active selection is replaced without modifying the kill ring."
    '("{" . meow-beginning-of-thing)
    '("}" . meow-end-of-thing)
    '("\"" . ignore)
-   '("`" . ignore)
+   '("`" . suderman/dashboard)
    '("~" . ignore)
    '("\\ \\" . suderman/alternate-buffer)
    '("\\ J" . suderman/meow-join-line)

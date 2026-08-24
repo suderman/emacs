@@ -25,6 +25,7 @@
 (require 'suderman-pickers)
 (require 'suderman-meow)
 (require 'suderman-files)
+(require 'suderman-dashboard)
 (require 'suderman-treemacs)
 (require 'suderman-markdown)
 (require 'suderman-languages)

@@ -73,6 +73,7 @@ Which-Key shows each leader prefix while I type it.
 | =%=         | Jump to matching delimiter or item              |
 | =C / V=     | Page up / down                                  |
 | =, / .=     | Open project-grouped IBuffer / Dirvish          |
+| =`=         | Open the Dashboard                               |
 | =S=         | Toggle Treemacs without moving editor focus      |
 | =q / Q=     | Quit the view / kill the current buffer         |
 
@@ -193,6 +194,28 @@ Inside Magit, =j/k= and =n/p= move by section, =^= moves to the parent section,
 or =.= restores the previous buffer. The original =j= jump and =k= discard
 commands remain available as =h j= and =h k=. In Transient menus, =ESC= returns
 to the parent menu or closes the top-level menu; =C-q= exits the entire stack.
+
+** Dashboard
+
+New Emacs sessions and fileless =emacsclient= frames start on a small dashboard.
+Its top row opens my common source and configuration directories through
+Dirvish, followed by recent projects and recent files. Backtick returns to it
+from Meow Normal and Motion states, IBuffer, or Dirvish. =M-x
+suderman/dashboard= works everywhere without using the leader map.
+
+| Key       | Action                                      |
+|-----------+---------------------------------------------|
+| =h / l=   | Move to the previous / next button in a row |
+| =j / k=   | Move to the nearest button below / above    |
+| =1 ... 8= | Open the matching pinned destination         |
+| =TAB=     | Move to the next item                        |
+| =RET=     | Open the item at point                       |
+| =p / r=   | Jump to projects / recent files             |
+| =s=       | Open =*scratch*=                             |
+| =SPC=     | Open the Meow keypad                         |
+| =, / .=   | Open IBuffer / Dirvish                       |
+| =g=       | Refresh the dashboard                       |
+| =q=       | Close the dashboard                         |
 
 ** IBuffer and Treemacs
 
@@ -316,6 +339,7 @@ Dirvish.
 | =lisp/suderman-buffers.el=      | Project-grouped IBuffer                          |
 | =lisp/suderman-completion.el=   | Vertico, Orderless, Consult, Marginalia, Embark  |
 | =lisp/suderman-files.el=        | Dired and Dirvish                                |
+| =lisp/suderman-dashboard.el=    | Startup dashboard and common destinations       |
 | =lisp/suderman-treemacs.el=     | Frame-local project tree and IBuffer integration |
 | =lisp/suderman-git.el=          | Magit, live hunks, and conflict handling          |
 | =lisp/suderman-keys.el=         | Global, Meta, and =SPC= leader bindings          |

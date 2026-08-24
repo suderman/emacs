@@ -67,6 +67,7 @@ The current modules have clear jobs.
 - `suderman-meow.el` owns modal editing, selections, editing commands, and the
   normal and motion maps.
 - `suderman-files.el` owns Dired and Dirvish.
+- `suderman-dashboard.el` owns the startup dashboard and common destinations.
 - `suderman-treemacs.el` owns the project-focused Treemacs tree and its links to
   IBuffer.
 - `suderman-markdown.el` owns Markdown mode behavior and Pandoc preview.
@@ -102,8 +103,9 @@ Important parts of the current grammar follow.
   layout when no other window is visible and the selected window otherwise.
 - `S` toggles Treemacs visibility in Normal and Motion states without moving
   editor focus when it opens. Inside Treemacs, it hides the tree.
-- In normal state, double quote, backtick, and `~` are intentionally inert.
-  Motion buffers let these keys fall through to their major-mode maps.
+- Backtick opens the Dashboard in Normal and Motion states, IBuffer, and
+  Dirvish. Double quote and `~` are intentionally inert in Normal; Motion lets
+  those two keys fall through to major-mode maps.
 - Image buffers use Motion state. Their native `n` and `p` browse files in
   cyclic alphabetical order while `SPC` remains Meow's keypad, `,` opens
   IBuffer, `.` opens Dirvish, and `h` moves left. `=`/`+` and `-` zoom,

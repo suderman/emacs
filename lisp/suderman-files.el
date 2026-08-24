@@ -14,6 +14,7 @@
 (defvar dirvish-quick-access-entries)
 (defvar dirvish-yank-sources)
 (defvar global-hl-line-mode)
+(declare-function suderman/dashboard "suderman-dashboard")
 (declare-function dirvish--build-layout "dirvish")
 (declare-function dirvish--create-parent-buffer "dirvish")
 (declare-function dirvish "dirvish")
@@ -311,6 +312,7 @@
 (add-hook 'dired-mode-hook #'suderman/dired-setup)
 (add-hook 'dired-mode-hook #'suderman/dired-hide-dotfiles t)
 (keymap-set ibuffer-mode-map "." #'suderman/ibuffer-dirvish)
+(keymap-set dired-mode-map "`" #'suderman/dashboard)
 
 (use-package dirvish
   :commands (dirvish dirvish-dwim)
@@ -345,6 +347,7 @@
               #'suderman/dirvish-create-parent-buffer)
   (add-hook 'dirvish-directory-view-mode-hook #'suderman/dired-setup)
   (dolist (map (list dired-mode-map dirvish-mode-map))
+    (keymap-set map "`" #'suderman/dashboard)
     (keymap-set map "SPC" #'meow-keypad)
     (keymap-set map "," #'suderman/dirvish-ibuffer)
     (keymap-set map "." #'suderman/dirvish)
