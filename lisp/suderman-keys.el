@@ -170,6 +170,7 @@
 (global-set-key (kbd "s-[") #'tab-previous)
 (global-set-key (kbd "s-]") #'tab-next)
 (global-set-key (kbd "s-w") #'tab-close)
+(global-set-key (kbd "M-z") #'suderman/zoom-window-toggle)
 (global-set-key (kbd "C-x 0") #'suderman/delete-window-or-tab)
 
 (dolist (binding '(("<f5>" . suderman/reload-config)

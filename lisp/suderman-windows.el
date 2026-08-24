@@ -36,6 +36,23 @@
     (scroll-on-jump-advice-add meow-goto-line)
     (scroll-on-jump-advice-add suderman/meow-search)))
 
+(defvar zoom-window-mode-line-color)
+
+(use-package zoom-window
+  :commands zoom-window-zoom)
+
+(defun suderman/zoom-window-toggle ()
+  "Toggle the selected window's zoomed layout."
+  (interactive)
+  (let ((zoom-window-mode-line-color
+         (or (suderman/theme-blend 'success 0.2)
+             (face-background 'mode-line nil t))))
+    (zoom-window-zoom)
+    (when (frame-parameter (selected-frame) 'zoom-window-enabled)
+      ;; `delete-other-windows' preserves side windows after zoom saves the layout.
+      (dolist (window (delq (selected-window) (window-list)))
+        (delete-window window)))))
+
 (defun suderman/window-left ()
   "Move focus to the window left of the selected window."
   (interactive)

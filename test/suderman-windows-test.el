@@ -6,6 +6,40 @@
 (require 'ert)
 (require 'suderman-windows)
 
+(ert-deftest suderman/zoom-window-is-bound-to-m-z ()
+  (should (eq (key-binding (kbd "M-z"))
+              #'suderman/zoom-window-toggle)))
+
+(ert-deftest suderman/zoom-window-toggle-restores-layout ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let ((left (selected-window))
+          (right (split-window-right))
+          (indicator (suderman/theme-blend 'success 0.2)))
+      (select-window left)
+      (suderman/zoom-window-toggle)
+      (should (one-window-p))
+      (should (equal (face-background 'mode-line nil t) indicator))
+      (suderman/zoom-window-toggle)
+      (should (memq left (window-list)))
+      (should (memq right (window-list))))))
+
+(ert-deftest suderman/zoom-window-toggle-restores-side-windows ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let* ((left (selected-window))
+           (right (split-window-right))
+           (side (display-buffer-in-side-window
+                  (get-buffer-create " *zoom-window-side-test*")
+                  '((side . left)))))
+      (select-window left)
+      (suderman/zoom-window-toggle)
+      (should (one-window-p))
+      (suderman/zoom-window-toggle)
+      (should (memq left (window-list)))
+      (should (memq right (window-list)))
+      (should (memq side (window-list))))))
+
 (ert-deftest suderman/resize-window-moves-trailing-edge ()
   (save-window-excursion
     (delete-other-windows)
