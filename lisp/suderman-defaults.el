@@ -15,6 +15,10 @@
       scroll-preserve-screen-position 'always
       scroll-error-top-bottom t)
 
+(setq-default indent-tabs-mode nil
+              tab-width 2
+              standard-indent 2)
+
 (savehist-mode 1)
 (save-place-mode 1)
 (recentf-mode 1)

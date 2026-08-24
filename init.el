@@ -30,6 +30,7 @@
 (require 'suderman-markdown)
 (require 'suderman-languages)
 (require 'suderman-keys)
+(require 'suderman-formatting)
 (require 'suderman-reload)
 
 ;; Keep Custom out of the hand-written config.
