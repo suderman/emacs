@@ -10,6 +10,7 @@
       use-short-answers t
       confirm-kill-emacs #'y-or-n-p
       read-process-output-max (* 1024 1024)
+      multiple-terminals-merge-keyboards t
       large-file-warning-threshold (* 100 1024 1024)
       enable-recursive-minibuffers t
       scroll-preserve-screen-position 'always
