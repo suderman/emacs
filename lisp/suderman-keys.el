@@ -11,6 +11,7 @@
 (require 'seq)
 (require 'suderman-meow)
 (require 'suderman-files)
+(require 'suderman-git)
 (require 'suderman-markdown)
 (require 'suderman-pickers)
 (require 'suderman-projects)
@@ -72,6 +73,12 @@
   "SPC b buffer command keymap.")
 (defvar suderman/leader-file-map nil
   "SPC f file command keymap.")
+(defvar suderman/leader-git-map nil
+  "SPC v Git command keymap.")
+(defvar suderman/leader-git-conflict-map nil
+  "SPC v c conflict command keymap.")
+(defvar suderman/leader-git-hunk-map nil
+  "SPC v h hunk command keymap.")
 (defvar suderman/leader-project-map nil
   "SPC p project command keymap.")
 (defvar suderman/leader-search-map nil
@@ -85,6 +92,9 @@
 
 (setq suderman/leader-buffer-map (make-sparse-keymap)
       suderman/leader-file-map (make-sparse-keymap)
+      suderman/leader-git-map (make-sparse-keymap)
+      suderman/leader-git-conflict-map (make-sparse-keymap)
+      suderman/leader-git-hunk-map (make-sparse-keymap)
       suderman/leader-project-map (make-sparse-keymap)
       suderman/leader-search-map (make-sparse-keymap)
       suderman/leader-tool-map (make-sparse-keymap)
@@ -107,6 +117,37 @@
 (suderman/keys--define suderman/leader-file-map "r" #'consult-recent-file)
 (suderman/keys--define suderman/leader-file-map "s" #'save-buffer)
 (suderman/keys--define suderman/leader-file-map "S" #'write-file)
+
+;; Git
+(suderman/keys--define suderman/leader-git-map "B" #'magit-blame-addition)
+(suderman/keys--define suderman/leader-git-map "b" #'magit-blame-echo)
+(suderman/keys--define suderman/leader-git-map "c" suderman/leader-git-conflict-map)
+(suderman/keys--define suderman/leader-git-map "d" #'magit-diff-buffer-file)
+(suderman/keys--define suderman/leader-git-map "f" #'magit-file-dispatch)
+(suderman/keys--define suderman/leader-git-map "v" #'magit-status)
+(suderman/keys--define suderman/leader-git-map "h" suderman/leader-git-hunk-map)
+(suderman/keys--define suderman/leader-git-map "l" #'magit-log-buffer-file)
+(suderman/keys--define suderman/leader-git-map "m" #'magit-dispatch)
+
+;; Git hunks
+(suderman/keys--define suderman/leader-git-hunk-map "d" #'diff-hl-diff-goto-hunk)
+(suderman/keys--define suderman/leader-git-hunk-map "n" #'diff-hl-next-hunk)
+(suderman/keys--define suderman/leader-git-hunk-map "p" #'diff-hl-previous-hunk)
+(suderman/keys--define suderman/leader-git-hunk-map "r" #'diff-hl-revert-hunk)
+(suderman/keys--define suderman/leader-git-hunk-map "s" #'diff-hl-stage-current-hunk)
+(suderman/keys--define suderman/leader-git-hunk-map "u" #'diff-hl-unstage-file)
+(suderman/keys--define suderman/leader-git-hunk-map "v" #'diff-hl-show-hunk)
+
+;; Git conflicts
+(suderman/keys--define suderman/leader-git-conflict-map "0" #'smerge-kill-current)
+(suderman/keys--define suderman/leader-git-conflict-map "a" #'smerge-keep-all)
+(suderman/keys--define suderman/leader-git-conflict-map "b" #'smerge-keep-base)
+(suderman/keys--define suderman/leader-git-conflict-map "e" #'smerge-ediff)
+(suderman/keys--define suderman/leader-git-conflict-map "l" #'smerge-keep-lower)
+(suderman/keys--define suderman/leader-git-conflict-map "n" #'smerge-next)
+(suderman/keys--define suderman/leader-git-conflict-map "p" #'smerge-prev)
+(suderman/keys--define suderman/leader-git-conflict-map "r" #'smerge-refine)
+(suderman/keys--define suderman/leader-git-conflict-map "u" #'smerge-keep-upper)
 
 ;; Projects
 (suderman/keys--define suderman/leader-project-map "b" #'consult-project-buffer)
@@ -197,7 +238,8 @@
   :config
   (which-key-mode 1)
   (dolist (key '("SPC b" "SPC d" "SPC e" "SPC f" "SPC h" "SPC H"
-                 "SPC p" "SPC q" "SPC s" "SPC t" "SPC w"))
+                 "SPC p" "SPC q" "SPC s" "SPC v" "SPC v c" "SPC v h"
+                 "SPC t" "SPC w"))
     (let ((regexp (concat "\\`" (regexp-quote key) "\\'")))
       (setq which-key-replacement-alist
             (seq-remove (lambda (entry) (equal (caar entry) regexp))
@@ -207,6 +249,9 @@
     "SPC d" "dirvish"
     "SPC e" "explorer"
     "SPC f" "files"
+    "SPC v" "git"
+    "SPC v c" "conflicts"
+    "SPC v h" "hunks"
     "SPC p" "projects"
     "SPC q" "quit/reload"
     "SPC s" "search"
@@ -236,6 +281,7 @@
  '("e" . dirvish-side)
  (cons "b" suderman/leader-buffer-map)
  (cons "f" suderman/leader-file-map)
+ (cons "v" suderman/leader-git-map)
  (cons "p" suderman/leader-project-map)
  (cons "q" suderman/leader-quit-map)
  (cons "s" suderman/leader-search-map)

@@ -11,9 +11,9 @@ switch projects, and manage windows. It is not a starter kit, and I do not try
 to make it portable to systems I do not use.
 
 [[https://github.com/meow-edit/meow][Meow]] controls modal editing. Built-in =project.el= supplies project data.
-IBuffer shows open buffers by project, and Treemacs keeps the current project
-visible. Vertico, Orderless, Consult, Marginalia, and Embark handle minibuffer
-completion.
+IBuffer shows open buffers by project, Treemacs keeps the current project
+visible, and Magit handles Git. Vertico, Orderless, Consult, Marginalia, and
+Embark handle minibuffer completion.
 
 Some choices are a little odd on purpose. Comma opens IBuffer, period opens
 Dirvish, and apostrophe repeats edits. =SPC= is both Meow's keypad and my leader
@@ -134,6 +134,7 @@ fit the same grammar. For example, =SPC 3 f= moves forward three words.
 | =SPC e=   | Open the Dirvish side window        |
 | =SPC b=   | Buffer commands                     |
 | =SPC f=   | File commands                       |
+| =SPC v=   | Git commands                        |
 | =SPC p=   | Project commands                    |
 | =SPC s=   | Search commands                     |
 | =SPC t=   | Tools and pickers                   |
@@ -146,10 +147,59 @@ I use these subcommands most often:
 |---------+---------------------------------------------------------------|
 | =SPC b= | =b= switch, =k= kill, =l= alternate, =r= revert, =s= save     |
 | =SPC f= | =f= find, =r= recent, =s= save, =S= save as                   |
+| =SPC v= | =v= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts |
 | =SPC p= | =b= buffers, =f= files, =p= switch, =s= ripgrep               |
 | =SPC s= | =c= clear, =g= ripgrep, =i= Imenu, =l= line                   |
 | =SPC w= | =hjkl= focus, =HJKL= resize, =s/v= split, =o= keep one        |
 | =SPC q= | =r= reload                                                     |
+
+** Git
+
+Magit is the repository dashboard. It stages files, hunks, and selected lines;
+drives commits, branches, remotes, logs, diffs, stashes, rebases, and other Git
+operations through its native Transient menus. Meow stays off in Magit buffers
+so those native single-letter commands win.
+
+| Key         | Action                                  |
+|-------------+-----------------------------------------|
+| =SPC v v=   | Open Magit status                       |
+| =SPC v m=   | Open Magit dispatch                     |
+| =SPC v f=   | Open current-file dispatch              |
+| =SPC v d=   | Diff the current file                   |
+| =SPC v l=   | Show current-file history               |
+| =SPC v b=   | Show current-line blame                 |
+| =SPC v B=   | Show full-buffer blame                  |
+
+diff-hl updates change indicators while editing. Its hunk commands are grouped
+under =SPC v h=.
+
+| Key           | Action                         |
+|---------------+--------------------------------|
+| =SPC v h n/p= | Next / previous hunk           |
+| =SPC v h v=   | Preview hunk                   |
+| =SPC v h d=   | Open hunk in a diff            |
+| =SPC v h s=   | Stage hunk                     |
+| =SPC v h r=   | Revert hunk                    |
+| =SPC v h u=   | Unstage the current file       |
+
+Built-in smerge-mode and Ediff handle conflict markers. Upper and lower are
+used instead of ours and theirs because those meanings reverse during rebase.
+
+| Key           | Action                                  |
+|---------------+-----------------------------------------|
+| =SPC v c n/p= | Next / previous conflict                |
+| =SPC v c u/l= | Keep upper / lower side                 |
+| =SPC v c a=   | Keep all sides                          |
+| =SPC v c b=   | Keep the base revision                  |
+| =SPC v c 0=   | Keep neither side                       |
+| =SPC v c r=   | Refine conflict highlighting            |
+| =SPC v c e=   | Resolve the current conflict with Ediff |
+
+Inside Magit, =j/k= and =n/p= move by section, =^= moves to the parent section,
+=TAB= expands or collapses, =RET= visits, =h= opens the dispatch menu, and =q=
+or =,= restores the previous buffer. The original =j= jump and =k= discard
+commands remain available as =h j= and =h k=. In Transient menus, =ESC= returns
+to the parent menu or closes the top-level menu; =C-q= exits the entire stack.
 
 ** IBuffer and Treemacs
 
@@ -246,7 +296,8 @@ Animated images autoplay and loop.
 
 ** Windows and frames
 
-These bindings work in Meow Normal and Motion states, IBuffer, and Dirvish.
+These bindings work in Meow Normal and Motion states, Magit, IBuffer, and
+Dirvish.
 
 | Key           | Action                              |
 |---------------+-------------------------------------|
@@ -254,6 +305,7 @@ These bindings work in Meow Normal and Motion states, IBuffer, and Dirvish.
 | =M-H/J/K/L=   | Move divider left/down/up/right       |
 | =M-u / M-i=   | Split below / split right           |
 | =M-w=         | Delete the window or current tab    |
+| =M-z=         | Zoom / restore the selected window  |
 | =s-+ / s--=   | Increase / decrease frame text size |
 | =s-t=         | New tab                             |
 | =s-[ / s-]=   | Previous / next tab                 |
@@ -272,6 +324,7 @@ These bindings work in Meow Normal and Motion states, IBuffer, and Dirvish.
 | =lisp/suderman-completion.el=   | Vertico, Orderless, Consult, Marginalia, Embark  |
 | =lisp/suderman-files.el=        | Dired and Dirvish                                |
 | =lisp/suderman-treemacs.el=     | Frame-local project tree and IBuffer integration |
+| =lisp/suderman-git.el=          | Magit, live hunks, and conflict handling          |
 | =lisp/suderman-keys.el=         | Global, Meta, and =SPC= leader bindings          |
 | =lisp/suderman-reload.el=       | Safe modular hot reload                          |
 | [[file:AGENTS.md][AGENTS.md]]                   | Maintenance decisions and verification rules     |

@@ -73,6 +73,7 @@ The current modules have clear jobs.
 - `suderman-markdown.el` owns Markdown mode behavior and Pandoc preview.
 - `suderman-languages.el` owns broad language associations and tree-sitter
   setup.
+- `suderman-git.el` owns Magit, diff-hl, and conflict handling.
 - `suderman-keys.el` owns global keys and the Meow `SPC` leader maps.
 - `suderman-reload.el` owns hot reload behavior.
 
@@ -123,6 +124,8 @@ Important parts of the current grammar follow.
 - `SPC` is both Meow's keypad and the owned leader map. Its native `h`
   translation starts a `C-h` key sequence. Numeric arguments are useful, for
   example `SPC 3 f`.
+- `SPC v` owns Git commands because Meow reserves keypad `g` for the `C-M-`
+  prefix. Hunks are under `SPC v h`, and conflict resolution is under `SPC v c`.
 
 The full map is the source of truth. Do not duplicate every binding here.
 
@@ -147,6 +150,16 @@ below the current directory. Question mark shows a compact Which-Key view
 generated from the effective bindings; the upstream Dirvish dispatcher remains
 available through `M-x`. `g` refreshes, `I` shows file information, `u` unmarks
 without moving, and `U` clears all marks.
+
+Magit disables Meow locally because its single-letter commands and Transient
+menus are the interface. `j/k` move between visible sections, while native
+`n/p` remain equivalent alternatives. Keep Magit's native `h/l`, `TAB`, `RET`,
+and `^` bindings for dispatch, logs, expansion, visiting, and parent movement.
+The displaced jump and discard commands remain under `h j` and `h k`. Comma
+buries Magit, while Meta window commands and `M-z` remain available. An isolated
+`<escape>` quits one Transient level without replacing raw `ESC` as the Meta
+prefix. Conflict commands use upper/lower terminology because ours/theirs
+changes meaning during a rebase.
 
 ## Buffer and explorer workflow
 
@@ -217,6 +230,9 @@ These choices are not immutable, but replacing one needs a concrete benefit.
 - Doom Modeline supplies the modeline and native Meow state segment.
 - Nerd Icons packages decorate Doom Modeline, IBuffer, and Treemacs.
 - Dirvish improves Dired, while Treemacs provides the persistent project tree.
+- Magit owns repository operations, diff-hl owns live hunk indicators, and
+  built-in smerge-mode plus Ediff resolve conflicts. Forge is intentionally
+  absent until hosting issues and pull requests need to live in Emacs.
 - Tree-sitter modes are preferred where the NixOS flake supplies grammars.
 - Markdown preview uses Pandoc and a small local HTTP server. It refreshes only
   after save and preserves browser scroll position.

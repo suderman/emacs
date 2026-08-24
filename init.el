@@ -29,6 +29,7 @@
 (require 'suderman-treemacs)
 (require 'suderman-markdown)
 (require 'suderman-languages)
+(require 'suderman-git)
 (require 'suderman-keys)
 (require 'suderman-formatting)
 (require 'suderman-reload)
