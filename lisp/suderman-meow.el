@@ -532,6 +532,14 @@ An active selection is replaced without modifying the kill ring."
   (advice-add 'surround--op-mark :after
               #'suderman/meow--adopt-surround-selection))
 
+(defun suderman/meow--cheatsheet-command-name (original command)
+  "Label Surround's anonymous prefix map, or call ORIGINAL for COMMAND."
+  (if (and (keymapp command)
+           (eq (lookup-key command (kbd "s")) #'surround-insert)
+           (eq (lookup-key command (kbd "d")) #'surround-delete))
+      (format "% 9s" "surround")
+    (funcall original command)))
+
 (defun suderman/meow-setup-qwerty ()
   "Install Suderman's QWERTY Meow bindings."
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
@@ -542,7 +550,9 @@ An active selection is replaced without modifying the kill ring."
     (define-key meow-normal-state-keymap (kbd key) nil))
   (dolist (key '("'" "\"" "`" "~"))
     (define-key meow-motion-state-keymap (kbd key) nil))
-  (dolist (entry '((suderman/format-buffer . "format")
+  (dolist (entry '((nil . "")
+                   (ignore . "")
+                   (suderman/format-buffer . "format")
                    (suderman/meow-smart-beginning-of-line . "code beg")
                    (beginning-of-line . "line beg")
                    (suderman/meow-back-word . "word back")
@@ -807,6 +817,10 @@ An active selection is replaced without modifying the kill ring."
           (term-mode . insert)
           (vterm-mode . insert)))
   :config
+  (advice-remove 'meow--short-command-name
+                 #'suderman/meow--cheatsheet-command-name)
+  (advice-add 'meow--short-command-name :around
+              #'suderman/meow--cheatsheet-command-name)
   (suderman/meow-reset-leader-map)
   (suderman/meow-setup-qwerty)
   (add-hook 'image-mode-hook #'suderman/meow-image-mode-setup)

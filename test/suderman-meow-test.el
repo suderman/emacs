@@ -50,6 +50,34 @@
   (should-not (lookup-key meow-normal-state-keymap (kbd "<")))
   (should-not (lookup-key meow-normal-state-keymap (kbd ">"))))
 
+(ert-deftest suderman/meow-cheatsheet-labels-surround-prefix ()
+  (should (eq (lookup-key meow-normal-state-keymap (kbd "s"))
+              surround-keymap))
+  (dolist (binding '(("s s" . surround-insert)
+                     ("s k" . surround-kill)
+                     ("s K" . surround-kill-outer)
+                     ("s i" . surround-mark)
+                     ("s o" . surround-mark-outer)
+                     ("s d" . surround-delete)
+                     ("s c" . surround-change)))
+    (should (eq (lookup-key meow-normal-state-keymap (kbd (car binding)))
+                (cdr binding))))
+  (should (equal (string-trim
+                  (meow--short-command-name
+                   (lookup-key meow-normal-state-keymap (kbd "s"))))
+                 "surround"))
+  (dolist (command '(nil ignore))
+    (should (equal (string-trim (meow--short-command-name command)) "")))
+  (unwind-protect
+      (save-window-excursion
+        (meow-cheatsheet)
+        (with-current-buffer "*Meow Cheatsheet*"
+          (should (string-match-p "surround" (buffer-string)))
+          (should-not (string-match-p "\\_<\\(nil\\|ignore\\)\\_>"
+                                      (buffer-string)))))
+    (when-let* ((buffer (get-buffer "*Meow Cheatsheet*")))
+      (kill-buffer buffer))))
+
 (ert-deftest suderman/backtick-opens-dashboard-from-editor-and-explorer-maps ()
   (should (eq (lookup-key meow-normal-state-keymap (kbd "`"))
               #'suderman/dashboard))
