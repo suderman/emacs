@@ -8,7 +8,6 @@
 ;;; Code:
 
 (require 'use-package)
-(require 'seq)
 (require 'suderman-meow)
 (require 'suderman-files)
 (require 'suderman-git)
@@ -236,27 +235,7 @@
   :init
   (setq which-key-idle-delay 0.35)
   :config
-  (which-key-mode 1)
-  (dolist (key '("SPC ." "SPC . c" "SPC . h" "SPC b" "SPC d" "SPC e"
-                 "SPC f" "SPC h" "SPC H" "SPC p" "SPC q" "SPC s"
-                 "SPC t" "SPC w"))
-    (let ((regexp (concat "\\`" (regexp-quote key) "\\'")))
-      (setq which-key-replacement-alist
-            (seq-remove (lambda (entry) (equal (caar entry) regexp))
-                        which-key-replacement-alist))))
-  (which-key-add-key-based-replacements
-    "SPC ." "git"
-    "SPC . c" "conflicts"
-    "SPC . h" "hunks"
-    "SPC b" "buffers"
-    "SPC d" "dirvish"
-    "SPC e" "explorer"
-    "SPC f" "files"
-    "SPC p" "projects"
-    "SPC q" "quit/reload"
-    "SPC s" "search"
-    "SPC t" "tools"
-    "SPC w" "windows"))
+  (which-key-mode 1))
 
 (suderman/meow-reset-leader-map)
 (meow-leader-define-key
@@ -285,6 +264,22 @@
  (cons "s" suderman/leader-search-map)
  (cons "t" suderman/leader-tool-map)
  (cons "w" suderman/leader-window-map))
+
+(which-key-add-keymap-based-replacements
+  suderman/meow-leader-map
+  "." (cons "git" suderman/leader-git-map)
+  "b" (cons "buffers" suderman/leader-buffer-map)
+  "f" (cons "files" suderman/leader-file-map)
+  "p" (cons "projects" suderman/leader-project-map)
+  "q" (cons "quit/reload" suderman/leader-quit-map)
+  "s" (cons "search" suderman/leader-search-map)
+  "t" (cons "tools" suderman/leader-tool-map)
+  "w" (cons "windows" suderman/leader-window-map))
+
+(which-key-add-keymap-based-replacements
+  suderman/leader-git-map
+  "c" (cons "conflicts" suderman/leader-git-conflict-map)
+  "h" (cons "hunks" suderman/leader-git-hunk-map))
 
 (provide 'suderman-keys)
 ;;; suderman-keys.el ends here
