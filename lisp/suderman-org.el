@@ -68,7 +68,11 @@
 (use-package org
   :ensure nil
   :init
-  (setq org-startup-indented t
+  (setq org-M-RET-may-split-line '((default . nil))
+        org-insert-heading-respect-content t
+        org-log-done 'time
+        org-log-into-drawer t
+        org-startup-indented t
         org-tags-column 0
         org-auto-align-tags nil
         org-directory (expand-file-name "~/org")

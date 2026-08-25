@@ -8,6 +8,10 @@
 (require 'suderman-org)
 
 (ert-deftest suderman/org-uses-inbox-and-todo-files ()
+  (should (equal org-M-RET-may-split-line '((default . nil))))
+  (should org-insert-heading-respect-content)
+  (should (eq org-log-done 'time))
+  (should org-log-into-drawer)
   (should org-startup-indented)
   (let ((directory (expand-file-name "~/org")))
     (should (equal org-directory directory))
