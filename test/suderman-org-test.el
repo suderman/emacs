@@ -63,5 +63,44 @@
       (should (stringp bullet))
       (should-not (equal bullet "-")))))
 
+(ert-deftest suderman/org-mouse-cycles-todo-on-left-click ()
+  (let ((org-todo-keywords '((sequence "TODO" "NEXT" "|" "DONE"))))
+    (with-temp-buffer
+      (insert "* TODO item\n")
+      (org-mode)
+      (font-lock-ensure)
+      (goto-char (+ (point-min) 2))
+      (let ((map (get-text-property (point) 'keymap)))
+        (should (eq (lookup-key map [mouse-1])
+                    #'suderman/org-mouse-cycle-todo)))
+      (cl-letf (((symbol-function 'mouse-set-point)
+                 (lambda (_event) (goto-char (+ (point-min) 2)))))
+        (suderman/org-mouse-cycle-todo nil))
+      (should (equal (org-get-todo-state) "NEXT"))
+      (cl-letf (((symbol-function 'mouse-set-point)
+                 (lambda (_event) (goto-char (+ (point-min) 2)))))
+        (suderman/org-mouse-cycle-todo nil)
+        (should (equal (org-get-todo-state) "DONE"))
+        (suderman/org-mouse-cycle-todo nil)
+        (should (equal (org-get-todo-state) "TODO"))))))
+
+(ert-deftest suderman/org-mouse-todo-menu-clears-state ()
+  (let ((org-todo-keywords '((sequence "TODO" "NEXT" "|" "DONE"))))
+    (with-temp-buffer
+      (insert "* DONE item\n")
+      (org-mode)
+      (goto-char (+ (point-min) 2))
+      (let ((clear
+             (cl-find-if
+              (lambda (item)
+                (and (vectorp item)
+                     (equal (aref item 0) "Clear")))
+              (org-mouse-todo-menu "DONE"))))
+        (should clear)
+        (should (equal (aref clear 1) '(org-todo "")))
+        (should (aref clear 2))
+        (eval (aref clear 1))
+        (should-not (org-get-todo-state))))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here
