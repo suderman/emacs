@@ -69,6 +69,8 @@
   :ensure nil
   :init
   (setq org-startup-indented t
+        org-tags-column 0
+        org-auto-align-tags nil
         org-directory (expand-file-name "~/org")
         org-agenda-files
         (mapcar (lambda (file) (expand-file-name file org-directory))
