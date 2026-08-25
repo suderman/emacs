@@ -25,6 +25,44 @@
       (should (equal (face-background 'region nil t) "#112233"))
       (should (equal (face-background 'secondary-selection nil t) "#445566")))))
 
+(ert-deftest suderman/tty-menu-faces-follow-semantic-theme-faces ()
+  (let ((frame (selected-frame))
+        calls)
+    (cl-letf (((symbol-function 'frame-list) (lambda () (list frame)))
+              ((symbol-function 'display-graphic-p) (lambda (_) nil))
+              ((symbol-function 'face-foreground)
+               (lambda (face &rest _)
+                 (pcase face
+                   ('default "foreground")
+                   ('shadow "disabled"))))
+              ((symbol-function 'face-background)
+               (lambda (face &rest _)
+                 (pcase face
+                   ('highlight "background")
+                   ('region "selected"))))
+              ((symbol-function 'set-face-attribute)
+               (lambda (face target &rest attributes)
+                 (push (append (list face target) attributes) calls))))
+      (suderman/apply-tty-menu-faces)
+      (should (member `(menu ,frame
+                            :foreground "foreground"
+                            :background "background"
+                            :inverse-video nil)
+                      calls))
+      (should (member `(tty-menu-enabled-face ,frame
+                                             :foreground "foreground"
+                                             :background "background")
+                      calls))
+      (should (member `(tty-menu-disabled-face ,frame
+                                              :foreground "disabled"
+                                              :background "background")
+                      calls))
+      (should (member `(tty-menu-selected-face ,frame
+                                              :foreground "foreground"
+                                              :background "selected"
+                                              :inverse-video nil)
+                      calls)))))
+
 (ert-deftest suderman/line-number-toggle-preserves-special-buffer-exclusions ()
   (let ((original-state global-display-line-numbers-mode)
         (text-buffer (generate-new-buffer " *suderman-line-numbers-text*"))

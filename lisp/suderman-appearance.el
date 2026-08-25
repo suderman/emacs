@@ -82,8 +82,37 @@
         (when (fboundp 'meow--prepare-face)
           (meow--prepare-face))))))
 
+(defun suderman/apply-tty-menu-faces (&optional _)
+  "Derive terminal menu faces from the active theme."
+  (dolist (frame (frame-list))
+    (unless (display-graphic-p frame)
+      (let ((foreground (face-foreground 'default frame t))
+            (background (face-background 'highlight frame t))
+            (disabled-foreground (face-foreground 'shadow frame t))
+            (selected-background (face-background 'region frame t)))
+        (when (and (stringp foreground)
+                   (stringp background)
+                   (stringp disabled-foreground)
+                   (stringp selected-background))
+          (set-face-attribute 'menu frame
+                              :foreground foreground
+                              :background background
+                              :inverse-video nil)
+          (set-face-attribute 'tty-menu-enabled-face frame
+                              :foreground foreground
+                              :background background)
+          (set-face-attribute 'tty-menu-disabled-face frame
+                              :foreground disabled-foreground
+                              :background background)
+          (set-face-attribute 'tty-menu-selected-face frame
+                              :foreground foreground
+                              :background selected-background
+                              :inverse-video nil))))))
+
 (add-hook 'enable-theme-functions #'suderman/apply-selection-faces t)
+(add-hook 'enable-theme-functions #'suderman/apply-tty-menu-faces t)
 (suderman/apply-selection-faces)
+(suderman/apply-tty-menu-faces)
 (with-eval-after-load 'meow
   (suderman/apply-selection-faces))
 
@@ -158,6 +187,7 @@
 (suderman/set-nerd-font-fallbacks)
 (suderman/apply-gui-appearance)
 (add-hook 'after-make-frame-functions #'suderman/apply-selection-faces)
+(add-hook 'after-make-frame-functions #'suderman/apply-tty-menu-faces)
 (add-hook 'after-make-frame-functions #'suderman/apply-gui-appearance)
 
 (provide 'suderman-appearance)
