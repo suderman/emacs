@@ -7,6 +7,7 @@
 
 (require 'use-package)
 (require 'nerd-icons)
+(require 'subr-x)
 (require 'suderman-files)
 
 (declare-function dashboard-open "dashboard")
@@ -117,14 +118,10 @@
   (setq dashboard-items '((projects . 5) (recents . 5))
         dashboard-startup-banner 'ascii
         dashboard-banner-ascii
-        (concat
-         "██████╗██╗   ██╗██████╗ ███████╗██████╗ ███╗   ███╗ █████╗ ███╗   ██╗\n"
-         "██╔════╝██║   ██║██╔══██╗██╔════╝██╔══██╗████╗ ████║██╔══██╗████╗  ██║\n"
-         "╚█████╗ ██║   ██║██║  ██║█████╗  ██████╔╝██╔████╔██║███████║██╔██╗ ██║\n"
-         " ╚═══██╗██║   ██║██║  ██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══██║██║╚██╗██║\n"
-         "██████╔╝╚██████╔╝██████╔╝███████╗██║  ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║\n"
-         "╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝\n"
-         "                           ╱ emacs")
+        (with-temp-buffer
+          (insert-file-contents
+           (expand-file-name "assets/dashboard.txt" user-emacs-directory))
+          (string-remove-suffix "\n" (buffer-string)))
         dashboard-projects-backend 'project-el
         dashboard-projects-switch-function #'suderman/dirvish
         dashboard-startupify-list '(dashboard-insert-banner
