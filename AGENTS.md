@@ -240,9 +240,8 @@ These choices are not immutable, but replacing one needs a concrete benefit.
 - Tree-sitter modes are preferred where the NixOS flake supplies grammars.
 - Markdown preview uses Pandoc and a small local HTTP server. It refreshes only
   after save and preserves browser scroll position.
-- The Nix-supplied `markdown-ts-mode` currently accepts two tree-sitter
-  children for every ATX heading in its Imenu predicate. The local Markdown
-  setup restricts Imenu to the inline child so Treemacs shows each heading once.
+- Emacs 31 supplies `markdown-ts-mode`; do not install the incompatible
+  third-party package with the same name.
 
 Avoid adding a package when an existing package or Emacs itself already covers
 the request. This config has enough moving pieces.

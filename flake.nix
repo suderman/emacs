@@ -127,6 +127,11 @@
         (dolist (library '("meow" "vterm" "pdf-tools" "jinx"))
           (unless (locate-library library)
             (error "Missing Emacs library: %s" library)))
+        (with-temp-buffer
+          (insert "# Heading\n")
+          (markdown-ts-mode)
+          (unless (derived-mode-p 'markdown-ts-mode)
+            (error "Failed to activate built-in markdown-ts-mode")))
         (dolist (executable '("fd" "rg" "pandoc" "treefmt" "wl-copy"))
           (unless (executable-find executable)
             (error "Missing executable: %s" executable)))
