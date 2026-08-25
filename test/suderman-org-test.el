@@ -8,6 +8,7 @@
 (require 'suderman-org)
 
 (ert-deftest suderman/org-uses-inbox-and-todo-files ()
+  (should org-startup-indented)
   (let ((directory (expand-file-name "~/org")))
     (should (equal org-directory directory))
     (should (equal org-agenda-files
@@ -36,6 +37,20 @@
         (meow-normal-mode 1)
         (execute-kbd-macro (kbd "SPC o a"))
         (should called)))))
+
+(ert-deftest suderman/org-indent-toggle-is-under-toggles ()
+  (should (eq (lookup-key suderman/leader-toggle-map (kbd "o"))
+              #'org-indent-mode)))
+
+(ert-deftest suderman/org-buffers-indent-and-scale-headings ()
+  (require 'org)
+  (with-temp-buffer
+    (org-mode)
+    (should (bound-and-true-p org-indent-mode))
+    (should (= (face-attribute 'org-level-1 :height nil) 1.35))
+    (should (= (face-attribute 'org-level-2 :height nil) 1.22))
+    (org-indent-mode -1)
+    (should-not (bound-and-true-p org-indent-mode))))
 
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here

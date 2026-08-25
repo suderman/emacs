@@ -173,6 +173,7 @@
 (suderman/keys--define suderman/leader-toggle-map "c" #'display-fill-column-indicator-mode)
 (suderman/keys--define suderman/leader-toggle-map "h" #'hl-line-mode)
 (suderman/keys--define suderman/leader-toggle-map "l" #'suderman/toggle-line-numbers)
+(suderman/keys--define suderman/leader-toggle-map "o" #'org-indent-mode)
 (suderman/keys--define suderman/leader-toggle-map "r" #'read-only-mode)
 (suderman/keys--define suderman/leader-toggle-map "s" #'jinx-mode)
 (suderman/keys--define suderman/leader-toggle-map "t" #'suderman/treemacs-toggle)
@@ -279,6 +280,7 @@
   "c" "column indicator"
   "h" "current line"
   "l" "line numbers"
+  "o" "org indentation"
   "r" "read only"
   "s" "spelling"
   "t" "treemacs"
