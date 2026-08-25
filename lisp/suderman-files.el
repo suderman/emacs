@@ -12,6 +12,7 @@
 (require 'suderman-windows)
 
 (defvar dirvish-quick-access-entries)
+(defvar dirvish-preview-setup-hook)
 (defvar dirvish-yank-sources)
 (defvar global-hl-line-mode)
 (declare-function suderman/dashboard "suderman-dashboard")
@@ -136,9 +137,15 @@
       (meow--disable))))
 
 (defun suderman/dired-disable-line-numbers ()
-  "Keep line numbers disabled in the current directory buffer."
+  "Keep line numbers disabled in the current buffer."
   (when display-line-numbers-mode
     (display-line-numbers-mode -1)))
+
+(defun suderman/dirvish-preview-disable-line-numbers ()
+  "Keep line numbers disabled in the current Dirvish preview."
+  (add-hook 'display-line-numbers-mode-hook
+            #'suderman/dired-disable-line-numbers nil t)
+  (suderman/dired-disable-line-numbers))
 
 (defun suderman/dired-disable-visual-line-mode ()
   "Keep directory entries on one display row."
@@ -341,6 +348,8 @@
   :config
   (dirvish-override-dired-mode 1)
   (require 'dirvish-yank)
+  (add-hook 'dirvish-preview-setup-hook
+            #'suderman/dirvish-preview-disable-line-numbers)
   (advice-remove 'dirvish--create-parent-buffer
                  #'suderman/dirvish-create-parent-buffer)
   (advice-add 'dirvish--create-parent-buffer :around

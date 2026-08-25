@@ -744,6 +744,32 @@ An active selection is replaced without modifying the kill ring."
   (let ((dired-movement-style 'cycle-files))
     (image-previous-file n)))
 
+(defun suderman/image-copy-to-clipboard ()
+  "Copy the current image file to the Wayland clipboard."
+  (interactive)
+  (unless (and buffer-file-name
+               (not (file-remote-p buffer-file-name))
+               (file-readable-p buffer-file-name))
+    (user-error "This image is not a readable local file"))
+  (require 'mailcap)
+  (let ((mime-type (mailcap-file-name-to-mime-type buffer-file-name)))
+    (unless (and mime-type (string-prefix-p "image/" mime-type))
+      (user-error "Cannot determine an image MIME type for this file"))
+    (unless (executable-find "wl-copy")
+      (user-error "wl-copy is not installed"))
+    (unless (eq 0
+                (if (equal mime-type "image/gif")
+                    (progn
+                      (require 'url-util)
+                      (call-process
+                       "wl-copy" nil nil nil "--type" "text/uri-list"
+                       (url-encode-url (concat "file://" buffer-file-name))))
+                  (call-process "wl-copy" buffer-file-name nil nil
+                                "--type" mime-type)))
+      (user-error "wl-copy failed"))
+    (message "Copied %s to the clipboard"
+             (file-name-nondirectory buffer-file-name))))
+
 (defun suderman/meow-image-mode-setup ()
   "Prepare Image mode for Meow motion state."
   (when (derived-mode-p 'image-mode)
@@ -754,6 +780,7 @@ An active selection is replaced without modifying the kill ring."
       (image-toggle-animation))
     (local-set-key (kbd ",") #'suderman/ibuffer-toggle)
     (local-set-key (kbd ".") #'suderman/dirvish)
+    (local-set-key (kbd "c") #'suderman/image-copy-to-clipboard)
     (local-set-key (kbd "n") #'suderman/image-next-file)
     (local-set-key (kbd "p") #'suderman/image-previous-file)
     (when (and (bound-and-true-p meow-global-mode)
@@ -766,6 +793,7 @@ An active selection is replaced without modifying the kill ring."
   (setq image-animate-loop t)
   (keymap-set image-mode-map "," #'suderman/ibuffer-toggle)
   (keymap-set image-mode-map "." #'suderman/dirvish)
+  (keymap-set image-mode-map "c" #'suderman/image-copy-to-clipboard)
   (keymap-set image-mode-map "n" #'suderman/image-next-file)
   (keymap-set image-mode-map "p" #'suderman/image-previous-file)
   (keymap-set image-mode-map "=" #'image-increase-size)

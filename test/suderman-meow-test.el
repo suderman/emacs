@@ -7,6 +7,9 @@
 (require 'ert)
 (require 'suderman-meow)
 
+(defvar dirvish-mode-map)
+(defvar image-mode-map)
+
 (ert-deftest suderman/meow-insert-dispatches-by-state ()
   (with-temp-buffer
     (let (calls)
@@ -62,6 +65,58 @@
       (should (equal (current-kill 0) buffer-file-name))))
   (with-temp-buffer
     (should-error (suderman/meow-save) :type 'user-error)))
+
+(ert-deftest suderman/image-copy-sends-static-image-data-with-its-mime-type ()
+  (with-temp-buffer
+    (setq-local buffer-file-name "/tmp/example.png")
+    (let (call)
+      (cl-letf (((symbol-function 'file-readable-p) (lambda (_) t))
+                ((symbol-function 'file-remote-p) (lambda (_) nil))
+                ((symbol-function 'mailcap-file-name-to-mime-type)
+                 (lambda (_) "image/png"))
+                ((symbol-function 'executable-find) (lambda (_) "/bin/wl-copy"))
+                ((symbol-function 'call-process)
+                 (lambda (&rest arguments)
+                   (setq call arguments)
+                   0)))
+        (suderman/image-copy-to-clipboard))
+      (should (equal call '("wl-copy" "/tmp/example.png" nil nil
+                            "--type" "image/png"))))))
+
+(ert-deftest suderman/image-copy-sends-gifs-as-local-files ()
+  (with-temp-buffer
+    (setq-local buffer-file-name "/tmp/example gif.gif")
+    (let (call)
+      (cl-letf (((symbol-function 'file-readable-p) (lambda (_) t))
+                ((symbol-function 'file-remote-p) (lambda (_) nil))
+                ((symbol-function 'mailcap-file-name-to-mime-type)
+                 (lambda (_) "image/gif"))
+                ((symbol-function 'executable-find) (lambda (_) "/bin/wl-copy"))
+                ((symbol-function 'call-process)
+                 (lambda (&rest arguments)
+                   (setq call arguments)
+                   0)))
+        (suderman/image-copy-to-clipboard))
+      (should (equal call '("wl-copy" nil nil nil
+                            "--type" "text/uri-list"
+                            "file:///tmp/example%20gif.gif"))))))
+
+(ert-deftest suderman/image-copy-requires-a-local-image-file ()
+  (with-temp-buffer
+    (should-error (suderman/image-copy-to-clipboard) :type 'user-error))
+  (with-temp-buffer
+    (setq-local buffer-file-name "/tmp/example.txt")
+    (cl-letf (((symbol-function 'file-readable-p) (lambda (_) t))
+              ((symbol-function 'file-remote-p) (lambda (_) nil))
+              ((symbol-function 'mailcap-file-name-to-mime-type)
+               (lambda (_) "text/plain")))
+      (should-error (suderman/image-copy-to-clipboard) :type 'user-error))))
+
+(ert-deftest suderman/image-mode-c-copies-without-changing-motion-state ()
+  (require 'image-mode)
+  (should (eq (lookup-key image-mode-map (kbd "c"))
+              #'suderman/image-copy-to-clipboard))
+  (should-not (lookup-key meow-motion-state-keymap (kbd "c"))))
 
 (ert-deftest suderman/meow-parentheses-extend-selection ()
   (should (eq (lookup-key meow-normal-state-keymap (kbd "("))

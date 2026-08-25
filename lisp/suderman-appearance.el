@@ -131,18 +131,18 @@
             (line-beginning-position 2)))))
 
 (defun suderman/disable-line-numbers-in-special-mode ()
-  "Disable line numbers in the current special-mode buffer."
+  "Disable line numbers in the current special or image buffer."
   (display-line-numbers-mode -1))
 
 (defun suderman/disable-line-numbers-in-special-buffers ()
-  "Disable line numbers in existing special-mode buffers."
+  "Disable line numbers in existing special and image buffers."
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
-      (when (derived-mode-p 'special-mode)
+      (when (derived-mode-p 'special-mode 'image-mode)
         (suderman/disable-line-numbers-in-special-mode)))))
 
 (defun suderman/toggle-line-numbers ()
-  "Toggle line numbers globally, preserving special-mode exclusions."
+  "Toggle line numbers globally, preserving special and image exclusions."
   (interactive)
   (if global-display-line-numbers-mode
       (global-display-line-numbers-mode -1)
@@ -164,6 +164,7 @@
 (setq-default hl-line-range-function #'suderman/hl-line-range)
 (global-hl-line-mode 1)
 (add-hook 'special-mode-hook #'suderman/disable-line-numbers-in-special-mode)
+(add-hook 'image-mode-hook #'suderman/disable-line-numbers-in-special-mode)
 (global-display-line-numbers-mode 1)
 (suderman/disable-line-numbers-in-special-buffers)
 (with-eval-after-load 'meow-cheatsheet

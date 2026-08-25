@@ -66,13 +66,16 @@
 (ert-deftest suderman/line-number-toggle-preserves-special-buffer-exclusions ()
   (let ((original-state global-display-line-numbers-mode)
         (text-buffer (generate-new-buffer " *suderman-line-numbers-text*"))
-        (special-buffer (generate-new-buffer " *suderman-line-numbers-special*")))
+        (special-buffer (generate-new-buffer " *suderman-line-numbers-special*"))
+        (image-buffer (generate-new-buffer " *suderman-line-numbers-image*")))
     (unwind-protect
         (progn
           (with-current-buffer text-buffer
             (text-mode))
           (with-current-buffer special-buffer
             (special-mode))
+          (with-current-buffer image-buffer
+            (setq major-mode 'image-mode))
           (unless global-display-line-numbers-mode
             (global-display-line-numbers-mode 1)
             (suderman/disable-line-numbers-in-special-buffers))
@@ -81,16 +84,27 @@
           (should-not global-display-line-numbers-mode)
           (should-not (buffer-local-value 'display-line-numbers-mode text-buffer))
           (should-not (buffer-local-value 'display-line-numbers-mode special-buffer))
+          (should-not (buffer-local-value 'display-line-numbers-mode image-buffer))
 
           (suderman/toggle-line-numbers)
           (should global-display-line-numbers-mode)
           (should (buffer-local-value 'display-line-numbers-mode text-buffer))
-          (should-not (buffer-local-value 'display-line-numbers-mode special-buffer)))
+          (should-not (buffer-local-value 'display-line-numbers-mode special-buffer))
+          (should-not (buffer-local-value 'display-line-numbers-mode image-buffer)))
       (global-display-line-numbers-mode (if original-state 1 -1))
       (when original-state
         (suderman/disable-line-numbers-in-special-buffers))
       (kill-buffer text-buffer)
-      (kill-buffer special-buffer))))
+      (kill-buffer special-buffer)
+      (kill-buffer image-buffer))))
+
+(ert-deftest suderman/dirvish-preview-keeps-line-numbers-disabled ()
+  (with-temp-buffer
+    (display-line-numbers-mode 1)
+    (suderman/dirvish-preview-disable-line-numbers)
+    (should-not display-line-numbers-mode)
+    (display-line-numbers-mode 1)
+    (should-not display-line-numbers-mode)))
 
 (provide 'suderman-appearance-test)
 ;;; suderman-appearance-test.el ends here
