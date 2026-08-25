@@ -42,6 +42,27 @@
   (should (eq (lookup-key meow-beacon-state-keymap (kbd "SPC"))
               #'suderman/meow-keypad-once)))
 
+(ert-deftest suderman/meow-save-copies-selection-or-buffer-path ()
+  (let ((transient-mark-mode t)
+        selection-saved)
+    (with-temp-buffer
+      (insert "selected")
+      (set-mark (point-min))
+      (activate-mark)
+      (cl-letf (((symbol-function 'meow-save)
+                 (lambda () (setq selection-saved t))))
+        (suderman/meow-save))
+      (should selection-saved)))
+  (let ((kill-ring nil)
+        (kill-ring-yank-pointer nil)
+        (interprogram-cut-function nil))
+    (with-temp-buffer
+      (setq-local buffer-file-name "/tmp/example.txt")
+      (suderman/meow-save)
+      (should (equal (current-kill 0) buffer-file-name))))
+  (with-temp-buffer
+    (should-error (suderman/meow-save) :type 'user-error)))
+
 (ert-deftest suderman/meow-parentheses-extend-selection ()
   (should (eq (lookup-key meow-normal-state-keymap (kbd "("))
               #'meow-left-expand))

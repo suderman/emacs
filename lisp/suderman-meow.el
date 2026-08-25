@@ -490,14 +490,14 @@ An active selection is replaced without modifying the kill ring."
   (user-error "No structural editing package configured"))
 
 (defun suderman/meow-save ()
-  "Copy the active selection, or the current line if none is active."
+  "Copy the active selection, or the current buffer's file path."
   (interactive)
   (if (use-region-p)
       (meow-save)
-    (let ((select-enable-clipboard meow-use-clipboard))
-      (kill-ring-save
-       (line-beginning-position)
-       (line-beginning-position 2)))))
+    (if-let* ((file buffer-file-name))
+        (let ((select-enable-clipboard meow-use-clipboard))
+          (kill-new file))
+      (user-error "Current buffer is not visiting a file"))))
 
 (defun suderman/meow--line-bounds ()
   "Return bounds of current line, including its newline when present."
