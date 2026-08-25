@@ -52,5 +52,16 @@
     (org-indent-mode -1)
     (should-not (bound-and-true-p org-indent-mode))))
 
+(ert-deftest suderman/org-superstar-prettifies-org-buffers ()
+  (with-temp-buffer
+    (insert "- item\n")
+    (org-mode)
+    (font-lock-ensure)
+    (should (bound-and-true-p org-superstar-mode))
+    (goto-char (point-min))
+    (let ((bullet (get-text-property (point) 'display)))
+      (should (stringp bullet))
+      (should-not (equal bullet "-")))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here

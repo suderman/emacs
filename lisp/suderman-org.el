@@ -35,5 +35,9 @@
            "* TODO %?\n  %U\n  %a"))
         org-refile-targets '((org-agenda-files :maxlevel . 3))))
 
+(use-package org-superstar
+  :after org
+  :hook (org-mode . org-superstar-mode))
+
 (provide 'suderman-org)
 ;;; suderman-org.el ends here
