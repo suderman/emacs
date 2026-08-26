@@ -1,14 +1,15 @@
 #+title: suderman/emacs 🐈
-#+subtitle: My Emacs 31 configuration for NixOS
+#+subtitle: My Emacs 31 configuration, packaged with Nix
 #+author: Jon Suderman
 #+options: toc:2 num:nil
 #+startup: content
 
 * About
 
-This is the Emacs config I use every day on NixOS. I tune it around how I edit,
-switch projects, and manage windows. It is not a starter kit, and I do not try
-to make it portable to systems I do not use.
+This is the Emacs config I use every day. I tune it around how I edit, switch
+projects, and manage windows. It is not a starter kit. It has my paths, my
+keymap, and a few experiments that earned their place by solving something
+annoying.
 
 [[https://github.com/meow-edit/meow][Meow]] controls modal editing. Built-in =project.el= supplies project data.
 IBuffer shows open buffers by project, Treemacs keeps the current project
@@ -26,16 +27,57 @@ Stylix supplies the colors, while Doom Modeline and Nerd Icons handle the lower
 status bar and file symbols. Image mode cycles through a directory, transforms
 images in place, and starts animated images automatically.
 
-* NixOS owns half of it
+* Run it
 
-This repository cannot reproduce my Emacs on its own. The matching
-[[https://github.com/suderman/nixos][suderman/nixos]] flake installs Emacs 31 PGTK, the daemon and client,
-tree-sitter grammars, native packages, language servers, formatters, Pandoc,
-and fonts. Stylix chooses the theme and typography.
+The flake packages Emacs 31 PGTK with this configuration, its Elisp packages,
+native modules, tree-sitter grammars, language servers, formatters, and
+command-line tools.
 
-This repository installs pure Elisp packages and defines commands, keymaps, and
-editing behavior. Package data and runtime state use XDG paths, so they do not
-end up in Git.
+#+begin_src sh
+nix run github:suderman/emacs
+#+end_src
+
+That runs the immutable configuration bundled in the Nix store. From a local
+checkout, I can build and run the same package with:
+
+#+begin_src sh
+nix run .
+#+end_src
+
+To use the flake's dependencies while loading the writable checkout instead:
+
+#+begin_src sh
+nix run . -- --init-directory "$PWD"
+#+end_src
+
+After that, =F5= reloads the modular configuration without rebuilding the
+package.
+
+The flake exposes =x86_64-linux= and =aarch64-linux= packages. I use and test
+the x86_64 build.
+
+* Nix and mutability
+
+I want deterministic bootstrapping without turning every Lisp edit into a Nix
+rebuild. The split is fairly small.
+
+- =use-package= forms remain the source of truth for pure Elisp dependencies.
+  The flake reads those declarations and bundles the matching packages.
+- Native Emacs modules, tree-sitter grammars, and external programs live in
+  [[file:flake.nix][flake.nix]] because they need compiled or system-level dependencies.
+- =early-init.el=, =init.el=, =lisp/=, and =assets/= become an immutable config
+  source in the Nix store.
+- =package.el= still works for quick experiments. Its packages live under
+  =~/.local/share/emacs/elpa= instead of this repository.
+
+My matching [[https://github.com/suderman/nixos][suderman/nixos]] flake owns the host-specific part. That includes the daemon
+and client, Stylix theme and typography, icon fonts, system shortcuts, and
+persistent state. Its Emacs wrapper prefers a writable
+=~/.config/emacs/init.el= when one exists. Without that checkout, it falls back
+to the configuration bundled by this flake. A direct =nix run= uses the bundled
+copy by default.
+
+Package data and runtime state follow XDG paths, so they do not end up in Git.
 
 Read [[file:AGENTS.md][AGENTS.md]] before changing the structure. It explains which repository owns
 each package, what each module does, where hot reload has failed before, and how
@@ -84,24 +126,24 @@ IBuffer and Dirvish retain their own =S= commands.
 
 *** Selection and editing
 
-| Keys          | Action                                             |
-|---------------+----------------------------------------------------|
-| =m / mm / mmm=| Select word / symbol / enclosing block              |
-| =M / MM / MMM=| Select rectangle / line / whole buffer               |
-| =g / G=       | Cancel selection / grab another selection           |
-| =i / I / E=   | Insert here / at indentation / at end of line        |
-| =o / O=       | Open a line below / above                            |
-| =c / v=       | Copy / paste                                         |
-| =d / D=       | Delete selection or character / delete line          |
-| =x / X=       | Cut and insert / cut line and insert                  |
-| =r=           | Replace one character                                |
-| =s=           | Surround command prefix                              |
-| =s s=         | Add a surround                                       |
-| =H / L=       | Outdent / indent                                     |
-| =J / K=       | Move selected lines down / up                         |
-| =u / U=       | One-way undo / one-way undo inside selection         |
-| =y=           | Redo                                                 |
-| ='=           | Repeat the last edit                                 |
+| Keys           | Action                                             |
+|----------------+----------------------------------------------------|
+| =m / mm / mmm= | Select word / symbol / enclosing block              |
+| =M / MM / MMM= | Select rectangle / line / whole buffer               |
+| =g / G=        | Cancel selection / grab another selection           |
+| =i / I / E=    | Insert here / at indentation / at end of line        |
+| =o / O=        | Open a line below / above                            |
+| =c / v=        | Copy / paste                                         |
+| =d / D=        | Delete selection or character / delete line          |
+| =x / X=        | Cut and insert / cut line and insert                  |
+| =r=            | Replace one character                                |
+| =s=            | Surround command prefix                              |
+| =s s=          | Add a surround                                       |
+| =H / L=        | Outdent / indent                                     |
+| =J / K=        | Move selected lines down / up                         |
+| =u / U=        | One-way undo / one-way undo inside selection         |
+| =y=            | Redo                                                 |
+| ='=            | Repeat the last edit                                 |
 
 =d= does not fill the kill ring. =x= cuts a real multi-character selection,
 then enters Insert state.
@@ -333,20 +375,31 @@ Dirvish.
 
 | Path                            | Role                                             |
 |---------------------------------+--------------------------------------------------|
+| [[file:flake.nix][flake.nix]]                       | Reproducible editor, packages, tools, and checks |
+| =nix/=                          | Emacs source patches                             |
+| =assets/=                       | Dashboard and Markdown preview assets            |
 | [[file:early-init.el][early-init.el]]                 | Process-level startup and frame defaults         |
 | [[file:init.el][init.el]]                       | Boring dependency-ordered module loader          |
 | =lisp/suderman-paths.el=        | XDG state paths                                  |
+| =lisp/suderman-packages.el=     | =package.el= and =use-package= bootstrap          |
+| =lisp/suderman-defaults.el=     | Small built-in behavior changes                  |
 | =lisp/suderman-appearance.el=   | Fonts, faces, modeline, and visual guides        |
+| =lisp/suderman-windows.el=      | Window helpers and smooth jump animation         |
 | =lisp/suderman-meow.el=         | Modal editing and the Normal/Motion maps         |
 | =lisp/suderman-buffers.el=      | Project-grouped IBuffer                          |
 | =lisp/suderman-completion.el=   | Vertico, Orderless, Consult, Marginalia, Embark  |
+| =lisp/suderman-pickers.el=      | Commands built from the completion stack         |
 | =lisp/suderman-files.el=        | Dired and Dirvish                                |
 | =lisp/suderman-dashboard.el=    | Startup dashboard and common destinations       |
 | =lisp/suderman-treemacs.el=     | Frame-local project tree and IBuffer integration |
+| =lisp/suderman-markdown.el=     | Markdown editing and Pandoc preview              |
+| =lisp/suderman-languages.el=    | Language associations and tree-sitter setup      |
 | =lisp/suderman-git.el=          | Magit, live hunks, and conflict handling          |
 | =lisp/suderman-org.el=          | Org agenda, capture, and refile workflow           |
 | =lisp/suderman-keys.el=         | Global, Meta, and =SPC= leader bindings          |
+| =lisp/suderman-formatting.el=   | Project and buffer formatting commands           |
 | =lisp/suderman-reload.el=       | Safe modular hot reload                          |
+| =test/=                         | Focused ERT regression tests                     |
 | [[file:AGENTS.md][AGENTS.md]]                   | Maintenance decisions and verification rules     |
 
 The source wins when this file falls behind. This reference only covers the
