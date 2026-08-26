@@ -64,7 +64,8 @@ rebuild. The split is fairly small.
 - =use-package= forms remain the source of truth for pure Elisp dependencies.
   The flake reads those declarations and bundles the matching packages.
 - Native Emacs modules, tree-sitter grammars, and external programs live in
-  [[file:flake.nix][flake.nix]] because they need compiled or system-level dependencies.
+  [[file:nix/packages/emacs.nix][nix/packages/emacs.nix]] because they need compiled or system-level
+  dependencies.
 - =early-init.el=, =init.el=, =lisp/=, and =assets/= become an immutable config
   source in the Nix store.
 - =package.el= still works for quick experiments. Its packages live under
@@ -375,8 +376,8 @@ Dirvish.
 
 | Path                            | Role                                             |
 |---------------------------------+--------------------------------------------------|
-| [[file:flake.nix][flake.nix]]                       | Reproducible editor, packages, tools, and checks |
-| =nix/=                          | Emacs source patches                             |
+| [[file:flake.nix][flake.nix]]                       | Flake inputs and Blueprint outputs               |
+| =nix/=                          | Blueprint package, checks, and Emacs patch       |
 | =assets/=                       | Dashboard and Markdown preview assets            |
 | [[file:early-init.el][early-init.el]]                 | Process-level startup and frame defaults         |
 | [[file:init.el][init.el]]                       | Boring dependency-ordered module loader          |
