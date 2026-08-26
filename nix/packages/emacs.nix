@@ -19,7 +19,7 @@
       (lib.filesystem.listFilesRecursive ../../lisp));
 
   emacsBase = pkgs.emacs31-pgtk.overrideAttrs (old: {
-    patches = (old.patches or []) ++ [../emacs-tty-menu-restore.patch];
+    patches = (old.patches or []) ++ [./emacs-tty-menu-restore.patch];
   });
   # Preserve package compilation when Home Manager wraps Emacs again.
   emacsSetupHook =
