@@ -23,7 +23,7 @@
     (let ((delimiter (make-string 2 39)))
       (insert
        (format
-        "{\n  elisp =\n    # elisp\n    %s\n      (defun hello () t)\n    %s;\n  bash =\n    # bash\n    %s\n      echo \"$HOME\"\n    %s;\n  python =\n    # python\n    %s\n      def hello():\n          return True\n    %s;\n  lua =\n    # lua\n    %s\n      local answer = true\n    %s;\n  html =\n    # html\n    %s\n      <main>Hello</main>\n    %s;\n  unknown =\n    # ruby\n    %s\n      puts \"hello\"\n    %s;\n  plain = %splain string%s;\n  interpolation = %shello ''${name}%s;\n}\n"
+        "{\n  elisp =\n    # elisp\n    %s\n      (defun hello ()\n        (unless (locate-library \"hello\")\n          (error \"missing\")))\n    %s;\n  bash =\n    # sh\n    %s\n      echo \"$HOME\"\n    %s;\n  python =\n    # python\n    %s\n      def hello():\n          return True\n    %s;\n  lua =\n    # lua\n    %s\n      local answer = true\n    %s;\n  html =\n    # html\n    %s\n      <main>Hello</main>\n    %s;\n  unknown =\n    # ruby\n    %s\n      puts \"hello\"\n    %s;\n  plain = %splain string%s;\n  interpolation = %shello ''${name}%s;\n}\n"
         delimiter delimiter delimiter delimiter delimiter delimiter
         delimiter delimiter delimiter delimiter delimiter delimiter
         delimiter delimiter delimiter delimiter)))
@@ -41,6 +41,11 @@
       (ert-info ((format "Embedded token: %s" text))
         (should-not (eq (suderman/test-nix-face-at text)
                         'font-lock-string-face))))
+    (should (eq (suderman/test-nix-face-at "unless")
+                'font-lock-keyword-face))
+    (should (eq (suderman/test-nix-face-at "locate-library") 'default))
+    (should (eq (suderman/test-nix-face-at "error")
+                'font-lock-warning-face))
     (let ((settings-count (length treesit-font-lock-settings)))
       (suderman/nix-embedded-languages-setup)
       (should (= (length treesit-font-lock-settings) settings-count)))

@@ -5,6 +5,10 @@
 ;; When several patterns capture the same node, the last one wins, so
 ;; a pattern that refines another must come after it.
 
+;; Clear the surrounding Nix string face and apply semantic highlighting
+;; to macros, special forms, and errors.
+(symbol) @suderman--nix-fontify-elisp-symbol
+
 ;; Special forms
 [
   "and"

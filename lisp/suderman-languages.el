@@ -13,12 +13,39 @@
 
 (defconst suderman/nix-embedded-languages '(bash elisp html lua python))
 
+;; Tree-sitter capture names cannot contain the usual `suderman/' separator.
+(defun suderman--nix-fontify-elisp-symbol (node override start end &rest _)
+  "Fontify Elisp symbol NODE like `emacs-lisp-mode'."
+  (let* ((symbol (intern-soft (treesit-node-text node t)))
+         (parent (treesit-node-parent node))
+         (function-position
+          (and parent
+               (equal (treesit-node-type parent) "list")
+               (treesit-node-eq node (treesit-node-child parent 0 t))))
+         (face
+          (cond
+           ((and function-position
+                 (memq symbol '(cl-assert cl-check-type error signal
+                                         user-error warn)))
+            'font-lock-warning-face)
+           ((and function-position
+                 symbol
+                 (or (special-form-p symbol) (macrop symbol))
+                 (not (get symbol 'no-font-lock-keyword)))
+            'font-lock-keyword-face)
+           (t 'default))))
+    (treesit-fontify-with-override
+     (treesit-node-start node) (treesit-node-end node)
+     face override start end)))
+
 (defun suderman/nix-embedded-language (node)
   "Return the supported language named by Nix comment NODE."
   (let ((language
          (intern-soft
           (string-trim
            (string-remove-prefix "#" (treesit-node-text node t))))))
+    (when (eq language 'sh)
+      (setq language 'bash))
     (and (memq language suderman/nix-embedded-languages)
          (treesit-language-available-p language)
          language)))
