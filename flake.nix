@@ -123,7 +123,7 @@
       pkgs = import nixpkgs {inherit system;};
       smokeTest =
         pkgs.writeText "emacs-config-smoke.el"
-        # lisp
+        # elisp
         ''
           ;;; -*- lexical-binding: t; -*-
           (load (expand-file-name "init.el" user-emacs-directory))
@@ -150,6 +150,19 @@
             (markdown-ts-mode)
             (unless (derived-mode-p 'markdown-ts-mode)
               (error "Failed to activate built-in markdown-ts-mode")))
+          (with-temp-buffer
+            (let ((delimiter (make-string 2 39)))
+              (insert (format
+                       "{\n  elisp =\n    # elisp\n    %s\n      (defun hello () t)\n    %s;\n  python =\n    # python\n    %s\n      def hello():\n          return True\n    %s;\n}\n"
+                       delimiter delimiter delimiter delimiter)))
+            (nix-ts-mode)
+            (goto-char (point-min))
+            (search-forward "defun")
+            (unless (eq (treesit-language-at (point)) 'elisp)
+              (error "Missing embedded Elisp parser"))
+            (search-forward "def hello")
+            (unless (eq (treesit-language-at (point)) 'python)
+              (error "Missing embedded Python parser")))
           (dolist (executable '("fd" "rg" "pandoc" "treefmt" "wl-copy"))
             (unless (executable-find executable)
               (error "Missing executable: %s" executable)))
@@ -161,7 +174,7 @@
         pkgs.runCommand "emacs-config-smoke-test" {
           nativeBuildInputs = [emacs];
         }
-        # sh
+        # bash
         ''
           export HOME="$TMPDIR/home"
           export XDG_CACHE_HOME="$TMPDIR/cache"
