@@ -7,6 +7,33 @@
 (require 'ert)
 (require 'suderman-appearance)
 
+(ert-deftest suderman/base16-gnus-faces-avoid-emacs-31-inheritance-cycles ()
+  (let (faces transformed)
+    (dolist (group '(mail news))
+      (dotimes (index 6)
+        (let* ((level (1+ index))
+               (face (intern (format "gnus-group-%s-%d" group level)))
+               (empty-face (intern (format "%s-empty" face)))
+               (outline (intern (format "outline-%d" level))))
+          (push `(,face :inherit ,outline) faces)
+          (push `(,empty-face :foreground base04 :inherit ,face) faces))))
+    (push '(default :foreground base05) faces)
+    (let ((original (copy-tree faces)))
+      (suderman/base16-theme-set-faces-without-gnus-cycles
+       (lambda (_theme _colors fixed-faces)
+         (setq transformed fixed-faces))
+       'base16-test nil faces)
+      (should (equal faces original)))
+    (dolist (face transformed)
+      (when (string-match
+             "\\`\\(gnus-group-\\(?:mail\\|news\\)-[1-6]\\)-empty\\'"
+             (symbol-name (car face)))
+        (let* ((base-face (intern (match-string 1 (symbol-name (car face)))))
+               (base-inherit (plist-get (cdr (assq base-face transformed)) :inherit)))
+          (should (eq (plist-get (cdr face) :inherit) base-inherit)))))
+    (should (equal (assq 'default transformed)
+                   '(default :foreground base05)))))
+
 (ert-deftest suderman/selection-faces-wait-for-a-graphical-frame ()
   (let ((frames nil)
         (original-region (face-background 'region nil t)))

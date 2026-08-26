@@ -15,6 +15,38 @@
 (defconst suderman/nerd-symbol-font "Symbols Nerd Font Mono")
 (defconst suderman/background-opacity 90)
 
+;; Emacs 31 rejects the Gnus inheritance cycles created by base16-theme
+;; 20260419.235 and upstream main as of 2026-08-25.  Remove this when the empty
+;; Gnus faces inherit their corresponding outline faces instead of the
+;; non-empty faces:
+;; https://github.com/tinted-theming/base16-emacs/blob/main/base16-theme.el
+(defun suderman/base16-theme-set-faces-without-gnus-cycles
+    (function theme colors faces)
+  "Call FUNCTION for THEME and COLORS with safe Gnus FACES."
+  (funcall
+   function theme colors
+   (mapcar
+    (lambda (face)
+      (let* ((name (symbol-name (car face)))
+             (base-face
+              (when (string-match
+                     "\\`\\(gnus-group-\\(?:mail\\|news\\)-[1-6]\\)-empty\\'"
+                     name)
+                (intern (match-string 1 name))))
+             (base-spec (assq base-face faces))
+             (inherit (plist-get (cdr base-spec) :inherit)))
+        (if inherit
+            (cons (car face)
+                  (plist-put (copy-sequence (cdr face)) :inherit inherit))
+          face)))
+    faces)))
+
+(with-eval-after-load 'base16-theme
+  (advice-remove 'base16-theme-set-faces
+                 #'suderman/base16-theme-set-faces-without-gnus-cycles)
+  (advice-add 'base16-theme-set-faces :around
+              #'suderman/base16-theme-set-faces-without-gnus-cycles))
+
 ;; Stylix's default.el loads after init.el and replaces this fallback when
 ;; enabled.  Avoid overriding it on systems where it loads earlier instead.
 (unless (memq 'base16-stylix custom-enabled-themes)
