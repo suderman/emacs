@@ -29,10 +29,22 @@
       backup-directory-alist `(("." . ,(expand-file-name "backups" suderman/state-dir)))
       auto-save-file-name-transforms `((".*" ,(expand-file-name "auto-save/" suderman/state-dir) t))
       create-lockfiles nil
+      dirvish-cache-dir (expand-file-name "dirvish/" suderman/cache-dir)
+      eshell-directory-name (expand-file-name "eshell/" suderman/state-dir)
+      multisession-directory (expand-file-name "multisession/" suderman/state-dir)
+      project-list-file (expand-file-name "projects" suderman/state-dir)
       recentf-save-file (expand-file-name "recentf" suderman/state-dir)
       savehist-file (expand-file-name "savehist" suderman/state-dir)
       save-place-file (expand-file-name "places" suderman/state-dir)
-      url-history-file (expand-file-name "url/history" suderman/state-dir)
+      tramp-persistency-file-name (expand-file-name "tramp" suderman/state-dir)
+      transient-history-file (expand-file-name "transient/history.el" suderman/state-dir)
+      transient-levels-file (expand-file-name "transient/levels.el" suderman/state-dir)
+      transient-values-file (expand-file-name "transient/values.el" suderman/state-dir)
+      treemacs-persist-file (expand-file-name "treemacs-persist" suderman/cache-dir)
+      treemacs-last-error-persist-file
+      (expand-file-name "treemacs-persist-at-last-error" suderman/cache-dir)
+      url-configuration-directory (expand-file-name "url/" suderman/state-dir)
+      url-history-file (expand-file-name "history" url-configuration-directory)
       bookmark-default-file (expand-file-name "bookmarks" suderman/state-dir))
 
 (dolist (dir (list (file-name-directory auto-save-list-file-prefix)

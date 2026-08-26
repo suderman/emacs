@@ -24,6 +24,8 @@ package-quickstart.elc
 *.eln
 
 # Runtime/history/cache files
+dirvish/
+multisession/
 projects
 recentf
 recentf-save.el
@@ -45,8 +47,7 @@ network-security.data
 org-clock-save.el
 
 # Eshell state
-eshell/history
-eshell/lastdir
+eshell/
 
 # LSP / language server caches
 .lsp-session-v1
