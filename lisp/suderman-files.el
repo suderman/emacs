@@ -325,10 +325,11 @@
   :commands (dirvish dirvish-dwim)
   :init
   (setq dired-listing-switches "-al --group-directories-first"
-        dirvish-attributes '(nerd-icons file-modes)
+        dirvish-attributes '(vc-state nerd-icons file-modes)
         dirvish-default-layout '(1 0.125 0.5)
         dirvish-mode-line-format
-        '(:left (sort symlink yank) :right (file-size file-modes index))
+        '(:left (sort vc-info symlink yank)
+          :right (file-size file-modes index))
         dirvish-preview-dired-sync-omit nil
         dirvish-quick-access-entries
         '(("h" "~/" "Home")
