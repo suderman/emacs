@@ -208,6 +208,19 @@
 (setq-default display-fill-column-indicator-column 100)
 (global-display-fill-column-indicator-mode 1)
 
+(use-package indent-bars
+  :hook ((prog-mode conf-mode toml-ts-mode yaml-ts-mode html-ts-mode)
+         . indent-bars-mode)
+  :custom
+  (indent-bars-color '(line-number :blend 1))
+  (indent-bars-color-by-depth nil)
+  (indent-bars-highlight-current-depth nil)
+  (indent-bars-pattern ".")
+  (indent-bars-width-frac 0.1)
+  (indent-bars-pad-frac 0.1)
+  (indent-bars-starting-column 0)
+  (indent-bars-display-on-blank-lines 'least))
+
 (use-package doom-modeline
   :demand t
   :init
