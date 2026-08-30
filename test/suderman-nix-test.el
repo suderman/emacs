@@ -1,10 +1,10 @@
-;;; suderman-languages-test.el --- Focused language checks -*- lexical-binding: t; -*-
+;;; suderman-nix-test.el --- Focused Nix checks -*- lexical-binding: t; -*-
 
 ;; Run with:
-;; emacs --batch -l init.el -l test/suderman-languages-test.el -f ert-run-tests-batch-and-exit
+;; emacs --batch -l init.el -l test/suderman-nix-test.el -f ert-run-tests-batch-and-exit
 
 (require 'ert)
-(require 'suderman-languages)
+(require 'suderman-nix)
 
 (defun suderman/test-nix-language-at (text)
   "Return the Tree-sitter language at the start of TEXT."
@@ -86,5 +86,5 @@
     (treesit-update-ranges)
     (should (eq (suderman/test-nix-language-at "util.exec") 'nix))))
 
-(provide 'suderman-languages-test)
-;;; suderman-languages-test.el ends here
+(provide 'suderman-nix-test)
+;;; suderman-nix-test.el ends here

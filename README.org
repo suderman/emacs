@@ -393,7 +393,8 @@ Dirvish.
 | =lisp/suderman-dashboard.el=    | Startup dashboard and common destinations       |
 | =lisp/suderman-treemacs.el=     | Frame-local project tree and IBuffer integration |
 | =lisp/suderman-markdown.el=     | Markdown editing and Pandoc preview              |
-| =lisp/suderman-languages.el=    | Language associations and tree-sitter setup      |
+| =lisp/suderman-languages.el=    | Broad language associations and tree-sitter use  |
+| =lisp/suderman-nix.el=          | Embedded-language highlighting in Nix strings    |
 | =lisp/suderman-git.el=          | Magit, live hunks, and conflict handling          |
 | =lisp/suderman-org.el=          | Org agenda, capture, and refile workflow           |
 | =lisp/suderman-keys.el=         | Global, Meta, and =SPC= leader bindings          |

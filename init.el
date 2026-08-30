@@ -29,6 +29,7 @@
 (require 'suderman-markdown)
 (require 'suderman-org)
 (require 'suderman-languages)
+(require 'suderman-nix)
 (require 'suderman-git)
 (require 'suderman-keys)
 (require 'suderman-formatting)

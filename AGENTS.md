@@ -70,8 +70,8 @@ The current modules have clear jobs.
 - `suderman-treemacs.el` owns the project-focused Treemacs tree and its links to
   IBuffer.
 - `suderman-markdown.el` owns Markdown mode behavior and Pandoc preview.
-- `suderman-languages.el` owns broad language associations and tree-sitter
-  setup.
+- `suderman-languages.el` owns broad language associations and tree-sitter use.
+- `suderman-nix.el` owns embedded-language highlighting in Nix strings.
 - `suderman-git.el` owns Magit, diff-hl, and conflict handling.
 - `suderman-org.el` owns Org agenda, capture, and refile behavior.
 - `suderman-keys.el` owns global keys and the Meow `SPC` leader maps.
