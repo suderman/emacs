@@ -65,6 +65,8 @@ The current modules have clear jobs.
   Embark.
 - `suderman-meow.el` owns modal editing, selections, editing commands, and the
   normal and motion maps.
+- `suderman-images.el` owns Image mode navigation, transforms, animation, and
+  clipboard behavior.
 - `suderman-files.el` owns Dired and Dirvish.
 - `suderman-dashboard.el` owns the startup dashboard and common destinations.
 - `suderman-treemacs.el` owns the project-focused Treemacs tree and its links to

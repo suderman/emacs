@@ -387,6 +387,7 @@ Dirvish.
 | =lisp/suderman-appearance.el=   | Fonts, faces, modeline, and visual guides        |
 | =lisp/suderman-windows.el=      | Window helpers and smooth jump animation         |
 | =lisp/suderman-meow.el=         | Modal editing and the Normal/Motion maps         |
+| =lisp/suderman-images.el=       | Image navigation, transforms, and clipboard      |
 | =lisp/suderman-buffers.el=      | Project-grouped IBuffer                          |
 | =lisp/suderman-completion.el=   | Vertico, Orderless, Consult, Marginalia, Embark  |
 | =lisp/suderman-files.el=        | Dired and Dirvish                                |

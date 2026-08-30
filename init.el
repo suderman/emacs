@@ -24,6 +24,7 @@
 (require 'suderman-completion)
 (require 'suderman-meow)
 (require 'suderman-files)
+(require 'suderman-images)
 (require 'suderman-dashboard)
 (require 'suderman-treemacs)
 (require 'suderman-markdown)
