@@ -1,7 +1,7 @@
 ;;; suderman-org.el --- Org agenda and capture workflow -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Keep daily Org work centered on the inbox and todo files.
+;; Keep daily Org work centered on a few phone-friendly files.
 
 ;;; Code:
 
@@ -144,15 +144,33 @@
         org-startup-indented t
         org-tags-column 0
         org-auto-align-tags nil
+        org-todo-keywords
+        '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))
         org-directory (expand-file-name "~/org")
         org-agenda-files
         (mapcar (lambda (file) (expand-file-name file org-directory))
-                '("inbox.org" "todo.org"))
+                '("inbox.org" "todo.org" "routines.org" "fresha.org"))
         org-default-notes-file (expand-file-name "inbox.org" org-directory)
         org-capture-templates
-        `(("t" "Todo" entry (file ,org-default-notes-file)
-           "* TODO %?\n  %U\n  %a"))
-        org-refile-targets '((org-agenda-files :maxlevel . 3))))
+        `(("t" "Task" entry (file ,org-default-notes-file)
+            "* TODO %?\n  %U\n  %a")
+          ("n" "Note" entry (file ,org-default-notes-file)
+            "* %?\n  %U\n  %a")
+          ("i" "Idea" entry (file ,(expand-file-name "ideas.org" org-directory))
+            "* %?\n  %U\n  %a"))
+        org-refile-targets
+        (mapcar (lambda (file)
+                  (cons (expand-file-name file org-directory) '(:maxlevel . 3)))
+                '("todo.org" "routines.org" "ideas.org" "archive.org"))
+        org-archive-location
+        (concat (expand-file-name "archive.org" org-directory) "::* From %s")
+        org-agenda-skip-scheduled-if-done t
+        org-agenda-skip-deadline-if-done t
+        org-agenda-custom-commands
+        '(("d" "Dashboard"
+           ((agenda "" ((org-agenda-span 7)))
+            (todo "PROG|EVAL|HOLD")
+            (todo "TODO"))))))
 
 (use-package org-superstar
   :after org

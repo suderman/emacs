@@ -8,7 +8,7 @@
 (require 'suderman-keys)
 (require 'suderman-org)
 
-(ert-deftest suderman/org-uses-inbox-and-todo-files ()
+(ert-deftest suderman/org-uses-phone-friendly-workflow-files ()
   (should (equal org-M-RET-may-split-line '((default . nil))))
   (should org-insert-heading-respect-content)
   (should (eq org-log-done 'time))
@@ -18,14 +18,30 @@
     (should (equal org-directory directory))
     (should (equal org-agenda-files
                    (mapcar (lambda (file) (expand-file-name file directory))
-                           '("inbox.org" "todo.org"))))
+                            '("inbox.org" "todo.org" "routines.org" "fresha.org"))))
+    (should (equal org-todo-keywords
+                   '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))))
     (should (equal org-default-notes-file
                    (expand-file-name "inbox.org" directory)))
     (should (equal org-capture-templates
-                   `(("t" "Todo" entry (file ,org-default-notes-file)
-                      "* TODO %?\n  %U\n  %a"))))
+                    `(("t" "Task" entry (file ,org-default-notes-file)
+                       "* TODO %?\n  %U\n  %a")
+                      ("n" "Note" entry (file ,org-default-notes-file)
+                       "* %?\n  %U\n  %a")
+                      ("i" "Idea" entry
+                       (file ,(expand-file-name "ideas.org" directory))
+                       "* %?\n  %U\n  %a"))))
     (should (equal org-refile-targets
-                   '((org-agenda-files :maxlevel . 3))))))
+                    (mapcar
+                     (lambda (file)
+                       (cons (expand-file-name file directory) '(:maxlevel . 3)))
+                     '("todo.org" "routines.org" "ideas.org" "archive.org"))))
+    (should (equal org-archive-location
+                   (concat (expand-file-name "archive.org" directory)
+                           "::* From %s")))
+    (should org-agenda-skip-scheduled-if-done)
+    (should org-agenda-skip-deadline-if-done)
+    (should (assoc "d" org-agenda-custom-commands))))
 
 (ert-deftest suderman/org-prefix-enters-through-meow-keypad ()
   (should (eq (lookup-key suderman/meow-leader-map (kbd "o"))
