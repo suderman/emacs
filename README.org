@@ -389,7 +389,6 @@ Dirvish.
 | =lisp/suderman-meow.el=         | Modal editing and the Normal/Motion maps         |
 | =lisp/suderman-buffers.el=      | Project-grouped IBuffer                          |
 | =lisp/suderman-completion.el=   | Vertico, Orderless, Consult, Marginalia, Embark  |
-| =lisp/suderman-pickers.el=      | Commands built from the completion stack         |
 | =lisp/suderman-files.el=        | Dired and Dirvish                                |
 | =lisp/suderman-dashboard.el=    | Startup dashboard and common destinations       |
 | =lisp/suderman-treemacs.el=     | Frame-local project tree and IBuffer integration |

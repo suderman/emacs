@@ -63,7 +63,6 @@ The current modules have clear jobs.
 - `suderman-buffers.el` owns project-grouped IBuffer.
 - `suderman-completion.el` owns Vertico, Orderless, Consult, Marginalia, and
   Embark.
-- `suderman-pickers.el` owns commands built from the completion stack.
 - `suderman-meow.el` owns modal editing, selections, editing commands, and the
   normal and motion maps.
 - `suderman-files.el` owns Dired and Dirvish.

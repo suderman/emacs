@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 ;; Vertico, Orderless, Consult, Marginalia, and Embark stay together because they
-;; are one coherent minibuffer UX.  Higher-level pickers live in suderman-pickers.
+;; are one coherent minibuffer UX.
 
 ;;; Code:
 

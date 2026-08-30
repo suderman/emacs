@@ -37,8 +37,6 @@ saveplace
 saveplace.el
 bookmarks
 bookmarks.el
-projectile-bookmarks.eld
-projectile.cache
 url/
 network-security.data
 
@@ -60,8 +58,7 @@ tree-sitter/
 tree-sitter-langs/
 tree-sitter-module/
 
-# Vertico / consult / prescient / completion history
-prescient-save.el
+# Vertico / consult / completion history
 transient/
 transient/history.el
 

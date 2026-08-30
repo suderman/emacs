@@ -58,11 +58,6 @@
   (interactive)
   (windmove-left))
 
-(defun suderman/window-previous ()
-  "Move focus to the previously selected window."
-  (interactive)
-  (other-window -1))
-
 (defun suderman/delete-window-or-tab ()
   "Delete the selected window, or close its tab when it is the only window."
   (interactive)

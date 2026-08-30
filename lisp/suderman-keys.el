@@ -13,7 +13,7 @@
 (require 'suderman-files)
 (require 'suderman-git)
 (require 'suderman-org)
-(require 'suderman-pickers)
+(require 'suderman-buffers)
 (require 'suderman-reload)
 (require 'suderman-treemacs)
 (require 'suderman-windows)

@@ -21,8 +21,8 @@
 
 (defconst suderman/reload-modal-keys
   '("<f5>"
-    "M-p" "M-g"
-    "M-h" "M-j" "M-k" "M-l" "M-;"
+    "M-p"
+    "M-h" "M-j" "M-k" "M-l"
     "M-H" "M-J" "M-K" "M-L"
     "M-u" "M-i" "M-U" "M-I" "M-w")
   "Meow modal keys rebuilt by `suderman-keys'.")

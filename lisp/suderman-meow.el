@@ -723,10 +723,6 @@ An active selection is replaced without modifying the kill ring."
 (declare-function image-animate-timer "image")
 (declare-function suderman/treemacs-toggle "suderman-treemacs")
 
-(defun suderman/image-mode-reset-point ()
-  "Keep point on Image mode's display property."
-  (goto-char (point-min)))
-
 (defun suderman/image-rotate-counterclockwise ()
   "Rotate the image at point 90 degrees counterclockwise."
   (interactive)
@@ -773,16 +769,11 @@ An active selection is replaced without modifying the kill ring."
 (defun suderman/meow-image-mode-setup ()
   "Prepare Image mode for Meow motion state."
   (when (derived-mode-p 'image-mode)
-    (suderman/image-mode-reset-point)
+    (goto-char (point-min))
     (when-let* ((image (image-get-display-property))
                 ((image-multi-frame-p image))
                 ((not (image-animate-timer image))))
       (image-toggle-animation))
-    (local-set-key (kbd ",") #'suderman/ibuffer-toggle)
-    (local-set-key (kbd ".") #'suderman/dirvish)
-    (local-set-key (kbd "c") #'suderman/image-copy-to-clipboard)
-    (local-set-key (kbd "n") #'suderman/image-next-file)
-    (local-set-key (kbd "p") #'suderman/image-previous-file)
     (when (and (bound-and-true-p meow-global-mode)
                (not (and (bound-and-true-p meow-mode)
                          (bound-and-true-p meow-motion-mode)

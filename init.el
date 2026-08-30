@@ -22,7 +22,6 @@
 ;; Editing building blocks.
 (require 'suderman-buffers)
 (require 'suderman-completion)
-(require 'suderman-pickers)
 (require 'suderman-meow)
 (require 'suderman-files)
 (require 'suderman-dashboard)

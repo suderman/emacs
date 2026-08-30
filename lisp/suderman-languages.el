@@ -9,7 +9,6 @@
 (require 'cl-lib)
 (require 'subr-x)
 (require 'use-package)
-(require 'suderman-markdown)
 
 (defconst suderman/nix-embedded-languages '(bash elisp html lua python))
 

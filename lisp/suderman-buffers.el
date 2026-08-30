@@ -11,6 +11,14 @@
 
 (declare-function suderman/dashboard "suderman-dashboard")
 
+(defun suderman/alternate-buffer ()
+  "Switch to the most recent alternate buffer."
+  (interactive)
+  (let ((buffer (other-buffer (current-buffer) t)))
+    (if buffer
+        (switch-to-buffer buffer)
+      (user-error "No alternate buffer"))))
+
 (define-ibuffer-column suderman-name
   (:name "Name"
          :header-mouse-map ibuffer-name-header-map
