@@ -19,6 +19,7 @@
           (error "Missing executable: %s" executable)))
       (unless (treesit-language-available-p 'c)
         (error "Missing C tree-sitter grammar"))
+      (load "${../../test}/run.el")
     '';
 in
   pkgs.runCommand "emacs-config-check" {}
