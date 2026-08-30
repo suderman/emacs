@@ -115,14 +115,12 @@
       (replace-match "</table>\n</div>" nil nil))
     (write-region (point-min) (point-max) html-file nil 'silent)))
 
-(defun suderman/markdown-preview-render (&optional html-file)
-  "Render current Markdown buffer to HTML-FILE, or the buffer preview file."
+(defun suderman/markdown-preview-render ()
+  "Render the current Markdown buffer to its preview file."
   (unless (executable-find "pandoc")
     (user-error "pandoc not found"))
-  (unless html-file
-    (suderman/markdown-preview-ensure-target))
-  (let ((output-file (or html-file suderman/markdown-preview-file))
-        (header-file (make-temp-file "markdown-preview-style-" nil ".html")))
+  (suderman/markdown-preview-ensure-target)
+  (let ((header-file (make-temp-file "markdown-preview-style-" nil ".html")))
     (unwind-protect
         (progn
           (write-region suderman/markdown-preview-css nil header-file nil 'silent)
@@ -134,20 +132,29 @@
                          "--to=html5"
                          "--metadata" (format "pagetitle=%s" (buffer-name))
                          "--include-in-header" header-file
-                         "--output" output-file)))
+                         "--output" suderman/markdown-preview-file)))
             (unless (zerop status)
               (user-error "pandoc failed with exit code %s" status)))
-          (suderman/markdown-preview-normalize-tables output-file)
-          (when (and suderman/markdown-preview-version-file
-                     (equal output-file suderman/markdown-preview-file))
-            (write-region (format "%s\n" (float-time)) nil suderman/markdown-preview-version-file nil 'silent)))
+          (suderman/markdown-preview-normalize-tables suderman/markdown-preview-file)
+          (write-region (format "%s\n" (float-time)) nil
+                        suderman/markdown-preview-version-file nil 'silent))
       (delete-file header-file))
-    output-file))
+    suderman/markdown-preview-file))
+
+(defun suderman/markdown-preview-cleanup ()
+  "Delete preview files owned by the current buffer."
+  (dolist (file (list suderman/markdown-preview-file
+                      suderman/markdown-preview-version-file))
+    (when (and file (file-exists-p file))
+      (delete-file file)))
+  (setq suderman/markdown-preview-file nil
+        suderman/markdown-preview-version-file nil
+        suderman/markdown-preview-url nil))
 
 (defun suderman/markdown-preview-after-save ()
   "Update this buffer's live Markdown preview after saving."
   (when suderman/markdown-preview-file
-    (suderman/markdown-preview-render suderman/markdown-preview-file)))
+    (suderman/markdown-preview-render)))
 
 (defun suderman/markdown-preview-buffer ()
   "Render current Markdown buffer with pandoc and open it in a browser.
@@ -156,9 +163,9 @@ The preview uses a stable local HTTP URL for this buffer.  Once opened, saving
 this Markdown buffer rerenders the HTML.  The browser polls a small version file
 and updates only after a save changes the preview."
   (interactive)
-  (suderman/markdown-preview-ensure-target)
-  (suderman/markdown-preview-render suderman/markdown-preview-file)
+  (suderman/markdown-preview-render)
   (add-hook 'after-save-hook #'suderman/markdown-preview-after-save nil t)
+  (add-hook 'kill-buffer-hook #'suderman/markdown-preview-cleanup nil t)
   (browse-url suderman/markdown-preview-url))
 
 (use-package markdown-ts-mode
