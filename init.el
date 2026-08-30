@@ -32,9 +32,11 @@
 (require 'suderman-languages)
 (require 'suderman-nix)
 (require 'suderman-git)
-(require 'suderman-keys)
 (require 'suderman-formatting)
 (require 'suderman-reload)
+
+;; Bind keys only after every command they invoke exists.
+(require 'suderman-keys)
 
 ;; Keep Custom out of the hand-written config.
 (when (file-exists-p custom-file)

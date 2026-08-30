@@ -8,6 +8,16 @@
 
 (require 'use-package)
 
+(defun suderman/clear-search ()
+  "Clear active isearch and lazy search highlighting."
+  (interactive)
+  (when (bound-and-true-p isearch-mode)
+    (isearch-exit))
+  (when (fboundp 'lazy-highlight-cleanup)
+    (lazy-highlight-cleanup t))
+  (when (fboundp 'isearch-dehighlight)
+    (isearch-dehighlight)))
+
 (use-package vertico
   :init
   (vertico-mode 1))

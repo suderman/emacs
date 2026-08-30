@@ -70,6 +70,38 @@
       (set-frame-parameter target-frame 'alpha-background
                            suderman/background-opacity))))
 
+(defun suderman/frame-text-scale-adjust (delta)
+  "Adjust the selected graphical frame's text size by DELTA points."
+  (let ((frame (selected-frame)))
+    (unless (display-graphic-p frame)
+      (user-error "Text scaling requires a graphical frame"))
+    ;; PGTK rounds rendered font sizes, so track the requested height instead.
+    (let* ((state
+            (or (frame-parameter frame 'suderman/frame-text-scale-state)
+                (let ((height
+                       (face-attribute 'default :height frame 'default)))
+                  (list height (frame-parameter frame 'font) height))))
+           (base-height (nth 0 state))
+           (base-font (nth 1 state))
+           (new-height (+ (nth 2 state) (* delta 10))))
+      (when (< 10 new-height 500)
+        (set-frame-parameter
+         frame 'suderman/frame-text-scale-state
+         (list base-height base-font new-height))
+        (if (= new-height base-height)
+            (set-frame-font base-font t nil t)
+          (set-face-attribute 'default frame :height new-height))))))
+
+(defun suderman/frame-text-scale-decrease ()
+  "Decrease text size in the selected graphical frame by one point."
+  (interactive)
+  (suderman/frame-text-scale-adjust -1))
+
+(defun suderman/frame-text-scale-increase ()
+  "Increase text size in the selected graphical frame by one point."
+  (interactive)
+  (suderman/frame-text-scale-adjust 1))
+
 (add-to-list 'default-frame-alist `(alpha-background . ,suderman/background-opacity))
 (add-to-list 'initial-frame-alist `(alpha-background . ,suderman/background-opacity))
 

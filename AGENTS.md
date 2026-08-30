@@ -76,6 +76,7 @@ The current modules have clear jobs.
 - `suderman-nix.el` owns embedded-language highlighting in Nix strings.
 - `suderman-git.el` owns Magit, diff-hl, and conflict handling.
 - `suderman-org.el` owns Org agenda, capture, and refile behavior.
+- `suderman-formatting.el` owns project-aware formatting and environment setup.
 - `suderman-keys.el` owns global keys and the Meow `SPC` leader maps.
 - `suderman-reload.el` owns hot reload behavior.
 
