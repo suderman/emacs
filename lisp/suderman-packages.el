@@ -15,6 +15,9 @@
 
 (package-initialize)
 
+;; Force fresh metadata before installing anything missing.
+(setq package-archive-contents nil)
+
 (unless (package-installed-p 'use-package)
   (unless package-archive-contents
     (package-refresh-contents))
@@ -25,6 +28,12 @@
 (setq use-package-always-ensure t
       use-package-always-defer t
       use-package-expand-minimally t)
+
+;; Keep startup usable when an optional package cannot be installed.
+(add-to-list 'use-package-defaults
+             '(:if (lambda (name _args)
+                     (list 'locate-library (symbol-name name)))
+               t))
 
 (provide 'suderman-packages)
 ;;; suderman-packages.el ends here
