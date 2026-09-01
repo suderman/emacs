@@ -10,6 +10,9 @@
 (require 'color)
 (require 'use-package)
 
+(declare-function suderman/dirvish "suderman-files")
+(declare-function suderman/ibuffer-toggle "suderman-buffers")
+
 (defconst suderman/font-family "JetBrainsMono Nerd Font Mono")
 (defconst suderman/font-size 11)
 (defconst suderman/nerd-symbol-font "Symbols Nerd Font Mono")
@@ -253,6 +256,18 @@
   (indent-bars-starting-column 0)
   (indent-bars-display-on-blank-lines 'least))
 
+(defun suderman/dirvish-from-mode-line (event)
+  "Open Dirvish for the window whose mode line EVENT clicked."
+  (interactive "e")
+  (select-window (posn-window (event-start event)))
+  (suderman/dirvish))
+
+(defun suderman/ibuffer-from-mode-line (event)
+  "Open IBuffer for the window whose mode line EVENT clicked."
+  (interactive "e")
+  (select-window (posn-window (event-start event)))
+  (suderman/ibuffer-toggle))
+
 (use-package doom-modeline
   :demand t
   :init
@@ -260,6 +275,34 @@
         doom-modeline-buffer-file-name-style 'relative-to-project
         doom-modeline-buffer-encoding 'nondefault)
   :config
+  (doom-modeline-def-segment suderman-dirvish
+    "Clickable Dirvish button."
+    (propertize (concat " "
+                       (doom-modeline-icon 'codicon "nf-cod-folder" "🗀" "D"
+                                            :face (doom-modeline-face))
+                       " ")
+                'mouse-face 'doom-modeline-highlight
+                'help-echo "mouse-1: Toggle Dirvish"
+                'local-map (let ((map (make-sparse-keymap)))
+                             (define-key map [mode-line mouse-1]
+                                         #'suderman/dirvish-from-mode-line)
+                             map)))
+  (doom-modeline-def-segment suderman-ibuffer
+    "Clickable IBuffer button."
+    (propertize (concat " "
+                       (doom-modeline-icon 'codicon "nf-cod-files" "🗎" "B"
+                                            :face (doom-modeline-face))
+                       " ")
+                'mouse-face 'doom-modeline-highlight
+                'help-echo "mouse-1: Toggle IBuffer"
+                'local-map (let ((map (make-sparse-keymap)))
+                             (define-key map [mode-line mouse-1]
+                                         #'suderman/ibuffer-from-mode-line)
+                             map)))
+  (doom-modeline-remove-segment 'suderman-dirvish)
+  (doom-modeline-remove-segment 'suderman-ibuffer)
+  (doom-modeline-add-segment 'suderman-dirvish 'bar :after)
+  (doom-modeline-add-segment 'suderman-ibuffer 'suderman-dirvish :after)
   (doom-modeline-mode 1))
 
 (suderman/set-nerd-font-fallbacks)
