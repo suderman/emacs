@@ -345,7 +345,8 @@ together without status messages. The preview remains unfiltered. Deleting a
 file kills its unmodified visiting buffer, while modified buffers still require
 confirmation. Use =M-x revert-buffer= when another program changes the
 directory. The =?= popup reads the current bindings instead of Dirvish's default
-command menu. Semicolon opens the original Dirvish menu.
+command menu. Semicolon opens the original Dirvish menu. Directory arrows toggle
+subtrees on click, matching =TAB=.
 
 Single left click selects a row, double left click opens it, and right click
 opens Dired's file or directory context menu. A single click in the center keeps

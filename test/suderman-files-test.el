@@ -42,6 +42,14 @@
       (should (local-variable-p 'mouse-1-click-follows-link))
       (should-not mouse-1-click-follows-link))))
 
+(ert-deftest suderman/dirvish-subtree-arrows-toggle-on-click ()
+  (dolist (icon (list (car dirvish-subtree--state-icons)
+                      (cdr dirvish-subtree--state-icons)))
+    (let ((map (get-text-property 0 'keymap icon)))
+      (should map)
+      (should (eq (lookup-key map [mouse-1])
+                  #'dirvish-subtree-toggle-or-open)))))
+
 (ert-deftest suderman/dirvish-windmove-rejects-breadcrumb-window ()
   (save-window-excursion
     (delete-other-windows)

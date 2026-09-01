@@ -18,6 +18,7 @@
 (defvar dirvish-yank-sources)
 (defvar dirvish-side-attributes)
 (defvar dirvish-side-mode-line-format)
+(defvar dirvish-subtree--state-icons)
 (defvar global-hl-line-mode)
 (defvar dirvish-directory-view-mode-map)
 (defvar dirvish-misc-mode-map)
@@ -44,6 +45,7 @@
 (declare-function dirvish-side--session-visible-p "dirvish-side")
 (declare-function dirvish-side-follow-mode "dirvish-side")
 (declare-function dirvish-subtree-toggle "dirvish-subtree")
+(declare-function dirvish-subtree-toggle-or-open "dirvish-subtree")
 (declare-function dirvish-yank "dirvish-yank")
 (declare-function dv-curr-layout "dirvish")
 (declare-function dv-index "dirvish")
@@ -163,6 +165,12 @@
 (defvar suderman/dirvish-help-map (make-sparse-keymap)
   "Current effective bindings displayed by `suderman/dirvish-help'.")
 
+(defvar suderman/dirvish-subtree-mouse-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mouse-1] #'dirvish-subtree-toggle-or-open)
+    map)
+  "Mouse bindings used by Dirvish subtree state arrows.")
+
 (defun suderman/dirvish-help ()
   "Show practical current directory bindings with Which-Key."
   (interactive)
@@ -179,6 +187,17 @@
   "Search below the current directory for comma-separated PATTERNs."
   (interactive (list (read-string "Search current directory: ")))
   (dirvish-fd nil pattern))
+
+(defun suderman/dirvish-enable-subtree-mouse ()
+  "Make Dirvish subtree state arrows toggle their directory on click."
+  (dolist (icon (list (car dirvish-subtree--state-icons)
+                      (cdr dirvish-subtree--state-icons)))
+    (add-text-properties
+     0 (length icon)
+     `(keymap ,suderman/dirvish-subtree-mouse-map
+              mouse-face highlight
+              help-echo "mouse-1: toggle subtree")
+     icon)))
 
 (defun suderman/dired-disable-meow ()
   "Disable Meow in the current Dired or Dirvish buffer."
@@ -535,6 +554,8 @@
   (require 'dirvish-rsync)
   (require 'dirvish-side)
   (require 'dirvish-peek)
+  (require 'dirvish-subtree)
+  (suderman/dirvish-enable-subtree-mouse)
   (dirvish-side-follow-mode 1)
   (dirvish-peek-mode 1)
   (add-hook 'dirvish-preview-setup-hook

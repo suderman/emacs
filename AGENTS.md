@@ -154,7 +154,8 @@ below the current directory. Question mark shows a compact Which-Key view
 generated from the effective bindings; semicolon opens the upstream Dirvish
 dispatcher. `TAB` toggles subtrees, `N` narrows, `E` manages emerge groups, and
 `R` runs rsync. `g` refreshes, `I` shows file information, `u` unmarks without
-moving, and `U` clears all marks.
+moving, and `U` clears all marks. Clicking a directory's subtree-state arrow
+also toggles its subtree without changing ordinary row-click behavior.
 
 Single left click selects a file, double left click opens it, and right click
 opens the native Dired context menu. Single click must keep focus in the root
