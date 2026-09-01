@@ -55,6 +55,7 @@
 (declare-function meow--disable "meow")
 (declare-function meow-keypad "meow-keypad")
 (declare-function meow-mode "meow")
+(declare-function pdf-tools-install "pdf-tools")
 (declare-function which-key-show-keymap "which-key")
 
 (defun suderman/revert-buffer-no-confirm ()
@@ -187,6 +188,29 @@
   "Search below the current directory for comma-separated PATTERNs."
   (interactive (list (read-string "Search current directory: ")))
   (dirvish-fd nil pattern))
+
+(defun suderman/dired-open ()
+  "Open the entry at point, delegating EPUB, audio, and video to the desktop."
+  (interactive)
+  (let ((file (dired-get-file-for-visit)))
+    (if (file-directory-p file)
+        (dired-find-file)
+      (require 'mailcap)
+      (let ((mime-type (mailcap-file-name-to-mime-type file)))
+        (if (and mime-type
+                 (or (equal mime-type "application/epub+zip")
+                     (string-match-p "\\`\\(?:audio\\|video\\)/" mime-type)))
+            (progn
+              (unless (executable-find "xdg-open")
+                (user-error "xdg-open is not installed"))
+              (start-process "open-media" nil "xdg-open" file))
+          (dired-find-file))))))
+
+(defun suderman/dired-mouse-open (event)
+  "Open the Dired entry clicked in EVENT."
+  (interactive "e")
+  (mouse-set-point event)
+  (suderman/dired-open))
 
 (defun suderman/dirvish-enable-subtree-mouse ()
   "Make Dirvish subtree state arrows toggle their directory on click."
@@ -515,6 +539,12 @@
 (keymap-unset ibuffer-mode-map "SPC" t)
 (keymap-set dired-mode-map "`" #'suderman/dashboard)
 
+(use-package pdf-tools
+  :ensure nil
+  :demand t
+  :config
+  (pdf-tools-install))
+
 (use-package dirvish
   :demand t
   :init
@@ -604,7 +634,7 @@
     (keymap-set map "i" #'suderman/dirvish-toggle-dotfiles)
     (keymap-set map "j" #'dired-next-line)
     (keymap-set map "k" #'dired-previous-line)
-    (keymap-set map "l" #'dired-find-file)
+    (keymap-set map "l" #'suderman/dired-open)
     (keymap-set map "m" #'suderman/dired-toggle-mark)
     (keymap-set map "r" #'dired-do-rename)
     (keymap-set map "s" #'dirvish-quicksort)
@@ -624,7 +654,7 @@
     (keymap-set map "M-i" #'suderman/split-window-right-and-focus)
     (keymap-set map "M-w" #'suderman/delete-window-or-tab)
     (keymap-set map "<mouse-1>" #'mouse-set-point)
-    (keymap-set map "<double-mouse-1>" #'dired-mouse-find-file)
+    (keymap-set map "<double-mouse-1>" #'suderman/dired-mouse-open)
     (keymap-set map "<mouse-3>" #'context-menu-open))
   (keymap-set dirvish-directory-view-mode-map
               "<mouse-1>" #'suderman/dirvish-parent-mouse-select)

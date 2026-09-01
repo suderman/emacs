@@ -349,8 +349,10 @@ command menu. Semicolon opens the original Dirvish menu. Directory arrows toggle
 subtrees on click, matching =TAB=.
 
 Single left click selects a row, double left click opens it, and right click
-opens Dired's file or directory context menu. A single click in the center keeps
-focus there instead of activating the preview. The left parent column is also
+opens Dired's file or directory context menu. PDF files open in PDF Tools; EPUB
+files use the desktop reader, and audio and video use the desktop player. NixOS
+currently maps those to Zathura and mpv. A single click in the center keeps focus
+there instead of activating the preview. The left parent column is also
 clickable: directories change the center column, while files change directory
 and select that file. In that column, =j/k= move between directories and update
 the center, =h= goes up another level, and =l= returns to the center. Breadcrumb

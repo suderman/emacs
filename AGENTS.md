@@ -158,14 +158,16 @@ moving, and `U` clears all marks. Clicking a directory's subtree-state arrow
 also toggles its subtree without changing ordinary row-click behavior.
 
 Single left click selects a file, double left click opens it, and right click
-opens the native Dired context menu. Single click must keep focus in the root
-pane rather than activating the preview. In the parent pane, left click changes
-the root directory or selects the clicked file in its directory. Its `j/k`
-bindings move between sibling directories and update the root, `h` moves both
-panes up a level, and `l` returns focus to the root. Breadcrumb clicks run in the
-root pane, while Meta window movement excludes breadcrumb and footer windows.
-Preview panes remain normal windows because `o` can deliberately turn one into
-an editable file buffer.
+opens the native Dired context menu. `l` and double-click open PDFs in PDF Tools
+and delegate EPUB, audio, or video to the desktop MIME handler; other files still
+use normal Emacs mode selection. Single click must keep focus in the root pane
+rather than activating the preview. In the parent pane, left click changes the
+root directory or selects the clicked file in its directory. Its `j/k` bindings
+move between sibling directories and update the root, `h` moves both panes up a
+level, and `l` returns focus to the root. Breadcrumb clicks run in the root pane,
+while Meta window movement excludes breadcrumb and footer windows. Preview panes
+remain normal windows because `o` can deliberately turn one into an editable
+file buffer.
 
 Magit disables Meow locally because its single-letter commands and Transient
 menus are the interface. `j/k` move between visible sections, while native
@@ -248,6 +250,9 @@ These choices are not immutable, but replacing one needs a concrete benefit.
 - Dirvish owns both focused file management and the persistent project tree.
   Its official extensions supply subtrees, collapse, narrowing, groups, rsync,
   minibuffer previews, history, search, sorting, quick access, and file details.
+- PDF Tools renders PDFs inside Emacs. EPUB, audio, and video opened from
+  Dirvish use the desktop MIME handler, which NixOS currently maps to Zathura
+  and mpv.
 - Magit owns repository operations, diff-hl owns live hunk indicators, and
   built-in smerge-mode plus Ediff resolve conflicts. Forge is intentionally
   absent until hosting issues and pull requests need to live in Emacs.
