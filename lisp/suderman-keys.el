@@ -16,7 +16,6 @@
 (require 'suderman-git)
 (require 'suderman-org)
 (require 'suderman-reload)
-(require 'suderman-treemacs)
 (require 'suderman-windows)
 
 (defun suderman/keys--define (map key command)
@@ -130,12 +129,12 @@
 
 ;; Toggles
 (suderman/keys--define suderman/leader-toggle-map "c" #'display-fill-column-indicator-mode)
+(suderman/keys--define suderman/leader-toggle-map "d" #'suderman/dirvish-side-toggle)
 (suderman/keys--define suderman/leader-toggle-map "h" #'hl-line-mode)
 (suderman/keys--define suderman/leader-toggle-map "l" #'suderman/toggle-line-numbers)
 (suderman/keys--define suderman/leader-toggle-map "o" #'org-indent-mode)
 (suderman/keys--define suderman/leader-toggle-map "r" #'read-only-mode)
 (suderman/keys--define suderman/leader-toggle-map "s" #'jinx-mode)
-(suderman/keys--define suderman/leader-toggle-map "t" #'suderman/treemacs-toggle)
 (suderman/keys--define suderman/leader-toggle-map "v" #'visual-line-mode)
 (suderman/keys--define suderman/leader-toggle-map "w" #'whitespace-mode)
 
@@ -237,12 +236,12 @@
 (which-key-add-keymap-based-replacements
   suderman/leader-toggle-map
   "c" "column indicator"
+  "d" "dirvish sidebar"
   "h" "current line"
   "l" "line numbers"
   "o" "org indentation"
   "r" "read only"
   "s" "spelling"
-  "t" "treemacs"
   "v" "visual lines"
   "w" "whitespace")
 

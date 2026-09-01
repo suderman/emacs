@@ -14,7 +14,12 @@
       (dolist (library '("meow" "vterm" "pdf-tools" "jinx"))
         (unless (locate-library library)
           (error "Missing Emacs library: %s" library)))
-      (dolist (executable '("fd" "rg" "pandoc" "treefmt" "wl-copy"))
+      (when (locate-library "treemacs")
+        (error "Treemacs is still bundled"))
+      (dolist (executable
+               '("7z" "epub-thumbnailer" "fd" "ffmpegthumbnailer" "magick"
+                 "mediainfo" "pandoc" "pdfinfo" "pdftoppm" "rg" "rsync"
+                 "treefmt" "vipsthumbnail" "wl-copy"))
         (unless (executable-find executable)
           (error "Missing executable: %s" executable)))
       (unless (treesit-language-available-p 'c)

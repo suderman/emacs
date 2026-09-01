@@ -27,6 +27,10 @@
       name = "emacs-load-path-hook";
     }
     emacsBase.setupHook;
+  epubThumbnailer = pkgs.writeShellScriptBin "epub-thumbnailer" ''
+    exec ${pkgs.gnome-epub-thumbnailer}/bin/gnome-epub-thumbnailer \
+      -s "$3" "$1" "$2"
+  '';
 
   emacsWithDependencies = pkgs.emacsWithPackagesFromUsePackage {
     package = emacsBase;
@@ -43,8 +47,16 @@
         fd
         ripgrep
         git
+        rsync
         python3
         wl-clipboard
+        vips
+        ffmpegthumbnailer
+        mediainfo
+        epubThumbnailer
+        poppler-utils
+        imagemagick
+        p7zip
         enchant
         hunspell
         hunspellDicts.en_US

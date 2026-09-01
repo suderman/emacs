@@ -12,7 +12,7 @@
 
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/dirvish "suderman-files")
-(declare-function suderman/treemacs-toggle "suderman-treemacs")
+(declare-function suderman/dirvish-side-toggle "suderman-files")
 
 ;;;; Leader integration
 
@@ -589,7 +589,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/ibuffer-toggle . "buffers")
                    (suderman/dashboard . "dashboard")
                    (suderman/dirvish . "files")
-                   (suderman/treemacs-toggle . "tree")
+                   (suderman/dirvish-side-toggle . "sidebar")
                    (surround-insert . "surround")
                    (suderman/meow-next-word . "word fwd")
                    (suderman/meow-next-symbol . "sym fwd")
@@ -609,7 +609,7 @@ An active selection is replaced without modifying the kill ring."
    '("j" . meow-next)
    '("k" . meow-prev)
    '("l" . meow-right)
-   '("S" . suderman/treemacs-toggle)
+   '("S" . suderman/dirvish-side-toggle)
    '("`" . suderman/dashboard)
    '("<escape>" . ignore))
   
@@ -679,7 +679,7 @@ An active selection is replaced without modifying the kill ring."
    '("r" . suderman/meow-replace-char)
    '("R" . meow-swap-grab)
    (cons "s" surround-keymap)
-   '("S" . suderman/treemacs-toggle)
+   '("S" . suderman/dirvish-side-toggle)
    '("t" . suderman/meow-till)
    '("T" . suderman/meow-till-backward)
    '("u" . meow-undo)

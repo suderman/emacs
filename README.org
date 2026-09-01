@@ -12,14 +12,14 @@ keymap, and a few experiments that earned their place by solving something
 annoying.
 
 [[https://github.com/meow-edit/meow][Meow]] controls modal editing. Built-in =project.el= supplies project data.
-IBuffer shows open buffers by project, Treemacs keeps the current project
-visible, and Magit handles Git. Vertico, Orderless, Consult, Marginalia, and
+IBuffer shows open buffers by project, Dirvish handles the file tree and file
+management, and Magit handles Git. Vertico, Orderless, Consult, Marginalia, and
 Embark handle minibuffer completion.
 
 Some choices are a little odd on purpose. Comma opens IBuffer, period opens
 Dirvish, and apostrophe repeats edits. =SPC= is both Meow's keypad and my leader
-key. IBuffer and Treemacs pass file and project context back and forth instead
-of acting like separate tools.
+key. IBuffer and Dirvish pass file and project context back and forth instead of
+acting like separate tools.
 
 The editing map starts with selections, then applies changes to them. Dirvish
 cleans up Dired. Markdown preview runs Pandoc and refreshes after each save.
@@ -117,13 +117,13 @@ Which-Key shows each leader prefix while I type it.
 | =C / V=     | Page up / down                                  |
 | =, / .=     | Open project-grouped IBuffer / Dirvish          |
 | =`=         | Open the Dashboard                               |
-| =S=         | Toggle Treemacs without moving editor focus      |
+| =S=         | Toggle the Dirvish sidebar without moving focus  |
 | =q / Q=     | Quit the view / kill the current buffer         |
 
 Movement expands an active Meow selection.
 
-=S= has the same visibility-only behavior in Meow Motion and inside Treemacs.
-IBuffer and Dirvish retain their own =S= commands.
+=S= has the same visibility-only behavior in Meow Motion. Inside the sidebar it
+closes the sidebar; in IBuffer it uses the selected buffer or project.
 
 *** Selection and editing
 
@@ -188,7 +188,7 @@ I use these subcommands most often:
 | =SPC .= | =.= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts |
 | =SPC o= | =a= agenda, =c= capture, =d/s= deadline/schedule, =g= headings, =i/l= insert/store link, =r= refile, =t/T= TODO item/list, =x= checkbox, =e= export |
 | =SPC s= | =c= clear, =i= Imenu, =l= line                                |
-| =SPC t= | =c= column indicator, =h= current line, =l= line numbers, =o= Org indentation, =r= read only, =s= spelling, =t= Treemacs, =v= visual lines, =w= whitespace |
+| =SPC t= | =c= column indicator, =d= Dirvish sidebar, =h= current line, =l= line numbers, =o= Org indentation, =r= read only, =s= spelling, =v= visual lines, =w= whitespace |
 | =SPC w= | =hjkl= focus, =HJKL= resize, =s/v= split, =o= keep one        |
 | =SPC q= | =r= reload                                                     |
 
@@ -262,21 +262,20 @@ suderman/dashboard= works everywhere without using the leader map.
 | =g=       | Refresh the dashboard                       |
 | =q=       | Close the dashboard                         |
 
-** IBuffer and Treemacs
+** IBuffer and the file sidebar
 
-I use IBuffer to answer "what is open?" and Treemacs to answer "where is this
-file?" Visiting a buffer can update the visible tree. Pressing comma on a tree
-node opens IBuffer on the same file. Meow stays off in both views so their own
-maps win.
+I use IBuffer to answer "what is open?" and the Dirvish sidebar to answer
+"where is this file?" The sidebar follows the selected file and project while
+leaving editor focus alone. Meow stays off in both views so their own maps win.
 
 *** IBuffer
 
 | Key       | Action                                                       |
 |-----------+--------------------------------------------------------------|
 | =j / k=   | Move by row                                                  |
-| =l=       | Visit buffer and update visible Treemacs, or toggle a group  |
+| =l=       | Visit the selected buffer, or toggle a group heading         |
 | =h / ,=   | Close IBuffer and restore the previous window               |
-| =S=       | Toggle contextual Treemacs without leaving IBuffer           |
+| =S=       | Toggle a contextual file sidebar without leaving IBuffer     |
 | =m=       | Toggle the current mark without moving                       |
 | =M=       | Mark every visible buffer                                    |
 | =t=       | Invert marks; =M t= clears all marks                         |
@@ -287,30 +286,23 @@ maps win.
 Left click visits a buffer. Middle click toggles its mark. Non-project images
 have their own group; other non-project buffers remain in the default group.
 
-*** Treemacs
+*** Dirvish sidebar
 
-| Key          | Action                                              |
-|--------------+-----------------------------------------------------|
-| =j / k / n=  | Next / previous / next node                         |
-| =h / u=      | Move the root up                                     |
-| =l=          | Visit a file or directory in the previous editor     |
-| =TAB=        | Expand or collapse the current node                   |
-| =RET / o=    | Open file or make a directory the root               |
-| =a=          | Add a file, or a directory when the name ends in =/= |
-| =c / d / r=  | Copy / delete / rename                               |
-| =g=          | Refresh                                              |
-| =t=          | Toggle file watching                                 |
-| =,=          | Open IBuffer in the selected tree context            |
-| =.=          | Open Dirvish in the selected tree context            |
-| =S=          | Toggle Treemacs visibility                            |
-| =q=          | Close Treemacs                                       |
-| =?=          | Treemacs help                                        |
+| Key        | Action                                         |
+|------------+------------------------------------------------|
+| =j / k=    | Move to the next / previous entry              |
+| =h / l=    | Move to the parent / open the selected entry   |
+| =TAB=      | Expand or collapse a directory subtree         |
+| =S / q=    | Close the sidebar                              |
+| =.=        | Close the sidebar                              |
+| =,=        | Open IBuffer without closing the sidebar       |
+| =i=        | Toggle dotfiles                                |
+| =g=        | Refresh                                        |
+| =?=        | Show the effective bindings                    |
 
-TAB is the only keyboard expansion control; =H= and =L= are inert. Single left
-click opens files and toggles directories. Middle click toggles a node without
-visiting it. Treemacs follows the selected buffer's file, even when it has no
-Imenu tags. After one second of idle time it follows the current Imenu tag,
-including headings in Org files.
+The sidebar follows the active file and project and expands its parent
+directories. =S= from an editor toggles visibility without stealing focus. =S=
+from IBuffer uses the selected buffer or project heading as context.
 
 ** Dirvish and Image mode
 
@@ -318,7 +310,10 @@ including headings in Org files.
 |---------+-----------------------+---------------------------------------------|
 | Dirvish | =h / j / k / l=       | Parent / next / previous / open             |
 | Dirvish | =f=                   | Toggle full-frame layout                    |
+| Dirvish | =TAB=                 | Toggle directory subtree                   |
+| Dirvish | =S=                   | Toggle file sidebar                        |
 | Dirvish | =H / L=               | Directory history backward / forward        |
+| Dirvish | =N / E / R=           | Narrow / file groups / rsync               |
 | Dirvish | =m / M / t=           | Toggle mark / mark all / invert marks       |
 | Dirvish | =u / U=               | Unmark without moving / unmark all          |
 | Dirvish | =c / x / v=           | Stage copy / stage cut / paste              |
@@ -327,7 +322,7 @@ including headings in Org files.
 | Dirvish | =. / ,=               | Close Dirvish / replace it with IBuffer     |
 | Dirvish | =g / I / i=           | Refresh / file information / toggle dotfiles |
 | Dirvish | =s / z=               | Sort / quick access                         |
-| Dirvish | =/ / ?=               | Search here / show current bindings         |
+| Dirvish | =/ / ; / ?=           | Search here / Dirvish menu / current keys   |
 | Dirvish | =SPC=                 | Meow keypad                                 |
 | Dirvish | =q=                   | Close Dirvish                               |
 | Image   | =n / p=               | Browse images in cyclic alphabetical order |
@@ -341,19 +336,27 @@ including headings in Org files.
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
 marked. Copies remain staged after =v=; cuts clear once the move starts.
 Period opens the full-frame layout when no other window is visible; with splits
-or Treemacs it uses only the selected editor window. The =f= key toggles between
-those layouts. Comma closes a full-frame layout before opening IBuffer, while a
-split-window Dirvish is replaced in place. Closing IBuffer restores the prior
-editor window.
+or the sidebar it uses only the selected editor window. The =f= key toggles
+between those layouts. Comma closes a full-frame layout before opening IBuffer.
+From the sidebar it opens IBuffer in an editor window and leaves the sidebar
+visible. Closing IBuffer restores the prior editor window.
 Dotfiles start hidden in the parent and current panes, and =i= toggles them
 together without status messages. The preview remains unfiltered. Deleting a
 file kills its unmodified visiting buffer, while modified buffers still require
 confirmation. Use =M-x revert-buffer= when another program changes the
 directory. The =?= popup reads the current bindings instead of Dirvish's default
-command menu. The original menu remains available through =M-x
-dirvish-dispatch=.
+command menu. Semicolon opens the original Dirvish menu.
 
-Animated images autoplay and loop.
+Single left click selects a row, double left click opens it, and right click
+opens Dired's file or directory context menu. The left parent column is also
+clickable: directories change the center column, while files change directory
+and select that file. Breadcrumb clicks and accidental =M-hjkl= movement into
+auxiliary panes return focus to the main directory pane.
+
+Dirvish previews video, images, looping GIFs, audio metadata, EPUB covers,
+archives, fonts, and PDFs. Minibuffer file selection uses the same preview
+dispatchers after a short delay. Animated images opened in Image mode also
+autoplay and loop.
 
 ** Windows and frames
 
@@ -390,9 +393,8 @@ Dirvish.
 | =lisp/suderman-images.el=       | Image navigation, transforms, and clipboard      |
 | =lisp/suderman-buffers.el=      | Project-grouped IBuffer                          |
 | =lisp/suderman-completion.el=   | Vertico, Orderless, Consult, Marginalia, Embark  |
-| =lisp/suderman-files.el=        | Dired and Dirvish                                |
+| =lisp/suderman-files.el=        | Dired, Dirvish, sidebar, previews, and transfers |
 | =lisp/suderman-dashboard.el=    | Startup dashboard and common destinations       |
-| =lisp/suderman-treemacs.el=     | Frame-local project tree and IBuffer integration |
 | =lisp/suderman-markdown.el=     | Markdown editing and Pandoc preview              |
 | =lisp/suderman-languages.el=    | Broad language associations and tree-sitter use  |
 | =lisp/suderman-nix.el=          | Embedded-language highlighting in Nix strings    |

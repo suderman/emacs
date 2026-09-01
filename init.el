@@ -26,7 +26,6 @@
 (require 'suderman-files)
 (require 'suderman-images)
 (require 'suderman-dashboard)
-(require 'suderman-treemacs)
 (require 'suderman-markdown)
 (require 'suderman-org)
 (require 'suderman-languages)

@@ -15,9 +15,9 @@
   (should (commandp #'suderman/dashboard)))
 
 (ert-deftest suderman/dashboard-closes-full-frame-dirvish-first ()
-  (let (calls)
-    (cl-letf (((symbol-function 'dirvish-curr) (lambda () 'session))
-              ((symbol-function 'dv-curr-layout) (lambda (_) t))
+  (let ((session (make-dirvish :curr-layout t))
+        calls)
+    (cl-letf (((symbol-function 'dirvish-curr) (lambda () session))
               ((symbol-function 'dirvish-quit)
                (lambda () (push 'quit calls)))
               ((symbol-function 'dashboard-open)

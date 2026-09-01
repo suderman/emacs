@@ -41,9 +41,6 @@
       transient-history-file (expand-file-name "transient/history.el" suderman/state-dir)
       transient-levels-file (expand-file-name "transient/levels.el" suderman/state-dir)
       transient-values-file (expand-file-name "transient/values.el" suderman/state-dir)
-      treemacs-persist-file (expand-file-name "treemacs-persist" suderman/cache-dir)
-      treemacs-last-error-persist-file
-      (expand-file-name "treemacs-persist-at-last-error" suderman/cache-dir)
       url-configuration-directory (expand-file-name "url/" suderman/state-dir)
       url-history-file (expand-file-name "history" url-configuration-directory)
       bookmark-default-file (expand-file-name "bookmarks" suderman/state-dir))

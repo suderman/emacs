@@ -67,10 +67,8 @@ The current modules have clear jobs.
   normal and motion maps.
 - `suderman-images.el` owns Image mode navigation, transforms, animation, and
   clipboard behavior.
-- `suderman-files.el` owns Dired and Dirvish.
+- `suderman-files.el` owns Dired, Dirvish, its sidebar, previews, and transfers.
 - `suderman-dashboard.el` owns the startup dashboard and common destinations.
-- `suderman-treemacs.el` owns the project-focused Treemacs tree and its links to
-  IBuffer.
 - `suderman-markdown.el` owns Markdown mode behavior and Pandoc preview.
 - `suderman-languages.el` owns broad language associations and tree-sitter use.
 - `suderman-nix.el` owns embedded-language highlighting in Nix strings.
@@ -104,8 +102,8 @@ Important parts of the current grammar follow.
 - `,` opens project-grouped IBuffer and selects the invoking buffer.
 - `.` opens Dirvish for the current file or directory. It uses the full-frame
   layout when no other window is visible and the selected window otherwise.
-- `S` toggles Treemacs visibility in Normal and Motion states without moving
-  editor focus when it opens. Inside Treemacs, it hides the tree.
+- `S` toggles the Dirvish sidebar in Normal and Motion states without moving
+  editor focus when it opens. Inside the sidebar, it hides the tree.
 - Backtick opens the Dashboard in Normal and Motion states, IBuffer, and
   Dirvish. Double quote and `~` are intentionally inert in Normal; Motion lets
   those two keys fall through to major-mode maps.
@@ -135,7 +133,7 @@ Important parts of the current grammar follow.
 
 The full map is the source of truth. Do not duplicate every binding here.
 
-IBuffer and Treemacs disable Meow locally. Their major-mode maps own `hjkl` and
+IBuffer and Dirvish disable Meow locally. Their major-mode maps own `hjkl` and
 related keys. Meow's emulation maps outrank ordinary major-mode maps, so
 forgetting this causes keys to appear correct in a keymap inspection while
 doing something else in a live buffer.
@@ -153,9 +151,18 @@ toggles them together without messages. The preview remains unfiltered. `c`,
 transfer engine. Deleting a file automatically kills its unmodified visiting
 buffer; modified buffers remain protected by a confirmation. Slash searches
 below the current directory. Question mark shows a compact Which-Key view
-generated from the effective bindings; the upstream Dirvish dispatcher remains
-available through `M-x`. `g` refreshes, `I` shows file information, `u` unmarks
-without moving, and `U` clears all marks.
+generated from the effective bindings; semicolon opens the upstream Dirvish
+dispatcher. `TAB` toggles subtrees, `N` narrows, `E` manages emerge groups, and
+`R` runs rsync. `g` refreshes, `I` shows file information, `u` unmarks without
+moving, and `U` clears all marks.
+
+Single left click selects a file, double left click opens it, and right click
+opens the native Dired context menu. In the parent pane, left click changes the
+root directory or selects the clicked file in its directory. Breadcrumb clicks
+run in the root pane. If mouse selection or `M-hjkl` enters a parent or
+breadcrumb pane, the Meta movement keys return focus to the root. Preview panes
+remain normal windows because `o` can deliberately turn one into an editable
+file buffer.
 
 Magit disables Meow locally because its single-letter commands and Transient
 menus are the interface. `j/k` move between visible sections, while native
@@ -169,8 +176,7 @@ changes meaning during a rebase.
 
 ## Buffer and explorer workflow
 
-The buffer list and project tree overlap on purpose, but each has a different
-job.
+The buffer list and file tree overlap on purpose, but each has a different job.
 
 ### IBuffer
 
@@ -182,10 +188,9 @@ is no broad hidden-buffer blacklist.
 - Normal-state `,` opens it and highlights the invoking buffer.
 - IBuffer `,` closes it and restores the prior buffer and window.
 - `j` and `k` move by row.
-- `l` visits the selected buffer and updates a visible Treemacs, or toggles a
-  group heading.
+- `l` visits the selected buffer or toggles a group heading.
 - `h` and `,` close IBuffer and restore the previous window.
-- `S` toggles a contextual Treemacs view without leaving IBuffer.
+- `S` toggles a contextual Dirvish sidebar without leaving IBuffer.
 - `.` opens Dirvish for the selected buffer or project heading.
 - `m` toggles the current buffer mark without moving. `M` marks every visible
   buffer and `t` inverts the marks, so `M t` clears them all.
@@ -195,30 +200,31 @@ is no broad hidden-buffer blacklist.
 IBuffer relies on native `quit-window` restoration. Do not add a custom window
 stack unless native restoration has been shown to fail.
 
-### Treemacs
+### Dirvish sidebar and subtrees
 
-Treemacs is the project tree. It follows the selected buffer's file, then its
-Imenu tag after one second of idle time, including Org headings. Both native
-follow modes stay enabled because tag follow alone skips buffers without an
-Imenu index. It supports Git and file watching and uses Nerd Icons. It keeps a
-private, non-persisted Treemacs workspace object per frame. This is necessary
-because upstream Treemacs otherwise shares one workspace object across
-frame-local buffers, which caused stale trees, blank trees, and root-navigation
-crashes.
+Dirvish is the only file explorer. Its full-frame parent/current/preview layout
+handles focused file management. `dirvish-side` supplies the persistent project
+tree, and `dirvish-subtree` expands directories in either view. Side follow mode
+tracks the selected file and project and expands parent subtrees.
 
-The module contains repair code for stale or blank frame trees. It also uses
-some Treemacs internals. Preserve this behavior unless the installed Treemacs
-version has fixed the underlying shared-workspace assumptions and the old
-failures have been retested.
+`S` and `SPC t d` toggle the sidebar without moving editor focus. From inside
+the sidebar, `S` hides it. In IBuffer, `S` derives context from the selected
+buffer or project heading and leaves IBuffer selected. Comma from the sidebar
+opens IBuffer in the most recently used editor window without removing the
+sidebar. Do not open a sidebar over the full-frame layout; close that layout
+first.
 
-Treemacs and IBuffer have contextual transitions. Period opens Dirvish for the
-selected buffer, project heading, or tree node. A selected file, project
-heading, current editor window, and current frame all matter. Test those flows
-with real windows instead of calling commands in an arbitrary temporary buffer.
-Inside Treemacs, `h` and `u` move the private root upward, while `l` visits the
-selected file or directory in the most recently used editor window. `TAB` is
-the only keyboard expansion control; `H` and `L` are intentionally inert.
-`RET` and `o` still make a selected directory the tree root or visit a file.
+Subtree, collapse, and ordinary directory views can coexist. Narrowing clears
+active subtree overlays in that buffer by upstream design. Emerge groups are
+also local, on-demand views rather than a global mode because their overlays do
+not safely coexist with active subtrees. Keep `dirvish-side-follow-mode` and
+`dirvish-peek-mode` idempotently enabled.
+
+Dirvish's parent and breadcrumb buffers are sparse special modes, not ordinary
+Dired buffers. Preserve the root-focus bindings and breadcrumb advice when
+changing mouse or window behavior. Test contextual IBuffer transitions,
+breadcrumb clicks, parent clicks, and sidebar toggling with real windows rather
+than calling commands in an arbitrary temporary buffer.
 
 ## Package choices that already have a reason
 
@@ -234,8 +240,10 @@ These choices are not immutable, but replacing one needs a concrete benefit.
   pixel-scroll precision mode remains off because it is a different feature
   and interfered with cursor-preserving keyboard paging.
 - Doom Modeline supplies the modeline and native Meow state segment.
-- Nerd Icons packages decorate Doom Modeline, IBuffer, and Treemacs.
-- Dirvish improves Dired, while Treemacs provides the persistent project tree.
+- Nerd Icons packages decorate Doom Modeline, IBuffer, and Dirvish.
+- Dirvish owns both focused file management and the persistent project tree.
+  Its official extensions supply subtrees, collapse, narrowing, groups, rsync,
+  minibuffer previews, history, search, sorting, quick access, and file details.
 - Magit owns repository operations, diff-hl owns live hunk indicators, and
   built-in smerge-mode plus Ediff resolve conflicts. Forge is intentionally
   absent until hosting issues and pull requests need to live in Emacs.
@@ -318,7 +326,8 @@ At minimum:
 
 For interactive behavior, also reload or restart the daemon and exercise the
 real key sequence. Check GUI and terminal frames when frame handling or Nerd
-Font rendering changes. Check two frames when changing Treemacs.
+Font rendering changes. Check two frames when changing frame-local explorer or
+sidebar behavior.
 
 Known warnings are not a reason to ignore new warnings. Existing warnings have
 included obsolete `when-let`, upstream package compatibility helpers, and Org

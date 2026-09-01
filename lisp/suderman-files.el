@@ -13,21 +13,40 @@
 
 (defvar dirvish-quick-access-entries)
 (defvar dirvish-preview-setup-hook)
+(defvar dirvish-preview-dispatchers)
+(defvar dirvish-peek-key)
 (defvar dirvish-yank-sources)
+(defvar dirvish-side-attributes)
+(defvar dirvish-side-mode-line-format)
 (defvar global-hl-line-mode)
+(defvar dirvish-directory-view-mode-map)
+(defvar dirvish-misc-mode-map)
+(defvar dirvish-mode-map)
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function dirvish--build-layout "dirvish")
 (declare-function dirvish--create-parent-buffer "dirvish")
+(declare-function dirvish--find-entry "dirvish")
+(declare-function dirvish--find-file-temporarily "dirvish")
 (declare-function dirvish "dirvish")
 (declare-function dirvish-curr "dirvish")
+(declare-function dirvish-dispatch "dirvish-extras")
 (declare-function dirvish-dwim "dirvish")
+(declare-function dirvish-emerge-menu "dirvish-emerge")
 (declare-function dirvish-fd "dirvish-fd")
 (declare-function dirvish-layout-toggle "dirvish")
+(declare-function dirvish-narrow "dirvish-narrow")
 (declare-function dirvish-quit "dirvish")
 (declare-function dirvish-move "dirvish-yank")
+(declare-function dirvish-rsync "dirvish-rsync")
+(declare-function dirvish-side "dirvish-side")
+(declare-function dirvish-side--session-visible-p "dirvish-side")
+(declare-function dirvish-side-follow-mode "dirvish-side")
+(declare-function dirvish-subtree-toggle "dirvish-subtree")
 (declare-function dirvish-yank "dirvish-yank")
 (declare-function dv-curr-layout "dirvish")
 (declare-function dv-index "dirvish")
+(declare-function dv-root-window "dirvish")
+(declare-function dv-type "dirvish")
 (declare-function global-hl-line-unhighlight "hl-line")
 (declare-function meow--disable "meow")
 (declare-function meow-keypad "meow-keypad")
@@ -54,13 +73,37 @@
         (dired-goto-file target)))))
 
 (defun suderman/dirvish-ibuffer ()
-  "Replace full-frame Dirvish with IBuffer."
+  "Open IBuffer from Dirvish without replacing a visible sidebar."
   (interactive)
-  (when-let* ((session (dirvish-curr))
-              ((dv-curr-layout session)))
-    (dirvish-quit))
+  (when-let* ((session (dirvish-curr)))
+    (cond
+     ((dv-curr-layout session)
+      (dirvish-quit))
+     ((eq (dv-type session) 'side)
+      (select-window
+       (or (get-mru-window (selected-frame) nil t t)
+           (user-error "No editor window available"))))))
   (set-buffer (window-buffer (selected-window)))
   (suderman/ibuffer-toggle))
+
+(defun suderman/dirvish-side-toggle (&optional path)
+  "Toggle the Dirvish sidebar for PATH without stealing editor focus."
+  (interactive)
+  (let ((session (dirvish-curr))
+        (visible (dirvish-side--session-visible-p)))
+    (cond
+     ((and session (eq (dv-type session) 'side))
+      (dirvish-quit))
+     (visible
+      (with-selected-window visible
+        (dirvish-quit)))
+     ((and session (dv-curr-layout session))
+      (user-error "Close the full-frame Dirvish view before opening the sidebar"))
+     (t
+      (let ((editor (selected-window)))
+        (dirvish-side path)
+        (when (window-live-p editor)
+          (select-window editor)))))))
 
 (defconst suderman/dirvish-help-keys
   '(("h" . "Parent directory")
@@ -68,8 +111,13 @@
     ("k" . "Previous entry")
     ("l" . "Open entry")
     ("f" . "Toggle fullscreen")
+    ("TAB" . "Toggle subtree")
+    ("S" . "Toggle file sidebar")
     ("H" . "History backward")
     ("L" . "History forward")
+    ("N" . "Narrow entries")
+    ("E" . "Manage file groups")
+    ("R" . "Rsync marked files")
     ("m" . "Toggle mark")
     ("M" . "Mark all")
     ("t" . "Invert marks")
@@ -91,6 +139,7 @@
     ("s" . "Sort")
     ("z" . "Quick access")
     ("/" . "Search here")
+    (";" . "Dirvish menu")
     ("," . "Open IBuffer")
     ("." . "Toggle Dirvish")
     ("q" . "Close view")
@@ -180,7 +229,9 @@
   (suderman/dired-disable-line-numbers)
   (suderman/dired-disable-visual-line-mode)
   (suderman/dired-disable-column-indicator)
-  (suderman/dired-disable-hl-line))
+  (suderman/dired-disable-hl-line)
+  (when (derived-mode-p 'dirvish-directory-view-mode)
+    (setq-local context-menu-functions '(t dired-context-menu))))
 
 (defun suderman/dired-hide-dotfiles ()
   "Hide dotfiles when a directory buffer is first created."
@@ -201,6 +252,51 @@
         (let ((dired-omit-verbose nil))
           (dired-omit-expunge))))
     buffer))
+
+(defun suderman/dirvish-focus-root ()
+  "Return focus from a Dirvish auxiliary pane to its root window."
+  (interactive)
+  (let* ((session (dirvish-curr))
+         (root (and session (dv-root-window session))))
+    (unless (window-live-p root)
+      (user-error "No Dirvish root window available"))
+    (select-window root)))
+
+(defun suderman/dirvish-find-entry-at-root (function find-function entry)
+  "Call FUNCTION for ENTRY from the root when a breadcrumb is selected."
+  (if (derived-mode-p 'dirvish-misc-mode)
+      (let* ((session (dirvish-curr))
+             (root (and session (dv-root-window session))))
+        (unless (window-live-p root)
+          (user-error "No Dirvish root window available"))
+        (select-window root)
+        (funcall function find-function entry))
+    (funcall function find-function entry)))
+
+(defun suderman/dirvish-parent-mouse-select (event)
+  "Navigate the root Dirvish pane to the parent entry clicked in EVENT."
+  (interactive "e")
+  (let* ((position (event-start event))
+         (window (posn-window position))
+         (point (posn-point position))
+         file session)
+    (unless (and (windowp window) (integer-or-marker-p point))
+      (user-error "No file chosen"))
+    (with-selected-window window
+      (goto-char point)
+      (setq file (dired-get-filename nil t)
+            session (dirvish-curr)))
+    (unless file
+      (user-error "No file chosen"))
+    (let ((root (and session (dv-root-window session))))
+      (unless (window-live-p root)
+        (user-error "No Dirvish root window available"))
+      (select-window root)
+      (if (file-directory-p file)
+          (dirvish--find-entry 'find-alternate-file file)
+        (dirvish--find-entry 'find-alternate-file
+                             (file-name-directory file))
+        (dired-goto-file file)))))
 
 (defun suderman/dirvish-toggle-dotfiles ()
   "Toggle dotfiles in the current Dirvish layout."
@@ -311,6 +407,19 @@
            (t default-directory))))
     (suderman/dirvish target)))
 
+(defun suderman/ibuffer-dirvish-side ()
+  "Toggle a sidebar for the buffer or project group at point."
+  (interactive)
+  (let ((buffer (ibuffer-current-buffer))
+        (group (get-text-property (line-beginning-position)
+                                  'ibuffer-filter-group-name)))
+    (if (buffer-live-p buffer)
+        (with-current-buffer buffer
+          (suderman/dirvish-side-toggle))
+      (suderman/dirvish-side-toggle
+       (and (stringp group) (file-directory-p group)
+            (file-name-as-directory (expand-file-name group)))))))
+
 (advice-remove 'dired-clean-up-after-deletion
                #'suderman/dired-clean-up-after-deletion)
 (advice-add 'dired-clean-up-after-deletion :around
@@ -319,18 +428,27 @@
 (add-hook 'dired-mode-hook #'suderman/dired-setup)
 (add-hook 'dired-mode-hook #'suderman/dired-hide-dotfiles t)
 (keymap-set ibuffer-mode-map "." #'suderman/ibuffer-dirvish)
+(keymap-set ibuffer-mode-map "S" #'suderman/ibuffer-dirvish-side)
+(keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open)
+(keymap-unset ibuffer-mode-map "i" t)
+(keymap-unset ibuffer-mode-map "H" t)
+(keymap-unset ibuffer-mode-map "SPC" t)
 (keymap-set dired-mode-map "`" #'suderman/dashboard)
 
 (use-package dirvish
-  :commands (dirvish dirvish-dwim)
+  :demand t
   :init
   (setq dired-listing-switches "-al --group-directories-first"
-        dirvish-attributes '(vc-state nerd-icons file-modes)
+        dirvish-attributes
+        '(vc-state subtree-state nerd-icons collapse file-modes)
         dirvish-default-layout '(1 0.125 0.5)
         dirvish-mode-line-format
         '(:left (sort vc-info symlink yank)
           :right (file-size file-modes index))
         dirvish-preview-dired-sync-omit nil
+        dirvish-preview-dispatchers
+        '(video image gif audio epub archive font pdf)
+        dirvish-peek-key '(:debounce 0.2 any)
         dirvish-quick-access-entries
         '(("h" "~/" "Home")
           ("d" "~/downloads/" "Downloads")
@@ -345,16 +463,28 @@
           ("c" "/etc/nixos/" "NixOS")
           ("t" "/mnt/main/storage/" "Storage")
           ("x" "/mnt/main/scratch/" "Scratch"))
+        dirvish-side-attributes
+        '(vc-state subtree-state nerd-icons collapse)
+        dirvish-side-mode-line-format
+        '(:left (path) :right (index))
         dirvish-use-mode-line 'global)
   :config
   (dirvish-override-dired-mode 1)
   (require 'dirvish-yank)
+  (require 'dirvish-rsync)
+  (require 'dirvish-side)
+  (require 'dirvish-peek)
+  (dirvish-side-follow-mode 1)
+  (dirvish-peek-mode 1)
   (add-hook 'dirvish-preview-setup-hook
             #'suderman/dirvish-preview-disable-line-numbers)
   (advice-remove 'dirvish--create-parent-buffer
                  #'suderman/dirvish-create-parent-buffer)
   (advice-add 'dirvish--create-parent-buffer :around
-              #'suderman/dirvish-create-parent-buffer)
+               #'suderman/dirvish-create-parent-buffer)
+  (advice-remove 'dirvish--find-entry #'suderman/dirvish-find-entry-at-root)
+  (advice-add 'dirvish--find-entry :around
+              #'suderman/dirvish-find-entry-at-root)
   (add-hook 'dirvish-directory-view-mode-hook #'suderman/dired-setup)
   (dolist (map (list dired-mode-map dirvish-mode-map))
     (keymap-set map "`" #'suderman/dashboard)
@@ -363,10 +493,17 @@
     (keymap-set map "." #'suderman/dirvish)
     (keymap-set map "?" #'suderman/dirvish-help)
     (keymap-set map "/" #'suderman/dirvish-search)
+    (keymap-set map ";" #'dirvish-dispatch)
+    (keymap-set map "TAB" #'dirvish-subtree-toggle)
+    (keymap-set map "<tab>" #'dirvish-subtree-toggle)
+    (keymap-set map "E" #'dirvish-emerge-menu)
     (keymap-set map "H" #'dirvish-history-go-backward)
     (keymap-set map "I" #'dirvish-file-info-menu)
     (keymap-set map "L" #'dirvish-history-go-forward)
     (keymap-set map "M" #'suderman/dired-mark-all)
+    (keymap-set map "N" #'dirvish-narrow)
+    (keymap-set map "R" #'dirvish-rsync)
+    (keymap-set map "S" #'suderman/dirvish-side-toggle)
     (keymap-set map "U" #'dired-unmark-all-marks)
     (keymap-set map "X" #'dired-do-flagged-delete)
     (keymap-set map "a" #'suderman/dired-create-item)
@@ -395,9 +532,32 @@
     (keymap-set map "M-L" #'suderman/resize-window-right)
     (keymap-set map "M-u" #'suderman/split-window-below-and-focus)
     (keymap-set map "M-i" #'suderman/split-window-right-and-focus)
-    (keymap-set map "M-w" #'suderman/delete-window-or-tab))
+    (keymap-set map "M-w" #'suderman/delete-window-or-tab)
+    (keymap-set map "<mouse-1>" #'mouse-set-point)
+    (keymap-set map "<double-mouse-1>" #'dired-mouse-find-file)
+    (keymap-set map "<mouse-3>" #'context-menu-open))
+  (keymap-set dirvish-directory-view-mode-map
+              "<mouse-1>" #'suderman/dirvish-parent-mouse-select)
+  (keymap-set dirvish-directory-view-mode-map
+              "<mouse-3>" #'context-menu-open)
+  (dolist (map (list dirvish-directory-view-mode-map dirvish-misc-mode-map))
+    (dolist (key '("M-h" "M-j" "M-k" "M-l"))
+      (keymap-set map key #'suderman/dirvish-focus-root)))
   (keymap-set dired-mode-map "q" #'quit-window)
   (require 'dirvish-widgets)
+  (dirvish-define-preview gif (file ext)
+    "Preview GIF images, looping while the preview remains visible."
+    (when (equal ext "gif")
+      (let ((gif (dirvish--find-file-temporarily file))
+            (callback
+             (lambda (recipe)
+               (when-let* ((buffer (cdr recipe))
+                           ((buffer-live-p buffer)))
+                 (with-current-buffer buffer
+                   (image-animate (get-char-property 1 'display)
+                                  nil t 1))))))
+        (run-with-idle-timer 1 nil callback gif)
+        gif)))
   (set-face-attribute 'dirvish-file-modes nil
                       :inherit 'font-lock-keyword-face
                       :foreground 'unspecified)
