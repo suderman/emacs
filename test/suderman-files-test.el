@@ -23,10 +23,93 @@
   (should (eq (lookup-key dirvish-directory-view-mode-map
                           (kbd "<mouse-1>"))
               #'suderman/dirvish-parent-mouse-select))
+  (dolist (binding '(("h" . suderman/dirvish-parent-up-directory)
+                     ("j" . suderman/dirvish-parent-next-directory)
+                     ("k" . suderman/dirvish-parent-previous-directory)
+                     ("l" . suderman/dirvish-focus-root)))
+    (should (eq (lookup-key dirvish-directory-view-mode-map
+                            (kbd (car binding)))
+                (cdr binding))))
   (dolist (map (list dirvish-directory-view-mode-map dirvish-misc-mode-map))
     (dolist (key '("M-h" "M-j" "M-k" "M-l"))
       (should (eq (lookup-key map (kbd key))
                   #'suderman/dirvish-focus-root)))))
+
+(ert-deftest suderman/dirvish-single-click-does-not-follow-dired-links ()
+  (with-temp-buffer
+    (let ((mouse-1-click-follows-link 450))
+      (suderman/dired-setup)
+      (should (local-variable-p 'mouse-1-click-follows-link))
+      (should-not mouse-1-click-follows-link))))
+
+(ert-deftest suderman/dirvish-windmove-rejects-breadcrumb-window ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let* ((window (split-window-right))
+           (buffer (generate-new-buffer " *dirvish-misc-test*")))
+      (unwind-protect
+          (progn
+            (set-window-buffer window buffer)
+            (with-current-buffer buffer (dirvish-misc-mode))
+            (should-not
+             (suderman/dirvish-ignore-misc-window
+              (lambda (&rest _) window)))
+            (with-current-buffer buffer (fundamental-mode))
+            (should
+             (eq (suderman/dirvish-ignore-misc-window
+                  (lambda (&rest _) window))
+                 window)))
+        (kill-buffer buffer)))))
+
+(ert-deftest suderman/dirvish-narrow-renders-after-live-update ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let* ((root (selected-window))
+           (session (make-dirvish :root-window root))
+           events received)
+      (cl-letf (((symbol-function 'dirvish-curr) (lambda () session))
+                ((symbol-function 'dirvish--render-attrs)
+                 (lambda (window selected)
+                   (push (list 'render window selected) events))))
+        (suderman/dirvish-render-after-narrow
+         (lambda (action record callback debounce throttle)
+           (setq received (list action record debounce throttle))
+           (funcall callback 'input))
+         "pdf" :narrow
+         (lambda (input) (push (list 'update input) events))
+         0.1 0.2)
+        (should (equal received '("pdf" :narrow 0.1 0.2)))
+        (should (equal (nreverse events)
+                       `((update input) (render ,root ,root))))))))
+
+(ert-deftest suderman/dirvish-parent-movement-navigates-to-directory ()
+  (let (moved navigated)
+    (cl-letf (((symbol-function 'dired-next-dirline)
+               (lambda (arg) (setq moved arg)))
+              ((symbol-function 'dired-get-filename)
+               (lambda (&rest _) "/tmp/next/"))
+              ((symbol-function 'file-directory-p) (lambda (_) t))
+              ((symbol-function 'suderman/dirvish-parent-navigate)
+               (lambda (directory) (setq navigated directory))))
+      (suderman/dirvish-parent-next-directory)
+      (should (= moved 1))
+      (should (equal navigated "/tmp/next/")))))
+
+(ert-deftest suderman/dirvish-parent-navigation-preserves-parent-focus ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let* ((root (selected-window))
+           (parent (split-window root nil 'left))
+           navigation)
+      (set-window-parameter parent 'no-other-window t)
+      (select-window parent)
+      (cl-letf (((symbol-function 'dirvish-curr) (lambda () 'session))
+                ((symbol-function 'dv-root-window) (lambda (_) root))
+                ((symbol-function 'dirvish--find-entry)
+                 (lambda (find entry) (setq navigation (list find entry)))))
+        (suderman/dirvish-parent-navigate "/tmp/next/")
+        (should (equal navigation '(find-alternate-file "/tmp/next/")))
+        (should (eq (selected-window) parent))))))
 
 (ert-deftest suderman/dirvish-sidebar-open-preserves-editor-focus ()
   (save-window-excursion

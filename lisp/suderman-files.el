@@ -27,6 +27,8 @@
 (declare-function dirvish--create-parent-buffer "dirvish")
 (declare-function dirvish--find-entry "dirvish")
 (declare-function dirvish--find-file-temporarily "dirvish")
+(declare-function dirvish--render-attrs "dirvish")
+(declare-function dirvish--run-with-delay "dirvish")
 (declare-function dirvish "dirvish")
 (declare-function dirvish-curr "dirvish")
 (declare-function dirvish-dispatch "dirvish-extras")
@@ -217,7 +219,8 @@
   "Prepare a Dired or Dirvish directory buffer."
   (setq-local dired-omit-files "\\`\\."
               dired-omit-extensions nil
-              dired-omit-verbose nil)
+              dired-omit-verbose nil
+              mouse-1-click-follows-link nil)
   (add-hook 'meow-mode-hook #'suderman/dired-disable-meow nil t)
   (add-hook 'display-line-numbers-mode-hook
             #'suderman/dired-disable-line-numbers nil t)
@@ -261,6 +264,64 @@
     (unless (window-live-p root)
       (user-error "No Dirvish root window available"))
     (select-window root)))
+
+(defun suderman/dirvish-ignore-misc-window (function &rest arguments)
+  "Exclude Dirvish breadcrumb windows returned by FUNCTION with ARGUMENTS."
+  (let ((window (apply function arguments)))
+    (unless (and (window-live-p window)
+                 (with-current-buffer (window-buffer window)
+                   (derived-mode-p 'dirvish-misc-mode)))
+      window)))
+
+(defun suderman/dirvish-render-after-narrow
+    (function action &optional record callback debounce throttle)
+  "Call FUNCTION and repaint attributes after a delayed narrow CALLBACK."
+  (if (and (eq record :narrow) callback)
+      (let ((session (dirvish-curr)))
+        (funcall function action record
+                 (lambda (&rest arguments)
+                   (prog1 (apply callback arguments)
+                     (when-let* ((root (and session (dv-root-window session)))
+                                 ((window-live-p root)))
+                       (dirvish--render-attrs root root))))
+                 debounce throttle))
+    (funcall function action record callback debounce throttle)))
+
+(defun suderman/dirvish-parent-navigate (directory)
+  "Show DIRECTORY in the root while keeping focus in the parent pane."
+  (let* ((session (dirvish-curr))
+         (root (and session (dv-root-window session))))
+    (unless (window-live-p root)
+      (user-error "No Dirvish root window available"))
+    (select-window root)
+    (dirvish--find-entry 'find-alternate-file directory)
+    (when-let* ((new-root (dv-root-window session))
+                ((window-live-p new-root))
+                (parent (window-in-direction 'left new-root t)))
+      (select-window parent))))
+
+(defun suderman/dirvish-parent-move (function)
+  "Move to a parent directory with FUNCTION and display it in the root pane."
+  (funcall function 1)
+  (let ((directory (dired-get-filename nil t)))
+    (unless (and directory (file-directory-p directory))
+      (user-error "No directory on this line"))
+    (suderman/dirvish-parent-navigate directory)))
+
+(defun suderman/dirvish-parent-next-directory ()
+  "Select the next directory in the parent pane."
+  (interactive)
+  (suderman/dirvish-parent-move #'dired-next-dirline))
+
+(defun suderman/dirvish-parent-previous-directory ()
+  "Select the previous directory in the parent pane."
+  (interactive)
+  (suderman/dirvish-parent-move #'dired-prev-dirline))
+
+(defun suderman/dirvish-parent-up-directory ()
+  "Move the root and parent panes up one directory."
+  (interactive)
+  (suderman/dirvish-parent-navigate (dired-current-directory)))
 
 (defun suderman/dirvish-find-entry-at-root (function find-function entry)
   "Call FUNCTION for ENTRY from the root when a breadcrumb is selected."
@@ -485,6 +546,14 @@
   (advice-remove 'dirvish--find-entry #'suderman/dirvish-find-entry-at-root)
   (advice-add 'dirvish--find-entry :around
               #'suderman/dirvish-find-entry-at-root)
+  (advice-remove 'windmove-find-other-window
+                 #'suderman/dirvish-ignore-misc-window)
+  (advice-add 'windmove-find-other-window :around
+              #'suderman/dirvish-ignore-misc-window)
+  (advice-remove 'dirvish--run-with-delay
+                 #'suderman/dirvish-render-after-narrow)
+  (advice-add 'dirvish--run-with-delay :around
+              #'suderman/dirvish-render-after-narrow)
   (add-hook 'dirvish-directory-view-mode-hook #'suderman/dired-setup)
   (dolist (map (list dired-mode-map dirvish-mode-map))
     (keymap-set map "`" #'suderman/dashboard)
@@ -540,6 +609,14 @@
               "<mouse-1>" #'suderman/dirvish-parent-mouse-select)
   (keymap-set dirvish-directory-view-mode-map
               "<mouse-3>" #'context-menu-open)
+  (keymap-set dirvish-directory-view-mode-map
+              "h" #'suderman/dirvish-parent-up-directory)
+  (keymap-set dirvish-directory-view-mode-map
+              "j" #'suderman/dirvish-parent-next-directory)
+  (keymap-set dirvish-directory-view-mode-map
+              "k" #'suderman/dirvish-parent-previous-directory)
+  (keymap-set dirvish-directory-view-mode-map
+              "l" #'suderman/dirvish-focus-root)
   (dolist (map (list dirvish-directory-view-mode-map dirvish-misc-mode-map))
     (dolist (key '("M-h" "M-j" "M-k" "M-l"))
       (keymap-set map key #'suderman/dirvish-focus-root)))

@@ -157,12 +157,14 @@ dispatcher. `TAB` toggles subtrees, `N` narrows, `E` manages emerge groups, and
 moving, and `U` clears all marks.
 
 Single left click selects a file, double left click opens it, and right click
-opens the native Dired context menu. In the parent pane, left click changes the
-root directory or selects the clicked file in its directory. Breadcrumb clicks
-run in the root pane. If mouse selection or `M-hjkl` enters a parent or
-breadcrumb pane, the Meta movement keys return focus to the root. Preview panes
-remain normal windows because `o` can deliberately turn one into an editable
-file buffer.
+opens the native Dired context menu. Single click must keep focus in the root
+pane rather than activating the preview. In the parent pane, left click changes
+the root directory or selects the clicked file in its directory. Its `j/k`
+bindings move between sibling directories and update the root, `h` moves both
+panes up a level, and `l` returns focus to the root. Breadcrumb clicks run in the
+root pane, while Meta window movement excludes breadcrumb and footer windows.
+Preview panes remain normal windows because `o` can deliberately turn one into
+an editable file buffer.
 
 Magit disables Meow locally because its single-letter commands and Transient
 menus are the interface. `j/k` move between visible sections, while native
@@ -221,10 +223,11 @@ not safely coexist with active subtrees. Keep `dirvish-side-follow-mode` and
 `dirvish-peek-mode` idempotently enabled.
 
 Dirvish's parent and breadcrumb buffers are sparse special modes, not ordinary
-Dired buffers. Preserve the root-focus bindings and breadcrumb advice when
-changing mouse or window behavior. Test contextual IBuffer transitions,
-breadcrumb clicks, parent clicks, and sidebar toggling with real windows rather
-than calling commands in an arbitrary temporary buffer.
+Dired buffers. Preserve the parent navigation bindings, windmove filter, and
+breadcrumb advice when changing mouse or window behavior. Test contextual
+IBuffer transitions, breadcrumb clicks, parent clicks and keyboard navigation,
+and sidebar toggling with real windows rather than calling commands in an
+arbitrary temporary buffer.
 
 ## Package choices that already have a reason
 
