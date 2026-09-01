@@ -259,5 +259,12 @@
         (funcall callback callback-arg)
         (should (equal animate-args '(image-spec nil t 1)))))))
 
+(ert-deftest suderman/dirvish-previews-gzip-files-as-archives ()
+  (should (member "gz" dirvish-archive-exts))
+  (should (member "gz" dirvish-binary-exts))
+  (should (eq (car (dirvish-archive-dp
+                    "/tmp/incomplete.gif.gz" "gz" nil nil))
+              'shell)))
+
 (provide 'suderman-files-test)
 ;;; suderman-files-test.el ends here

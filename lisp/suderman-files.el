@@ -12,6 +12,8 @@
 (require 'suderman-windows)
 
 (defvar dirvish-quick-access-entries)
+(defvar dirvish-archive-exts)
+(defvar dirvish-binary-exts)
 (defvar dirvish-preview-setup-hook)
 (defvar dirvish-preview-dispatchers)
 (defvar dirvish-peek-key)
@@ -585,6 +587,8 @@
   (require 'dirvish-side)
   (require 'dirvish-peek)
   (require 'dirvish-subtree)
+  (add-to-list 'dirvish-archive-exts "gz")
+  (add-to-list 'dirvish-binary-exts "gz")
   (suderman/dirvish-enable-subtree-mouse)
   (dirvish-side-follow-mode 1)
   (dirvish-peek-mode 1)
