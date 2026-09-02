@@ -10,6 +10,7 @@
 (require 'color)
 (require 'use-package)
 
+(declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/ibuffer-toggle "suderman-buffers")
 
@@ -256,6 +257,12 @@
   (indent-bars-starting-column 0)
   (indent-bars-display-on-blank-lines 'least))
 
+(defun suderman/dashboard-from-mode-line (event)
+  "Open Dashboard for the window whose mode line EVENT clicked."
+  (interactive "e")
+  (select-window (posn-window (event-start event)))
+  (suderman/dashboard))
+
 (defun suderman/dirvish-from-mode-line (event)
   "Open Dirvish for the window whose mode line EVENT clicked."
   (interactive "e")
@@ -268,6 +275,10 @@
   (select-window (posn-window (event-start event)))
   (suderman/ibuffer-toggle))
 
+(with-eval-after-load 'dirvish
+  (advice-remove 'dirvish--setup-mode-line
+                 'suderman/dirvish-use-doom-modeline))
+
 (use-package doom-modeline
   :demand t
   :init
@@ -275,6 +286,18 @@
         doom-modeline-buffer-file-name-style 'relative-to-project
         doom-modeline-buffer-encoding 'nondefault)
   :config
+  (doom-modeline-def-segment suderman-dashboard
+    "Clickable Dashboard button."
+    (propertize (concat " "
+                       (doom-modeline-icon 'codicon "nf-cod-dashboard" "D" "D"
+                                            :face (doom-modeline-face))
+                       " ")
+                'mouse-face 'doom-modeline-highlight
+                'help-echo "mouse-1: Open Dashboard"
+                'local-map (let ((map (make-sparse-keymap)))
+                             (define-key map [mode-line mouse-1]
+                                         #'suderman/dashboard-from-mode-line)
+                             map)))
   (doom-modeline-def-segment suderman-dirvish
     "Clickable Dirvish button."
     (propertize (concat " "
@@ -299,9 +322,11 @@
                              (define-key map [mode-line mouse-1]
                                          #'suderman/ibuffer-from-mode-line)
                              map)))
+  (doom-modeline-remove-segment 'suderman-dashboard)
   (doom-modeline-remove-segment 'suderman-dirvish)
   (doom-modeline-remove-segment 'suderman-ibuffer)
-  (doom-modeline-add-segment 'suderman-dirvish 'bar :after)
+  (doom-modeline-add-segment 'suderman-dashboard 'bar :after)
+  (doom-modeline-add-segment 'suderman-dirvish 'suderman-dashboard :after)
   (doom-modeline-add-segment 'suderman-ibuffer 'suderman-dirvish :after)
   (doom-modeline-mode 1))
 

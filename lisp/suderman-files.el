@@ -26,6 +26,10 @@
 (defvar dirvish-misc-mode-map)
 (defvar dirvish-mode-map)
 (declare-function suderman/dashboard "suderman-dashboard")
+(declare-function suderman/dashboard-from-mode-line "suderman-appearance")
+(declare-function suderman/dirvish-from-mode-line "suderman-appearance")
+(declare-function doom-modeline-face "doom-modeline-core")
+(declare-function doom-modeline-icon "doom-modeline-core")
 (declare-function dirvish--build-layout "dirvish")
 (declare-function dirvish--create-parent-buffer "dirvish")
 (declare-function dirvish--find-entry "dirvish")
@@ -92,6 +96,24 @@
            (user-error "No editor window available"))))))
   (set-buffer (window-buffer (selected-window)))
   (suderman/ibuffer-toggle))
+
+(defun suderman/dirvish-ibuffer-from-mode-line (event)
+  "Open IBuffer from the Dirvish mode line EVENT clicked."
+  (interactive "e")
+  (select-window (posn-window (event-start event)))
+  (suderman/dirvish-ibuffer))
+
+(defun suderman/dirvish-mode-line-button (icon fallback help command)
+  "Return a clickable Dirvish mode line button using ICON and COMMAND."
+  (propertize (concat " "
+                     (doom-modeline-icon 'codicon icon fallback fallback
+                                          :face (doom-modeline-face))
+                     " ")
+              'mouse-face 'doom-modeline-highlight
+              'help-echo help
+              'local-map (let ((map (make-sparse-keymap)))
+                           (define-key map [mode-line mouse-1] command)
+                           map)))
 
 (defun suderman/dirvish-side-toggle (&optional path)
   "Toggle the Dirvish sidebar for PATH without stealing editor focus."
@@ -555,7 +577,8 @@
         '(vc-state subtree-state nerd-icons collapse file-modes)
         dirvish-default-layout '(1 0.125 0.5)
         dirvish-mode-line-format
-        '(:left (sort vc-info symlink yank)
+        '(:left (suderman-dashboard suderman-dirvish suderman-ibuffer
+                 sort vc-info symlink yank)
           :right (file-size file-modes index))
         dirvish-preview-dired-sync-omit nil
         dirvish-preview-dispatchers
@@ -581,6 +604,21 @@
         '(:left (path) :right (index))
         dirvish-use-mode-line 'global)
   :config
+  (dirvish-define-mode-line suderman-dashboard
+    "Clickable Dashboard button."
+    (suderman/dirvish-mode-line-button
+     "nf-cod-dashboard" "D" "mouse-1: Open Dashboard"
+     #'suderman/dashboard-from-mode-line))
+  (dirvish-define-mode-line suderman-dirvish
+    "Clickable Dirvish button."
+    (suderman/dirvish-mode-line-button
+     "nf-cod-folder" "D" "mouse-1: Toggle Dirvish"
+     #'suderman/dirvish-from-mode-line))
+  (dirvish-define-mode-line suderman-ibuffer
+    "Clickable IBuffer button."
+    (suderman/dirvish-mode-line-button
+     "nf-cod-files" "B" "mouse-1: Toggle IBuffer"
+     #'suderman/dirvish-ibuffer-from-mode-line))
   (dirvish-override-dired-mode 1)
   (require 'dirvish-yank)
   (require 'dirvish-rsync)
