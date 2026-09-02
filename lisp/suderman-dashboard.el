@@ -101,10 +101,9 @@
 (defun suderman/dashboard ()
   "Open Dashboard, replacing an active full-frame Dirvish layout."
   (interactive)
-  (when (and (fboundp 'dirvish-curr)
-             (let ((session (dirvish-curr)))
-               (and session (dv-curr-layout session))))
-    (dirvish-quit))
+  (when-let* ((session (suderman/dirvish-session))
+              ((dv-curr-layout session)))
+    (suderman/dirvish-quit-full-frame session))
   (dashboard-open))
 
 (defun suderman/dashboard-open-destination (index)

@@ -69,6 +69,16 @@
   (interactive)
   (revert-buffer t t))
 
+(defun suderman/dirvish-session ()
+  "Return current Dirvish session, including a full-frame preview's session."
+  (or (and (fboundp 'dirvish-curr) (dirvish-curr))
+      (and (fboundp 'dirvish--get-session) (dirvish--get-session))))
+
+(defun suderman/dirvish-quit-full-frame (session)
+  "Quit SESSION's full-frame layout from its root window."
+  (with-selected-window (dv-root-window session)
+    (dirvish-quit)))
+
 (defun suderman/dirvish (&optional path)
   "Toggle Dirvish for PATH, selecting it when it is a file."
   (interactive)
@@ -86,10 +96,10 @@
 (defun suderman/dirvish-ibuffer ()
   "Open IBuffer from Dirvish without replacing a visible sidebar."
   (interactive)
-  (when-let* ((session (dirvish-curr)))
+  (when-let* ((session (suderman/dirvish-session)))
     (cond
      ((dv-curr-layout session)
-      (dirvish-quit))
+      (suderman/dirvish-quit-full-frame session))
      ((eq (dv-type session) 'side)
       (select-window
        (or (get-mru-window (selected-frame) nil t t)
@@ -260,9 +270,11 @@
     (display-line-numbers-mode -1)))
 
 (defun suderman/dirvish-preview-disable-line-numbers ()
-  "Keep line numbers disabled in the current Dirvish preview."
+  "Configure the current Dirvish preview."
   (add-hook 'display-line-numbers-mode-hook
             #'suderman/dired-disable-line-numbers nil t)
+  (keymap-local-set "`" #'suderman/dashboard)
+  (keymap-local-set "," #'suderman/dirvish-ibuffer)
   (suderman/dired-disable-line-numbers))
 
 (defun suderman/dired-disable-visual-line-mode ()
@@ -672,11 +684,15 @@
     (keymap-set map "c" #'suderman/dired-copy-files)
     (keymap-set map "f" #'dirvish-layout-toggle)
     (keymap-set map "h" #'dired-up-directory)
+    (keymap-set map "<left>" #'dired-up-directory)
     (keymap-set map "g" #'revert-buffer)
     (keymap-set map "i" #'suderman/dirvish-toggle-dotfiles)
     (keymap-set map "j" #'dired-next-line)
+    (keymap-set map "<down>" #'dired-next-line)
     (keymap-set map "k" #'dired-previous-line)
+    (keymap-set map "<up>" #'dired-previous-line)
     (keymap-set map "l" #'suderman/dired-open)
+    (keymap-set map "<right>" #'suderman/dired-open)
     (keymap-set map "m" #'suderman/dired-toggle-mark)
     (keymap-set map "r" #'dired-do-rename)
     (keymap-set map "s" #'dirvish-quicksort)
@@ -705,12 +721,24 @@
   (keymap-set dirvish-directory-view-mode-map
               "h" #'suderman/dirvish-parent-up-directory)
   (keymap-set dirvish-directory-view-mode-map
+              "<left>" #'suderman/dirvish-parent-up-directory)
+  (keymap-set dirvish-directory-view-mode-map
               "j" #'suderman/dirvish-parent-next-directory)
+  (keymap-set dirvish-directory-view-mode-map
+              "<down>" #'suderman/dirvish-parent-next-directory)
   (keymap-set dirvish-directory-view-mode-map
               "k" #'suderman/dirvish-parent-previous-directory)
   (keymap-set dirvish-directory-view-mode-map
+              "<up>" #'suderman/dirvish-parent-previous-directory)
+  (keymap-set dirvish-directory-view-mode-map
               "l" #'suderman/dirvish-focus-root)
-  (dolist (map (list dirvish-directory-view-mode-map dirvish-misc-mode-map))
+  (keymap-set dirvish-directory-view-mode-map
+              "<right>" #'suderman/dirvish-focus-root)
+  (dolist (map (list dirvish-directory-view-mode-map
+                     dirvish-misc-mode-map
+                     dirvish-special-preview-mode-map))
+    (keymap-set map "`" #'suderman/dashboard)
+    (keymap-set map "," #'suderman/dirvish-ibuffer)
     (dolist (key '("M-h" "M-j" "M-k" "M-l"))
       (keymap-set map key #'suderman/dirvish-focus-root)))
   (keymap-set dired-mode-map "q" #'quit-window)
