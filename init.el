@@ -23,6 +23,7 @@
 (require 'suderman-buffers)
 (require 'suderman-completion)
 (require 'suderman-meow)
+(require 'suderman-terminal)
 (require 'suderman-files)
 (require 'suderman-images)
 (require 'suderman-dashboard)

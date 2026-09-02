@@ -11,7 +11,7 @@
     ''
       ;;; -*- lexical-binding: t; -*-
       (load (expand-file-name "init.el" user-emacs-directory))
-      (dolist (library '("meow" "vterm" "pdf-tools" "jinx"))
+      (dolist (library '("meow" "ghostel" "pdf-tools" "jinx"))
         (unless (locate-library library)
           (error "Missing Emacs library: %s" library)))
       (when (locate-library "treemacs")

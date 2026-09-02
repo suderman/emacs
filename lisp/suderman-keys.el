@@ -16,6 +16,7 @@
 (require 'suderman-git)
 (require 'suderman-org)
 (require 'suderman-reload)
+(require 'suderman-terminal)
 (require 'suderman-windows)
 
 (defun suderman/keys--define (map key command)
@@ -212,6 +213,7 @@
  '("9" . meow-digit-argument)
  '("0" . meow-digit-argument)
  '("?" . meow-cheatsheet)
+ '("RET" . ghostel-project)
  '("SPC" . execute-extended-command)
  (cons "." suderman/leader-git-map)
  (cons "b" suderman/leader-buffer-map)

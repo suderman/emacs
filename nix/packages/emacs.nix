@@ -38,7 +38,7 @@
     alwaysEnsure = true;
     extraEmacsPackages = epkgs:
       (with epkgs; [
-        vterm
+        ghostel
         pdf-tools
         jinx
         treesit-grammars.with-all-grammars

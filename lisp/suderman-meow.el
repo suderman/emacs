@@ -752,7 +752,7 @@ An active selection is replaced without modifying the kill ring."
           (eshell-mode . insert)
           (shell-mode . insert)
           (term-mode . insert)
-          (vterm-mode . insert)))
+          (ghostel-mode . insert)))
   :config
   (advice-remove 'meow--short-command-name
                  #'suderman/meow--cheatsheet-command-name)
