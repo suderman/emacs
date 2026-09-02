@@ -32,6 +32,7 @@
 (require 'suderman-nix)
 (require 'suderman-git)
 (require 'suderman-formatting)
+(require 'suderman-pi)
 (require 'suderman-reload)
 
 ;; Bind keys only after every command they invoke exists.

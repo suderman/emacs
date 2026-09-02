@@ -20,6 +20,10 @@
 (defconst suderman/state-dir (suderman/xdg-dir "XDG_STATE_HOME" ".local/state" "emacs")
   "Root directory for Emacs state files.")
 
+(let ((local-bin (expand-file-name ".local/bin" "~")))
+  (add-to-list 'exec-path local-bin)
+  (setenv "PATH" (mapconcat #'identity exec-path path-separator)))
+
 (dolist (dir (list suderman/cache-dir suderman/data-dir suderman/state-dir))
   (make-directory dir t))
 
