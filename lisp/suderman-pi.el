@@ -2,8 +2,12 @@
 
 ;;; Code:
 
-(add-to-list 'load-path
-             (expand-file-name "site-lisp/pi-coding-agent" suderman/data-dir))
+(use-package pi-coding-agent
+  :demand t)
+(declare-function pi-coding-agent--read-prompt-image "pi-coding-agent-input" (path))
+(declare-function pi-coding-agent--get-prompt-image "pi-coding-agent-ui" (&optional input-buffer))
+(declare-function pi-coding-agent--set-prompt-image "pi-coding-agent-ui" (image &optional input-buffer))
+(declare-function pi-coding-agent--get-input-buffer "pi-coding-agent-ui" ())
 (require 'pi-coding-agent)
 
 (defalias 'pi 'pi-coding-agent)
