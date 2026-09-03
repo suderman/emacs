@@ -120,7 +120,7 @@ Crossing the anchor reverses the selection naturally."
       (meow--select t))))
 
 (defun suderman/meow--adopt-surround-selection (&rest _)
-  "Convert Surround's active region to a Meow character selection."
+  "Convert the active region to a Meow character selection."
   (when (and (bound-and-true-p meow-normal-mode)
              (region-active-p))
     (suderman/meow--select-to (point))))
@@ -814,6 +814,12 @@ An active selection is replaced without modifying the kill ring."
           (term-mode . insert)
           (ghostel-mode . insert)))
   :config
+  (dolist (command '(meow-beginning-of-thing
+                     meow-end-of-thing
+                     meow-inner-of-thing
+                     meow-bounds-of-thing))
+    (advice-remove command #'suderman/meow--adopt-surround-selection)
+    (advice-add command :after #'suderman/meow--adopt-surround-selection))
   (advice-remove 'meow--short-command-name
                  #'suderman/meow--cheatsheet-command-name)
   (advice-add 'meow--short-command-name :around
