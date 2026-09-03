@@ -47,6 +47,7 @@
 (declare-function dirvish-quit "dirvish")
 (declare-function dirvish-move "dirvish-yank")
 (declare-function dirvish-rsync "dirvish-rsync")
+(declare-function dirvish-setup-menu "dirvish-extras")
 (declare-function dirvish-side "dirvish-side")
 (declare-function dirvish-side--session-visible-p "dirvish-side")
 (declare-function dirvish-side-follow-mode "dirvish-side")
@@ -89,7 +90,9 @@
            (directory (if (file-directory-p target)
                           target
                         (file-name-directory target))))
-      (dirvish-dwim directory)
+      (dirvish directory)
+      (unless (and (>= (frame-width) 80) (one-window-p t))
+        (dirvish-layout-toggle))
       (unless (file-directory-p target)
         (dired-goto-file target)))))
 
@@ -178,6 +181,7 @@
     ("s" . "Sort")
     ("z" . "Quick access")
     ("/" . "Search here")
+    ("'" . "Change view attributes")
     (";" . "Dirvish menu")
     ("," . "Open IBuffer")
     ("." . "Toggle Dirvish")
@@ -586,7 +590,7 @@
   :init
   (setq dired-listing-switches "-al --group-directories-first"
         dirvish-attributes
-        '(vc-state subtree-state nerd-icons collapse file-modes)
+        '(vc-state subtree-state nerd-icons collapse file-size)
         dirvish-default-layout '(1 0.125 0.5)
         dirvish-mode-line-format
         '(:left (suderman-dashboard suderman-dirvish suderman-ibuffer
@@ -667,6 +671,7 @@
     (keymap-set map "." #'suderman/dirvish)
     (keymap-set map "?" #'suderman/dirvish-help)
     (keymap-set map "/" #'suderman/dirvish-search)
+    (keymap-set map "'" #'dirvish-setup-menu)
     (keymap-set map ";" #'dirvish-dispatch)
     (keymap-set map "TAB" #'dirvish-subtree-toggle)
     (keymap-set map "<tab>" #'dirvish-subtree-toggle)

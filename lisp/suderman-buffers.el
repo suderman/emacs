@@ -109,6 +109,9 @@
   :demand t
   :init
   (setq ibuffer-use-other-window nil
+        ibuffer-never-show-predicates
+        '("\\` ?\\*dirvish-\\(?:parent-[0-9]+\\|preview\\|shell\\|header\\|footer\\)@"
+          "\\`PREVIEW :: ")
         ibuffer-expert t
         ibuffer-display-summary nil
         ibuffer-show-empty-filter-groups nil
