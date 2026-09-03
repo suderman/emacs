@@ -770,5 +770,12 @@
                 (derived-mode-p 'dirvish-directory-view-mode))
         (suderman/dired-setup)))))
 
+(use-package kitty-graphics
+  :ensure nil
+  :after dirvish
+  :demand t
+  :config
+  (kitty-graphics-setup))
+
 (provide 'suderman-files)
 ;;; suderman-files.el ends here

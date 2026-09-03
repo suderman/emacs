@@ -259,6 +259,11 @@
       (should (equal selected file))
       (should (eq (selected-window) root)))))
 
+(ert-deftest suderman/kitty-graphics-enables-terminal-clients ()
+  (should (fboundp 'kitty-graphics-setup))
+  (should (memq #'kitty-graphics--enable-on-tty-frame
+                server-after-make-frame-hook)))
+
 (ert-deftest suderman/dirvish-gif-preview-loops-only-while-displayed ()
   (with-temp-buffer
     (insert (propertize " " 'display 'image-spec))

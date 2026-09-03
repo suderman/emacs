@@ -42,6 +42,22 @@
         "type": "github"
       }
     },
+    "kitty-graphics": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784999277,
+        "narHash": "sha256-3P4NQJpC0R1DRQ1oV1vbN1VD+Tb0wcMIvN1yA/pa/Rc=",
+        "owner": "cashmeredev",
+        "repo": "kitty-graphics.el",
+        "rev": "13666d4eb2ef4eeed24697c0326368eff3667dce",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cashmeredev",
+        "repo": "kitty-graphics.el",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1787498568,
@@ -78,6 +94,7 @@
       "inputs": {
         "blueprint": "blueprint",
         "emacs-overlay": "emacs-overlay",
+        "kitty-graphics": "kitty-graphics",
         "nixpkgs": "nixpkgs"
       }
     },

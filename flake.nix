@@ -7,6 +7,8 @@
     blueprint.inputs.nixpkgs.follows = "nixpkgs";
     emacs-overlay.url = "github:nix-community/emacs-overlay";
     emacs-overlay.inputs.nixpkgs.follows = "nixpkgs";
+    kitty-graphics.url = "github:cashmeredev/kitty-graphics.el";
+    kitty-graphics.flake = false;
   };
 
   outputs = inputs: let

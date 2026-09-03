@@ -1,4 +1,8 @@
-{pkgs, ...}: let
+{
+  inputs,
+  pkgs,
+  ...
+}: let
   inherit (pkgs) lib;
 
   configSource = lib.fileset.toSource {
@@ -37,12 +41,21 @@
     config = lib.concatMapStringsSep "\n" builtins.readFile configFiles;
     alwaysEnsure = true;
     extraEmacsPackages = epkgs:
-      (with epkgs; [
-        ghostel
-        pdf-tools
-        jinx
-        treesit-grammars.with-all-grammars
-      ])
+      let
+        kitty-graphics = epkgs.trivialBuild {
+          pname = "kitty-graphics";
+          version = inputs.kitty-graphics.shortRev;
+          src = inputs.kitty-graphics;
+          packageRequires = [];
+        };
+      in
+        (with epkgs; [
+          kitty-graphics
+          ghostel
+          pdf-tools
+          jinx
+          treesit-grammars.with-all-grammars
+        ])
       ++ (with pkgs; [
         fd
         ripgrep
