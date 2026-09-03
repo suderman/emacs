@@ -10,6 +10,8 @@
 (require 'color)
 (require 'use-package)
 
+(defvar base16-theme-256-color-source)
+
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/ibuffer-toggle "suderman-buffers")
@@ -46,6 +48,9 @@
     faces)))
 
 (with-eval-after-load 'base16-theme
+  ;; Do not trust an SSH client's ANSI palette to match Stylix.  In a
+  ;; 256-color terminal, translate the active theme's actual colors instead.
+  (setq base16-theme-256-color-source 'colors)
   (advice-remove 'base16-theme-set-faces
                  #'suderman/base16-theme-set-faces-without-gnus-cycles)
   (advice-add 'base16-theme-set-faces :around
@@ -181,6 +186,7 @@
 (add-hook 'enable-theme-functions #'suderman/apply-tty-menu-faces t)
 (suderman/apply-selection-faces)
 (suderman/apply-tty-menu-faces)
+(add-hook 'window-setup-hook #'suderman/apply-tty-menu-faces)
 (with-eval-after-load 'meow
   (suderman/apply-selection-faces))
 
