@@ -60,6 +60,16 @@
 
 (add-hook 'org-mode-hook #'suderman/org-enable-mouse-todo-cycling)
 
+(defun suderman/org-inhibit-electric-angle-pairing ()
+  "Keep Org structure-template shortcuts from gaining a closing angle bracket."
+  (let ((inhibit-predicate electric-pair-inhibit-predicate))
+    (setq-local electric-pair-inhibit-predicate
+                (lambda (char)
+                  (or (eq char ?<)
+                      (funcall inhibit-predicate char))))))
+
+(add-hook 'org-mode-hook #'suderman/org-inhibit-electric-angle-pairing)
+
 (defun suderman/org--call-contextually
     (org-command &optional agenda-command fallback-command)
   "Call the command appropriate for the current Org context."
@@ -171,6 +181,46 @@
            ((agenda "" ((org-agenda-span 7)))
             (todo "PROG|EVAL|HOLD")
             (todo "TODO"))))))
+
+(use-package org-tempo
+  :ensure nil
+  :after org
+  :demand t
+  :config
+  (dolist (template '(("el" . "src emacs-lisp")
+                      ("sh" . "src shell")
+                      ("py" . "src python")
+                      ("js" . "src js")
+                      ("ts" . "src typescript")
+                      ("php" . "src php")
+                      ("html" . "src html")
+                      ("twig" . "src twig")
+                      ("css" . "src css")
+                      ("scss" . "src scss")
+                      ("nix" . "src nix")
+                      ("lua" . "src lua")
+                      ("sql" . "src sql")
+                      ("json" . "src json")
+                      ("yaml" . "src yaml")
+                      ("xml" . "src xml")
+                      ("md" . "src markdown")
+                      ("conf" . "src conf")
+                      ("docker" . "src dockerfile")))
+    (add-to-list 'org-structure-template-alist template))
+  (add-to-list 'org-src-lang-modes '("nix" . nix-ts)))
+
+(use-package ob
+  :ensure nil
+  :after org
+  :demand t
+  :config
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (shell . t)
+     (python . t)
+     (js . t)
+     (sqlite . t))))
 
 (use-package org-superstar
   :after org
