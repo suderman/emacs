@@ -774,6 +774,9 @@
   :ensure nil
   :after dirvish
   :demand t
+  :init
+  (setq kitty-graphics-enable-video t
+        kitty-graphics-dirvish-video-inline-preview t)
   :config
   (kitty-graphics-setup))
 

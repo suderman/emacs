@@ -259,8 +259,11 @@
       (should (equal selected file))
       (should (eq (selected-window) root)))))
 
-(ert-deftest suderman/kitty-graphics-enables-terminal-clients ()
+(ert-deftest suderman/kitty-graphics-enables-terminal-features ()
   (should (fboundp 'kitty-graphics-setup))
+  (should kitty-graphics-enable-video)
+  (should kitty-graphics-dirvish-video-inline-preview)
+  (should-not kitty-graphics-heading-sizes-auto)
   (should (memq #'kitty-graphics--enable-on-tty-frame
                 server-after-make-frame-hook)))
 

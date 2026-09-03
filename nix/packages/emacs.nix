@@ -64,8 +64,10 @@
         python3
         wl-clipboard
         vips
+        ffmpeg
         ffmpegthumbnailer
         mediainfo
+        mpv
         epubThumbnailer
         poppler-utils
         imagemagick
