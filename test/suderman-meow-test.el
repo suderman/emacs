@@ -27,6 +27,21 @@
         (suderman/meow-insert)
         (should (equal calls '(cancel insert)))))))
 
+(ert-deftest suderman/meow-line-bound-overloads-insert-without-selection ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (insert "  alpha  ; comment")
+    (let (insert-points)
+      (cl-letf (((symbol-function 'suderman/meow-insert)
+                 (lambda () (push (point) insert-points))))
+        (goto-char 5)
+        (suderman/meow-insert-at-indentation)
+        (suderman/meow-insert-at-indentation)
+        (goto-char 5)
+        (suderman/meow-insert-at-end-of-line)
+        (suderman/meow-insert-at-end-of-line))
+      (should (equal (nreverse insert-points) '(3 1 8 19))))))
+
 (ert-deftest suderman/meow-keypad-runs-without-beacon-fanout ()
   (with-temp-buffer
     (let* ((overlay (make-overlay (point-min) (point-min)))
@@ -97,6 +112,61 @@
         (should (equal (nth 2 states)
                        `((expand . char) 3 ,(point-max) nil
                          (,(point-min) . ,(point-max)))))))))
+
+(ert-deftest suderman/meow-navigation-and-append-bindings ()
+  (should meow-use-cursor-position-hack)
+  (dolist (binding '(("$" . suderman/meow-smart-end-of-line)
+                     ("^" . suderman/meow-smart-beginning-of-line)
+                     ("a" . meow-append)
+                     ("A" . suderman/meow-insert-at-end-of-line)
+                     ("I" . suderman/meow-insert-at-indentation)
+                     ("e" . suderman/meow-next-word)
+                     ("E" . suderman/meow-next-symbol)
+                     ("f" . suderman/meow-find)
+                     ("F" . suderman/meow-find-backward)
+                     ("N" . suderman/meow-buffer-end)
+                     ("P" . suderman/meow-buffer-beginning)))
+    (should (eq (lookup-key meow-normal-state-keymap (kbd (car binding)))
+                (cdr binding)))))
+
+(ert-deftest suderman/meow-line-bound-overloads-extend-word-selections ()
+  (let ((transient-mark-mode t))
+    (with-temp-buffer
+      (emacs-lisp-mode)
+      (insert "  alpha beta")
+      (goto-char 5)
+      (let ((last-command nil))
+        (suderman/meow-visual))
+      (suderman/meow-insert-at-end-of-line)
+      (should (equal (cons (region-beginning) (region-end)) '(3 . 13)))
+
+      (meow--cancel-selection)
+      (goto-char 10)
+      (let ((last-command nil))
+        (suderman/meow-visual))
+      (suderman/meow-insert-at-indentation)
+      (should (equal (cons (region-beginning) (region-end)) '(3 . 13)))
+      (suderman/meow-insert-at-indentation)
+      (should (equal (cons (region-beginning) (region-end)) '(1 . 13))))))
+
+(ert-deftest suderman/meow-find-motions-extend-word-selections ()
+  (let ((transient-mark-mode t))
+    (save-window-excursion
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (emacs-lisp-mode)
+        (insert "alpha beta theta")
+        (setq-local meow-normal-mode t)
+        (goto-char 3)
+        (execute-kbd-macro (kbd "m f t '"))
+        (should (equal (cons (region-beginning) (region-end)) '(1 . 13)))
+
+        (meow--cancel-selection)
+        (erase-buffer)
+        (insert "token beta gamma")
+        (goto-char 14)
+        (execute-kbd-macro (kbd "m F t '"))
+        (should (equal (cons (region-beginning) (region-end)) '(1 . 17)))))))
 
 (ert-deftest suderman/meow-parentheses-extend-selection ()
   (should (eq (lookup-key meow-normal-state-keymap (kbd "("))

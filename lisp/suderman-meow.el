@@ -131,6 +131,26 @@ Crossing the anchor reverses the selection naturally."
       (suderman/meow--select-to pos)
     (goto-char pos)))
 
+(defun suderman/meow--extend-selection-with (motion)
+  "Run MOTION and extend the active selection to its destination."
+  (let ((beg (region-beginning))
+        (end (region-end))
+        (old-mark (mark))
+        (old-point (point)))
+    ;; Get the destination without letting MOTION replace the current region.
+    (let ((mark-active nil))
+      (funcall motion))
+    (let* ((target (point))
+           (selection
+            (cond
+             ((<= target beg) (cons end target))
+             ((>= target end) (cons beg target))
+             (t (cons old-mark old-point)))))
+      (thread-first
+          (meow--make-selection '(expand . char)
+                                (car selection) (cdr selection))
+        (meow--select t)))))
+
 (defun suderman/meow--select-thing (thing n)
   "Move forward N instances of THING, extending an active selection."
   (let ((target
@@ -168,6 +188,19 @@ Crossing the anchor reverses the selection naturally."
         (meow--cancel-selection)
         (goto-char target)))))
 
+(defun suderman/meow-find (n char)
+  "Find CHAR like Meow, extending an active selection."
+  (interactive "p\ncFind: ")
+  (let ((selecting (region-active-p)))
+    (setq meow--last-find nil)
+    (meow-find n char t)
+    (suderman/meow--finish-find-motion selecting)))
+
+(defun suderman/meow-find-backward (n char)
+  "Find backward to CHAR, extending an active selection."
+  (interactive "p\ncFind backward: ")
+  (suderman/meow-find (- n) char))
+
 (defun suderman/meow-till (n char)
   "Move till CHAR like Meow, extending an active selection."
   (interactive "p\ncTill: ")
@@ -182,15 +215,23 @@ Crossing the anchor reverses the selection naturally."
   (suderman/meow-till (- n) char))
 
 (defun suderman/meow-repeat (n)
-  "Repeat the previous till motion, or the last edit N times."
+  "Repeat the previous find or till motion, or the last edit N times."
   (interactive "p")
-  (if (and meow--last-till
-           (memq last-command
-                 '(suderman/meow-till suderman/meow-till-backward)))
-      (let ((command last-command))
-        (setq this-command command)
-        (funcall command n meow--last-till))
-    (repeat-fu-execute n)))
+  (cond
+   ((and meow--last-find
+         (memq last-command
+               '(suderman/meow-find suderman/meow-find-backward)))
+    (let ((command last-command))
+      (setq this-command command)
+      (funcall command n meow--last-find)))
+   ((and meow--last-till
+         (memq last-command
+               '(suderman/meow-till suderman/meow-till-backward)))
+    (let ((command last-command))
+      (setq this-command command)
+      (funcall command n meow--last-till)))
+   (t
+    (repeat-fu-execute n))))
 
 (defun suderman/meow-search (&optional backward)
   "Search in the requested direction, leaving a character selection.
@@ -231,7 +272,7 @@ Search backward when BACKWARD is non-nil, otherwise search forward."
           (save-excursion
             (comment-normalize-vars)
             (goto-char eol)
-            (when-let ((comment-pos (comment-beginning)))
+            (when-let* ((comment-pos (comment-beginning)))
               (goto-char comment-pos)
               (skip-chars-backward " \t")
               (point))))
@@ -348,16 +389,22 @@ Keep every result as a char selection so motion commands can fine-tune it."
     (meow-insert)))
 
 (defun suderman/meow-insert-at-indentation ()
-  "Enter Meow insert state at the first non-whitespace character."
+  "Extend an active selection to smart line start, or insert there."
   (interactive)
-  (back-to-indentation)
-  (suderman/meow-insert))
+  (if (region-active-p)
+      (suderman/meow--extend-selection-with
+       #'suderman/meow-smart-beginning-of-line)
+    (suderman/meow-smart-beginning-of-line)
+    (suderman/meow-insert)))
 
 (defun suderman/meow-insert-at-end-of-line ()
-  "Enter Meow insert state at the end of the current line."
+  "Extend an active selection to smart line end, or insert there."
   (interactive)
-  (end-of-line)
-  (suderman/meow-insert))
+  (if (region-active-p)
+      (suderman/meow--extend-selection-with
+       #'suderman/meow-smart-end-of-line)
+    (suderman/meow-smart-end-of-line)
+    (suderman/meow-insert)))
 
 (defun suderman/meow-delete ()
   "Delete selection, or one character forward.
@@ -572,6 +619,8 @@ An active selection is replaced without modifying the kill ring."
                    (execute-extended-command . "M-x")
                    (evilmi-jump-items-native . "match")
                    (kill-current-buffer . "kill buf")
+                   (suderman/meow-find . "find fwd")
+                   (suderman/meow-find-backward . "find back")
                    (suderman/meow-buffer-beginning . "buf beg")
                    (suderman/meow-buffer-end . "buf end")
                    (suderman/meow-indent . "indent")
@@ -636,7 +685,9 @@ An active selection is replaced without modifying the kill ring."
    '(";" . meow-reverse)
    '(":" . execute-extended-command)
    '("#" . meow-goto-line)
+   '("$" . suderman/meow-smart-end-of-line)
    '("%" . evilmi-jump-items-native)
+   '("^" . suderman/meow-smart-beginning-of-line)
     '("(" . meow-left-expand)
     '(")" . meow-right-expand)
    '("," . suderman/ibuffer-toggle)
@@ -650,18 +701,18 @@ An active selection is replaced without modifying the kill ring."
    '("~" . ignore)
    '("\\ \\" . suderman/alternate-buffer)
    '("\\ J" . suderman/meow-join-line)
-   '("a" . suderman/meow-smart-beginning-of-line)
-   '("A" . suderman/meow-buffer-beginning)
+   '("a" . meow-append)
+   '("A" . suderman/meow-insert-at-end-of-line)
    '("b" . suderman/meow-back-word)
    '("B" . suderman/meow-back-symbol)
    '("c" . suderman/meow-save)
    '("C" . meow-page-up)
    '("d" . suderman/meow-delete)
    '("D" . suderman/meow-delete-line)
-   '("e" . suderman/meow-smart-end-of-line)
-   '("E" . suderman/meow-insert-at-end-of-line)
-   '("f" . suderman/meow-next-word)
-   '("F" . suderman/meow-next-symbol)
+   '("e" . suderman/meow-next-word)
+   '("E" . suderman/meow-next-symbol)
+   '("f" . suderman/meow-find)
+   '("F" . suderman/meow-find-backward)
    '("g" . meow-cancel-selection)
    '("G" . meow-grab)
    '("h" . meow-left)
@@ -677,10 +728,11 @@ An active selection is replaced without modifying the kill ring."
    '("m" . suderman/meow-visual)
    '("M" . suderman/meow-line-or-rectangle)
    '("n" . suderman/meow-search)
+   '("N" . suderman/meow-buffer-end)
    '("o" . meow-open-below)
    '("O" . meow-open-above)
    '("p" . suderman/meow-search-backward)
-   '("P" . ignore)
+   '("P" . suderman/meow-buffer-beginning)
    '("q" . meow-quit)
    '("Q" . kill-current-buffer)
    '("r" . suderman/meow-replace-char)
@@ -730,6 +782,7 @@ An active selection is replaced without modifying the kill ring."
   :demand t
   :init
   (setq meow-use-clipboard t
+        meow-use-cursor-position-hack t
         meow--kbd-undo #'undo-only
         ;; Keep Meow editing commands independent from modal key overrides.
         meow--kbd-join-sexp #'suderman/meow-join-sexp-unavailable
