@@ -65,6 +65,39 @@
   (with-temp-buffer
     (should-error (suderman/meow-save) :type 'user-error)))
 
+(ert-deftest suderman/meow-shift-m-selects-line-rectangle-buffer ()
+  (let ((transient-mark-mode t)
+        (command (symbol-function 'suderman/meow-line-or-rectangle))
+        states)
+    (save-window-excursion
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (insert "alpha\nbeta\n")
+        (setq-local meow-normal-mode t)
+        (meow--cancel-selection)
+        (goto-char 3)
+        (setq last-command nil)
+        (cl-letf (((symbol-function 'suderman/meow-line-or-rectangle)
+                   (lambda (n)
+                     (interactive "p")
+                     (funcall command n)
+                     (push (list (meow--selection-type)
+                                 suderman/meow-line-position
+                                 (point)
+                                 (bound-and-true-p rectangle-mark-mode)
+                                 (when (region-active-p)
+                                   (cons (region-beginning) (region-end))))
+                           states))))
+          (execute-kbd-macro (kbd "M M M")))
+        (setq states (nreverse states))
+        (should (equal (nth 0 states)
+                       '((expand . line) 3 6 nil (1 . 6))))
+        (should (equal (nth 1 states)
+                       '((expand . char) 3 3 t (3 . 3))))
+        (should (equal (nth 2 states)
+                       `((expand . char) 3 ,(point-max) nil
+                         (,(point-min) . ,(point-max)))))))))
+
 (ert-deftest suderman/meow-parentheses-extend-selection ()
   (should (eq (lookup-key meow-normal-state-keymap (kbd "("))
               #'meow-left-expand))

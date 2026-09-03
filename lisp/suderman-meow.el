@@ -41,6 +41,9 @@
 (defvar-local suderman/meow-visual-stage 0
   "Current consecutive `suderman/meow-visual' expansion stage.")
 
+(defvar-local suderman/meow-line-position nil
+  "Point before `suderman/meow-line-or-rectangle' selects a line.")
+
 (defun suderman/meow--cancel-active-selection ()
   "Cancel the current Meow selection when the region is active."
   (when (region-active-p)
@@ -259,16 +262,20 @@ Search backward when BACKWARD is non-nil, otherwise search forward."
   (suderman/meow--move-to (point-max)))
 
 (defun suderman/meow-line-or-rectangle (n)
-  "Select a rectangle, N lines, then the buffer when repeated."
+  "Select N lines, a rectangle, then the buffer when repeated."
   (interactive "p")
   (cond
    ((not (eq last-command 'suderman/meow-line-or-rectangle))
-    (rectangle-mark-mode 1))
-   ((bound-and-true-p rectangle-mark-mode)
-    (meow--cancel-selection)
-    (rectangle-mark-mode -1)
+    (setq suderman/meow-line-position (point))
     (meow-line n))
+   ((equal (meow--selection-type) '(expand . line))
+    (meow--cancel-selection)
+    (goto-char suderman/meow-line-position)
+    (rectangle-mark-mode 1))
    (t
+    (when (bound-and-true-p rectangle-mark-mode)
+      (meow--cancel-selection)
+      (rectangle-mark-mode -1))
     (thread-first
         (meow--make-selection '(expand . char) (point-min) (point-max))
       (meow--select t)))))
