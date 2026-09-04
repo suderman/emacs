@@ -77,30 +77,31 @@ CALLBACK follows the formatter function protocol used by Apheleia."
         (apheleia-format-buffer formatters)
       (user-error "No formatter configured for %s" major-mode))))
 
-(use-package apheleia
-  :demand t
-  :custom
-  (apheleia-formatters-respect-indent-level nil)
-  :config
-  (setf (alist-get 'suderman/treefmt apheleia-formatters)
-        #'suderman/formatting-treefmt)
-  (setf (alist-get 'alejandra apheleia-formatters)
-        '("alejandra" "-q"))
-  (setf (alist-get 'nix-ts-mode apheleia-mode-alist) 'alejandra)
-  (dolist (mode '(python-mode python-ts-mode))
-    (setf (alist-get mode apheleia-mode-alist) 'ruff))
-  (setf (alist-get 'markdown-ts-mode apheleia-mode-alist) 'prettier-markdown)
-  (setf (alist-get 'sql-mode apheleia-mode-alist) 'sqlfluff)
-  (add-hook 'before-save-hook #'suderman/formatting-select-formatter)
-  (apheleia-global-mode 1))
+(unless (eq system-type 'android)
+  (use-package apheleia
+    :demand t
+    :custom
+    (apheleia-formatters-respect-indent-level nil)
+    :config
+    (setf (alist-get 'suderman/treefmt apheleia-formatters)
+          #'suderman/formatting-treefmt)
+    (setf (alist-get 'alejandra apheleia-formatters)
+          '("alejandra" "-q"))
+    (setf (alist-get 'nix-ts-mode apheleia-mode-alist) 'alejandra)
+    (dolist (mode '(python-mode python-ts-mode))
+      (setf (alist-get mode apheleia-mode-alist) 'ruff))
+    (setf (alist-get 'markdown-ts-mode apheleia-mode-alist) 'prettier-markdown)
+    (setf (alist-get 'sql-mode apheleia-mode-alist) 'sqlfluff)
+    (add-hook 'before-save-hook #'suderman/formatting-select-formatter)
+    (apheleia-global-mode 1))
 
-;; Enable this last so its buffer setup precedes other global minor modes.
-(use-package envrc
-  :demand t
-  :custom
-  (envrc-show-summary-in-minibuffer nil)
-  :config
-  (envrc-global-mode 1))
+  ;; Enable this last so its buffer setup precedes other global minor modes.
+  (use-package envrc
+    :demand t
+    :custom
+    (envrc-show-summary-in-minibuffer nil)
+    :config
+    (envrc-global-mode 1)))
 
 (provide 'suderman-formatting)
 ;;; suderman-formatting.el ends here

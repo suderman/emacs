@@ -35,6 +35,7 @@
 
 (use-package ghostel
   :ensure nil
+  :if (not (eq system-type 'android))
   :demand t
   :hook (ghostel-mode . suderman/ghostel-setup)
   :config

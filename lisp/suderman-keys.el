@@ -135,7 +135,8 @@
 (suderman/keys--define suderman/leader-toggle-map "l" #'suderman/toggle-line-numbers)
 (suderman/keys--define suderman/leader-toggle-map "o" #'org-indent-mode)
 (suderman/keys--define suderman/leader-toggle-map "r" #'read-only-mode)
-(suderman/keys--define suderman/leader-toggle-map "s" #'jinx-mode)
+(when (fboundp 'jinx-mode)
+  (suderman/keys--define suderman/leader-toggle-map "s" #'jinx-mode))
 (suderman/keys--define suderman/leader-toggle-map "v" #'visual-line-mode)
 (suderman/keys--define suderman/leader-toggle-map "w" #'whitespace-mode)
 
@@ -213,7 +214,6 @@
  '("9" . meow-digit-argument)
  '("0" . meow-digit-argument)
  '("?" . meow-cheatsheet)
- '("RET" . ghostel-project)
  '("SPC" . execute-extended-command)
  (cons "." suderman/leader-git-map)
  (cons "b" suderman/leader-buffer-map)
@@ -223,6 +223,8 @@
  (cons "s" suderman/leader-search-map)
  (cons "t" suderman/leader-toggle-map)
  (cons "w" suderman/leader-window-map))
+(when (fboundp 'ghostel-project)
+  (meow-leader-define-key '("RET" . ghostel-project)))
 
 (which-key-add-keymap-based-replacements
   suderman/meow-leader-map

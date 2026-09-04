@@ -7,6 +7,17 @@
 (require 'ert)
 (require 'suderman-appearance)
 
+(ert-deftest suderman/android-uses-nerd-fonts-only-when-both-are-available ()
+  (let ((system-type 'android))
+    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) t))
+              ((symbol-function 'find-font)
+               (lambda (spec &optional _frame)
+                 (equal (font-get spec :family) suderman/font-family))))
+      (should-not (suderman/nerd-fonts-available-p)))
+    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) t))
+              ((symbol-function 'find-font) (lambda (&rest _) 'font)))
+      (should (suderman/nerd-fonts-available-p)))))
+
 (ert-deftest suderman/base16-gnus-faces-avoid-emacs-31-inheritance-cycles ()
   (let (faces transformed)
     (dolist (group '(mail news))

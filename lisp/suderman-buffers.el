@@ -7,6 +7,7 @@
 
 (require 'use-package)
 (require 'ibuffer)
+(require 'suderman-appearance)
 (require 'suderman-windows)
 
 (declare-function suderman/dashboard "suderman-dashboard")
@@ -117,8 +118,8 @@
         ibuffer-show-empty-filter-groups nil
         ibuffer-use-header-line 'title
         ibuffer-formats
-        '((mark modified read-only " "
-                (icon 2 2)
+        `((mark modified read-only " "
+                ,@(when (suderman/nerd-fonts-available-p) '((icon 2 2)))
                 (suderman-name 24 32 :left :elide) " "
                 (mode+ 16 20 :left :elide) " "
                 (size-h 7 -1 :right) " "

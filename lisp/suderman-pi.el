@@ -2,15 +2,21 @@
 
 ;;; Code:
 
-(use-package pi-coding-agent
-  :demand t)
+(unless (eq system-type 'android)
+  (use-package pi-coding-agent
+    :demand t))
 (declare-function pi-coding-agent--read-prompt-image "pi-coding-agent-input" (path))
 (declare-function pi-coding-agent--get-prompt-image "pi-coding-agent-ui" (&optional input-buffer))
 (declare-function pi-coding-agent--set-prompt-image "pi-coding-agent-ui" (image &optional input-buffer))
 (declare-function pi-coding-agent--get-input-buffer "pi-coding-agent-ui" ())
-(require 'pi-coding-agent)
+(declare-function pi-coding-agent--prompt-image-byte-size "pi-coding-agent-input" (image))
+(declare-function pi-coding-agent--prompt-image-data "pi-coding-agent-input" (image))
+(declare-function pi-coding-agent--prompt-image-mime-type "pi-coding-agent-input" (image))
+(declare-function pi-coding-agent--prompt-image-name "pi-coding-agent-input" (image))
 
-(defalias 'pi 'pi-coding-agent)
+(unless (eq system-type 'android)
+  (require 'pi-coding-agent)
+  (defalias 'pi 'pi-coding-agent))
 
 (defvar-local suderman-pi--image-indicator nil)
 
@@ -50,10 +56,11 @@
           (concat (propertize " " 'display preview) "\n")))))
     (force-window-update (current-buffer))))
 
-(unless (advice-member-p #'suderman-pi-refresh-image-indicator
-                         'pi-coding-agent--set-prompt-image)
-  (advice-add 'pi-coding-agent--set-prompt-image :after
-              #'suderman-pi-refresh-image-indicator))
+(unless (eq system-type 'android)
+  (unless (advice-member-p #'suderman-pi-refresh-image-indicator
+                           'pi-coding-agent--set-prompt-image)
+    (advice-add 'pi-coding-agent--set-prompt-image :after
+                #'suderman-pi-refresh-image-indicator)))
 
 (defun suderman-pi-attach-clipboard-image ()
   "Attach the Wayland clipboard image to the current Pi draft."
@@ -77,8 +84,9 @@
                         'iec " " "B")))))
       (delete-file file))))
 
-(define-key pi-coding-agent-input-mode-map (kbd "C-c C-v")
-            #'suderman-pi-attach-clipboard-image)
+(unless (eq system-type 'android)
+  (define-key pi-coding-agent-input-mode-map (kbd "C-c C-v")
+              #'suderman-pi-attach-clipboard-image))
 
 (provide 'suderman-pi)
 ;;; suderman-pi.el ends here

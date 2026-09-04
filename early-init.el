@@ -23,8 +23,9 @@
 (scroll-bar-mode -1)
 
 ;; GUI frame opacity needs to be available before the first frame is built.
-(add-to-list 'default-frame-alist '(alpha-background . 90))
-(add-to-list 'initial-frame-alist '(alpha-background . 90))
+(unless (eq system-type 'android)
+  (add-to-list 'default-frame-alist '(alpha-background . 90))
+  (add-to-list 'initial-frame-alist '(alpha-background . 90)))
 
 (provide 'early-init)
 ;;; early-init.el ends here

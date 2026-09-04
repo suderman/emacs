@@ -175,9 +175,10 @@
     (treesit-font-lock-recompute-features)
     (font-lock-flush)))
 
-(use-package nix-ts-mode
-  :mode "\\.nix\\'"
-  :hook (nix-ts-mode . suderman/nix-embedded-languages-setup))
+(unless (eq system-type 'android)
+  (use-package nix-ts-mode
+    :mode "\\.nix\\'"
+    :hook (nix-ts-mode . suderman/nix-embedded-languages-setup)))
 
 (provide 'suderman-nix)
 ;;; suderman-nix.el ends here

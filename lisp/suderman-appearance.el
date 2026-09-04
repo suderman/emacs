@@ -21,6 +21,13 @@
 (defconst suderman/nerd-symbol-font "Symbols Nerd Font Mono")
 (defconst suderman/background-opacity 90)
 
+(defun suderman/nerd-fonts-available-p (&optional frame)
+  "Return non-nil when FRAME can display the configured Nerd Fonts."
+  (or (not (eq system-type 'android))
+      (and (display-graphic-p frame)
+           (find-font (font-spec :family suderman/font-family) frame)
+           (find-font (font-spec :family suderman/nerd-symbol-font) frame))))
+
 ;; Emacs 31 rejects the Gnus inheritance cycles created by base16-theme
 ;; 20260419.235 and upstream main as of 2026-08-25.  Remove this when the empty
 ;; Gnus faces inherit their corresponding outline faces instead of the
@@ -58,24 +65,27 @@
 
 ;; Stylix's default.el loads after init.el and replaces this fallback when
 ;; enabled.  Avoid overriding it on systems where it loads earlier instead.
-(unless (memq 'base16-stylix custom-enabled-themes)
+(when (and (not (memq 'base16-stylix custom-enabled-themes))
+           (suderman/nerd-fonts-available-p))
   (set-face-attribute 'default nil :font
                       (font-spec :family suderman/font-family
                                  :size suderman/font-size)))
 
 (defun suderman/set-nerd-font-fallbacks ()
   "Teach Emacs where Nerd Font private-use icons live."
-  (dolist (range (list (cons #xe000 #xf8ff)
-                       (cons #xf0000 #xffffd)
-                       (cons #x100000 #x10fffd)))
-    (set-fontset-font t range
-                      (font-spec :family suderman/nerd-symbol-font)
-                      nil 'prepend)))
+  (when (suderman/nerd-fonts-available-p)
+    (dolist (range (list (cons #xe000 #xf8ff)
+                         (cons #xf0000 #xffffd)
+                         (cons #x100000 #x10fffd)))
+      (set-fontset-font t range
+                        (font-spec :family suderman/nerd-symbol-font)
+                        nil 'prepend))))
 
 (defun suderman/apply-gui-appearance (&optional frame)
   "Apply GUI background opacity to FRAME."
   (let ((target-frame (or frame (selected-frame))))
-    (when (display-graphic-p target-frame)
+    (when (and (display-graphic-p target-frame)
+               (not (eq system-type 'android)))
       (set-frame-parameter target-frame 'alpha-background
                            suderman/background-opacity))))
 
@@ -111,8 +121,11 @@
   (interactive)
   (suderman/frame-text-scale-adjust 1))
 
-(add-to-list 'default-frame-alist `(alpha-background . ,suderman/background-opacity))
-(add-to-list 'initial-frame-alist `(alpha-background . ,suderman/background-opacity))
+(unless (eq system-type 'android)
+  (add-to-list 'default-frame-alist
+               `(alpha-background . ,suderman/background-opacity))
+  (add-to-list 'initial-frame-alist
+               `(alpha-background . ,suderman/background-opacity)))
 
 (defun suderman/theme-blend (face alpha)
   "Blend FACE's foreground into the theme background by ALPHA."
@@ -288,6 +301,9 @@
 (use-package doom-modeline
   :demand t
   :init
+  (when (and (eq system-type 'android)
+             (not (suderman/nerd-fonts-available-p)))
+    (setq doom-modeline-icon nil))
   (setq doom-modeline-modal-icon nil
         doom-modeline-buffer-file-name-style 'relative-to-project
         doom-modeline-buffer-encoding 'nondefault)

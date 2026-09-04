@@ -7,7 +7,9 @@
 
 (require 'dired)
 (require 'dired-x)
+(require 'seq)
 (require 'use-package)
+(require 'suderman-appearance)
 (require 'suderman-buffers)
 (require 'suderman-windows)
 
@@ -63,6 +65,7 @@
 (declare-function meow-keypad "meow-keypad")
 (declare-function meow-mode "meow")
 (declare-function pdf-tools-install "pdf-tools")
+(declare-function android-browse-url "android-win")
 (declare-function which-key-show-keymap "which-key")
 
 (defun suderman/revert-buffer-no-confirm ()
@@ -228,7 +231,7 @@
   (dirvish-fd nil pattern))
 
 (defun suderman/dired-open ()
-  "Open the entry at point, delegating EPUB, audio, and video to the desktop."
+  "Open the entry at point, delegating EPUB, audio, and video to the system."
   (interactive)
   (let ((file (dired-get-file-for-visit)))
     (if (file-directory-p file)
@@ -238,11 +241,33 @@
         (if (and mime-type
                  (or (equal mime-type "application/epub+zip")
                      (string-match-p "\\`\\(?:audio\\|video\\)/" mime-type)))
-            (progn
+            (if (eq system-type 'android)
+                (progn
+                  (require 'browse-url)
+                  (android-browse-url (browse-url-file-url file)))
               (unless (executable-find "xdg-open")
                 (user-error "xdg-open is not installed"))
               (start-process "open-media" nil "xdg-open" file))
           (dired-find-file))))))
+
+(defun suderman/dirvish-quick-access-entries ()
+  "Return configured Dirvish destinations that exist on this device."
+  (seq-filter
+   (lambda (entry)
+     (file-directory-p (expand-file-name (nth 1 entry))))
+   '(("h" "~/" "Home")
+     ("d" "~/downloads/" "Downloads")
+     ("k" "~/desktop/" "Desktop")
+     ("b" "~/documents/" "Documents")
+     ("i" "~/pictures/" "Pictures")
+     ("v" "~/movies/" "Movies")
+     ("m" "~/music/" "Music")
+     ("g" "~/games/" "Games")
+     ("s" "~/src/" "Source")
+     ("n" "~/org/notes/markdown-vault/" "Notes")
+     ("c" "/etc/nixos/" "NixOS")
+     ("t" "/mnt/main/storage/" "Storage")
+     ("x" "/mnt/main/scratch/" "Scratch"))))
 
 (defun suderman/dired-mouse-open (event)
   "Open the Dired entry clicked in EVENT."
@@ -581,6 +606,7 @@
 
 (use-package pdf-tools
   :ensure nil
+  :if (not (eq system-type 'android))
   :demand t
   :config
   (pdf-tools-install))
@@ -588,9 +614,12 @@
 (use-package dirvish
   :demand t
   :init
-  (setq dired-listing-switches "-al --group-directories-first"
+  (setq dired-listing-switches
+        (if (eq system-type 'android) "-al" "-al --group-directories-first")
         dirvish-attributes
-        '(vc-state subtree-state nerd-icons collapse file-size)
+        (append '(vc-state subtree-state)
+                (when (suderman/nerd-fonts-available-p) '(nerd-icons))
+                '(collapse file-size))
         dirvish-default-layout '(1 0.125 0.5)
         dirvish-mode-line-format
         '(:left (suderman-dashboard suderman-dirvish suderman-ibuffer
@@ -600,22 +629,11 @@
         dirvish-preview-dispatchers
         '(video image gif audio epub archive font pdf)
         dirvish-peek-key '(:debounce 0.2 any)
-        dirvish-quick-access-entries
-        '(("h" "~/" "Home")
-          ("d" "~/downloads/" "Downloads")
-          ("k" "~/desktop/" "Desktop")
-          ("b" "~/documents/" "Documents")
-          ("i" "~/pictures/" "Pictures")
-          ("v" "~/movies/" "Movies")
-          ("m" "~/music/" "Music")
-          ("g" "~/games/" "Games")
-          ("s" "~/src/" "Source")
-          ("n" "~/org/notes/markdown-vault/" "Notes")
-          ("c" "/etc/nixos/" "NixOS")
-          ("t" "/mnt/main/storage/" "Storage")
-          ("x" "/mnt/main/scratch/" "Scratch"))
+        dirvish-quick-access-entries (suderman/dirvish-quick-access-entries)
         dirvish-side-attributes
-        '(vc-state subtree-state nerd-icons collapse)
+        (append '(vc-state subtree-state)
+                (when (suderman/nerd-fonts-available-p) '(nerd-icons))
+                '(collapse))
         dirvish-side-mode-line-format
         '(:left (path) :right (index))
         dirvish-use-mode-line 'global)
@@ -772,6 +790,7 @@
 
 (use-package kitty-graphics
   :ensure nil
+  :if (not (eq system-type 'android))
   :after dirvish
   :demand t
   :init

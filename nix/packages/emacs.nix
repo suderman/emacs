@@ -10,7 +10,7 @@
     fileset = lib.fileset.unions [
       ../../early-init.el
       ../../init.el
-      ../../lisp
+      (lib.fileset.fileFilter (file: file.hasExt "el") ../../lisp)
       ../../assets
     ];
   };

@@ -8,6 +8,7 @@
 (require 'use-package)
 (require 'nerd-icons)
 (require 'subr-x)
+(require 'suderman-appearance)
 (require 'suderman-files)
 
 (declare-function dashboard-open "dashboard")
@@ -111,6 +112,44 @@
   (interactive (list (- last-command-event ?1)))
   (funcall (nth 3 (nth index (car dashboard-navigator-buttons)))))
 
+(defun suderman/dashboard-destinations ()
+  "Return pinned Dashboard destinations that exist on this device."
+  (let ((entries
+         `((nerd-icons-mdicon "nf-md-home" "Home"
+            "Open home directory" "~/")
+           (nerd-icons-sucicon "nf-custom-orgmode" "Org"
+            "Open Org directory" "~/org/")
+           (nerd-icons-mdicon "nf-md-account" "Personal"
+            "Open personal source" "~/src/suderman/")
+           (nerd-icons-mdicon "nf-md-briefcase" "Work"
+            "Open work source" "~/src/nonfiction/")
+           (nerd-icons-sucicon "nf-custom-emacs" "Emacs"
+            "Open Emacs configuration" ,user-emacs-directory)
+           (nerd-icons-mdicon "nf-md-nix" "NixOS"
+            "Open NixOS configuration" "/etc/nixos/")
+           (nerd-icons-mdicon "nf-md-folder_cog" "Config"
+            "Open config directory" "~/.config/")
+           (nerd-icons-mdicon "nf-md-note_edit" "Scratch"
+            "Open scratch buffer" scratch)))
+        (index 0))
+    (delq
+     nil
+     (mapcar
+      (lambda (entry)
+        (let ((target (nth 4 entry)))
+          (when (or (eq target 'scratch)
+                    (file-directory-p (expand-file-name target)))
+            (setq index (1+ index))
+            (list (if (suderman/nerd-fonts-available-p)
+                      (funcall (nth 0 entry) (nth 1 entry))
+                    (nth 2 entry))
+                  (number-to-string index)
+                  (nth 3 entry)
+                  (if (eq target 'scratch)
+                      (lambda (&rest _) (scratch-buffer))
+                    (lambda (&rest _) (suderman/dirvish target)))))))
+      entries))))
+
 (use-package dashboard
   :demand t
   :init
@@ -129,36 +168,15 @@
                                     dashboard-insert-newline
                                     dashboard-insert-items)
         dashboard-navigator-buttons
-        `(((,(nerd-icons-mdicon "nf-md-home") "1" "Open home directory"
-             (lambda (&rest _)
-               (suderman/dirvish "~/")))
-           (,(nerd-icons-sucicon "nf-custom-orgmode") "2" "Open Org directory"
-            (lambda (&rest _)
-              (suderman/dirvish "~/org/")))
-           (,(nerd-icons-mdicon "nf-md-account") "3" "Open personal source"
-            (lambda (&rest _)
-              (suderman/dirvish "~/src/suderman/")))
-           (,(nerd-icons-mdicon "nf-md-briefcase") "4" "Open work source"
-            (lambda (&rest _)
-              (suderman/dirvish "~/src/nonfiction/")))
-           (,(nerd-icons-sucicon "nf-custom-emacs") "5" "Open Emacs configuration"
-            (lambda (&rest _)
-              (suderman/dirvish user-emacs-directory)))
-           (,(nerd-icons-mdicon "nf-md-nix") "6" "Open NixOS configuration"
-            (lambda (&rest _)
-              (suderman/dirvish "/etc/nixos/")))
-           (,(nerd-icons-mdicon "nf-md-folder_cog") "7" "Open config directory"
-            (lambda (&rest _)
-              (suderman/dirvish "~/.config/")))
-           (,(nerd-icons-mdicon "nf-md-note_edit") "8" "Open scratch buffer"
-            (lambda (&rest _)
-              (scratch-buffer))))))
+        (list (suderman/dashboard-destinations)))
   :config
   (setq initial-buffer-choice #'dashboard-open)
   (add-hook 'dashboard-mode-hook #'suderman/dashboard-setup)
   (dolist (key '("h" "j" "k" "l"))
     (keymap-set dashboard-mode-map key #'suderman/dashboard-move))
-  (dotimes (index 8)
+  (dotimes (index 9)
+    (keymap-unset dashboard-mode-map (number-to-string (1+ index)) t))
+  (dotimes (index (length (car dashboard-navigator-buttons)))
     (keymap-set dashboard-mode-map (number-to-string (1+ index))
                 #'suderman/dashboard-open-destination))
   (keymap-set dashboard-mode-map "SPC" #'meow-keypad)
