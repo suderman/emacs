@@ -91,8 +91,9 @@ any installed Emacs certificate, then asks before installing or updating:
 #+end_src
 
 After Android verifies the installation, the installer discovers the app data
-directory with =run-as org.gnu.emacs pwd=. It checks that Termux Git runs from
-the Emacs app context before offering to clone or update this repository at
+directory with =run-as org.gnu.emacs pwd=. It installs any missing pinned Nerd
+Font files under =$HOME/fonts=, then checks that Termux Git runs from the Emacs
+app context before offering to clone or update this repository at
 =$HOME/.config/emacs=. A managed checkout must have =init.el=, a clean worktree,
 the expected GitHub origin, a resolvable HEAD, and no local divergence. Updates
 use =git pull --ff-only= and report the resulting commit.
@@ -184,6 +185,11 @@ The Android module adds Termux's binary directory to =PATH= and =exec-path=.
 Keep =LD_LIBRARY_PATH= unset. Check the connection with =(executable-find
 "git")=, =(executable-find "rg")=, and =(executable-find "fd")=.
 
+Android stores Emacs's bundled data under the virtual =/assets= tree, which an
+external GPG process cannot read. The package bootstrap copies the bundled GNU
+ELPA keyring to a temporary physical file for import and deletes it afterward.
+Package signature verification stays enabled.
+
 Android keeps the portable editing core: Meow, completion, Org, Magit,
 Dashboard, Dired and Dirvish, Markdown, and Image mode. Ghostel, Nix
 tree-sitter integration, automatic formatting, Pi, PDF Tools, and Kitty graphics
@@ -193,17 +199,24 @@ app chooser.
 
 ** Fonts and input
 
-On first startup, Emacs offers to download the three Nerd Font files used by
-the desktop configuration. It downloads immutable Nerd Fonts 3.4.0 files,
-checks their SHA-256 hashes, and installs them under =$HOME/fonts=. Restart
-Emacs after installation because Android scans that directory only at process
-startup. If a download fails or is declined, the config uses the Android system
-font and text labels instead of icon glyphs. Retry with =M-x
-suderman/android-install-fonts=.
+Before the launch prompt, the installer automatically downloads any missing
+Nerd Fonts 3.4.0 files used by the desktop configuration. It checks their
+SHA-256 hashes before and after transfer, stages the complete set, and only then
+moves them under =$HOME/fonts=. Existing font files are never overwritten. A
+failure leaves no partially installed set and does not invalidate the APK or
+configuration setup. Fix the reported network or host-tool problem and rerun
+=./android/install.sh=. Until then, the config uses the Android system font and
+text labels instead of icon glyphs. Android scans =$HOME/fonts= at process
+startup, so restart an already-running Emacs after a standalone setup retry.
+
+Android uses an 18 point default font while desktop frames remain at 11 points.
+The default face carries that size into ordinary buffers, modelines, and
+minibuffers.
 
 The bottom toolbar supplies Escape, Tab, Ctrl, and Meta. Volume Down applies
 Ctrl to the next key, and Volume Up applies Meta. Press Volume Down then Volume
-Up for Escape, or Volume Up then Volume Down for Tab.
+Up for Escape, or Volume Up then Volume Down for Tab. The toolbar Escape button
+calls Meow's insert-exit command directly.
 
 * Nix and mutability
 
@@ -540,7 +553,7 @@ Dirvish.
 | [[file:early-init.el][early-init.el]]                 | Process-level startup and frame defaults         |
 | [[file:init.el][init.el]]                       | Boring dependency-ordered module loader          |
 | =lisp/suderman-paths.el=        | XDG state paths                                  |
-| =lisp/suderman-android.el=      | Android paths, input toolbar, and font installer |
+| =lisp/suderman-android.el=      | Android paths and input toolbar                  |
 | =lisp/suderman-packages.el=     | =package.el= and =use-package= bootstrap          |
 | =lisp/suderman-defaults.el=     | Small built-in behavior changes                  |
 | =lisp/suderman-appearance.el=   | Fonts, faces, modeline, and visual guides        |

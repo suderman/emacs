@@ -5,6 +5,12 @@ set -uo pipefail
 readonly emacs_package="org.gnu.emacs"
 readonly config_origin="https://github.com/suderman/emacs.git"
 readonly termux_git="${TERMACS_TERMUX_GIT:-/data/data/com.termux/files/usr/bin/git}"
+readonly nerd_fonts_revision="fa7b859994228a9c8759f99c55a8d31ee92a1b5e"
+readonly -a android_fonts=(
+  "JetBrainsMonoNerdFontMono-Regular.ttf|patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFontMono-Regular.ttf|f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c"
+  "JetBrainsMonoNerdFontMono-Bold.ttf|patched-fonts/JetBrainsMono/Ligatures/Bold/JetBrainsMonoNerdFontMono-Bold.ttf|5bdd4a873f3cd32f882d2c55545089123926e27707d5880fc9eaf84eb01b6686"
+  "SymbolsNerdFontMono-Regular.ttf|patched-fonts/NerdFontsSymbolsOnly/SymbolsNerdFontMono-Regular.ttf|f0f624d9b474bea1662cf7e862d44aebe1ae1f6c7f9cb7a0ca5d0e5ac9561c60"
+)
 
 device="${1:-}"
 emacs_home=""
@@ -32,6 +38,101 @@ emacs_shell() {
 
 emacs_git() {
   emacs_shell env -u LD_LIBRARY_PATH HOME="$emacs_home" "$termux_git" "$@"
+}
+
+install_android_fonts() {
+  local font_directory="$emacs_home/fonts"
+  local host_directory spec name path checksum url download staging final digest
+  local problem=""
+  local -a missing=() staged=() installed=()
+
+  for spec in "${android_fonts[@]}"; do
+    IFS='|' read -r name path checksum <<< "$spec"
+    if ! emacs_shell test -e "$font_directory/$name"; then
+      missing+=("$spec")
+    fi
+  done
+  if (( ${#missing[@]} == 0 )); then
+    printf '%s\n' "Android Nerd Fonts are already installed."
+    return 0
+  fi
+  if ! command -v curl >/dev/null 2>&1 ||
+    ! command -v sha256sum >/dev/null 2>&1; then
+    printf '%s\n' "Font setup failed: host curl and sha256sum are required." >&2
+    return 1
+  fi
+  host_directory="$(mktemp -d)" || {
+    printf '%s\n' "Font setup failed: could not create a host staging directory." >&2
+    return 1
+  }
+  if ! emacs_shell mkdir -p -- "$font_directory"; then
+    problem="could not create $font_directory"
+  fi
+
+  for spec in "${missing[@]}"; do
+    [[ -z $problem ]] || break
+    IFS='|' read -r name path checksum <<< "$spec"
+    url="https://raw.githubusercontent.com/ryanoasis/nerd-fonts/$nerd_fonts_revision/$path"
+    download="$host_directory/$name"
+    staging="$font_directory/.$name.installer-$$"
+    if emacs_shell test -e "$staging"; then
+      problem="device staging path already exists: $staging"
+    elif ! curl --fail --location --silent --show-error \
+      --output "$download" "$url"; then
+      problem="download failed for $name"
+    else
+      digest="$(sha256sum "$download")" || problem="could not hash $name"
+      digest="${digest%% *}"
+      if [[ -z $problem && $digest != "$checksum" ]]; then
+        problem="checksum mismatch for $name"
+      elif [[ -z $problem ]]; then
+        staged+=("$staging")
+        # shellcheck disable=SC2016 # $1 expands in the device shell.
+        if ! emacs_shell sh -c 'cat > "$1"' sh "$staging" < "$download"; then
+          problem="could not transfer $name"
+        else
+          digest="$(emacs_shell cat "$staging" | sha256sum)" ||
+            problem="could not verify the transferred $name"
+          digest="${digest%% *}"
+          if [[ -z $problem && $digest != "$checksum" ]]; then
+            problem="transferred checksum mismatch for $name"
+          fi
+        fi
+      fi
+    fi
+  done
+
+  if [[ -z $problem ]]; then
+    for spec in "${missing[@]}"; do
+      IFS='|' read -r name path checksum <<< "$spec"
+      staging="$font_directory/.$name.installer-$$"
+      final="$font_directory/$name"
+      if emacs_shell test -e "$final"; then
+        problem="font appeared during setup and was not overwritten: $final"
+        break
+      elif ! emacs_shell mv -- "$staging" "$final"; then
+        problem="could not install $name"
+        break
+      fi
+      installed+=("$final")
+    done
+  fi
+
+  rm -rf -- "$host_directory"
+  if [[ -n $problem ]]; then
+    for final in "${installed[@]}"; do
+      emacs_shell rm -f -- "$final" >/dev/null 2>&1 || true
+    done
+    for staging in "${staged[@]}"; do
+      emacs_shell rm -f -- "$staging" >/dev/null 2>&1 || true
+    done
+    printf 'Font setup failed: %s. Configuration setup will continue.\n' \
+      "$problem" >&2
+    return 1
+  fi
+
+  printf 'Installed %d verified Nerd Font files at %s\n' \
+    "${#installed[@]}" "$font_directory"
 }
 
 print_manual_setup() {
@@ -298,6 +399,8 @@ main() {
     return 0
   fi
   printf 'Discovered Emacs home: %s\n' "$emacs_home"
+
+  install_android_fonts || true
 
   if ! emacs_git --version >/dev/null 2>&1; then
     print_manual_setup "Termux Git is unavailable from the Emacs app context"

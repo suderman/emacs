@@ -17,9 +17,12 @@
 (declare-function suderman/ibuffer-toggle "suderman-buffers")
 
 (defconst suderman/font-family "JetBrainsMono Nerd Font Mono")
-(defconst suderman/font-size 11)
 (defconst suderman/nerd-symbol-font "Symbols Nerd Font Mono")
 (defconst suderman/background-opacity 90)
+
+(defun suderman/default-font-size ()
+  "Return the platform's default font size in points."
+  (if (eq system-type 'android) 18 11))
 
 (defun suderman/nerd-fonts-available-p (&optional frame)
   "Return non-nil when FRAME can display the configured Nerd Fonts."
@@ -63,13 +66,20 @@
   (advice-add 'base16-theme-set-faces :around
               #'suderman/base16-theme-set-faces-without-gnus-cycles))
 
+(defun suderman/apply-default-font ()
+  "Apply the platform font fallback unless Stylix already owns it."
+  (unless (memq 'base16-stylix custom-enabled-themes)
+    (if (suderman/nerd-fonts-available-p)
+        (set-face-attribute 'default nil :font
+                            (font-spec :family suderman/font-family
+                                       :size (suderman/default-font-size)))
+      (when (eq system-type 'android)
+        (set-face-attribute 'default nil
+                            :height (* 10 (suderman/default-font-size)))))))
+
 ;; Stylix's default.el loads after init.el and replaces this fallback when
 ;; enabled.  Avoid overriding it on systems where it loads earlier instead.
-(when (and (not (memq 'base16-stylix custom-enabled-themes))
-           (suderman/nerd-fonts-available-p))
-  (set-face-attribute 'default nil :font
-                      (font-spec :family suderman/font-family
-                                 :size suderman/font-size)))
+(suderman/apply-default-font)
 
 (defun suderman/set-nerd-font-fallbacks ()
   "Teach Emacs where Nerd Font private-use icons live."

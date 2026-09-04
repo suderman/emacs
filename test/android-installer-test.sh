@@ -9,6 +9,11 @@ real_git="$(command -v git)"
 test_bash="$(command -v bash)"
 test_root="$(mktemp -d)"
 tests_run=0
+font_names=(
+  JetBrainsMonoNerdFontMono-Regular.ttf
+  JetBrainsMonoNerdFontMono-Bold.ttf
+  SymbolsNerdFontMono-Regular.ttf
+)
 
 cleanup() {
   rm -rf -- "$test_root"
@@ -108,9 +113,62 @@ fi
 exec "$REAL_GIT" "$@"
 EOF
 
-  chmod +x "$fake_bin/run-as" "$fake_bin/gum" "$fake_bin/git"
+  cat > "$fake_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+destination=""
+url=""
+while (( $# )); do
+  case "$1" in
+    --output)
+      destination="$2"
+      shift 2
+      ;;
+    --*) shift ;;
+    *)
+      url="$1"
+      shift
+      ;;
+  esac
+done
+[[ -n $destination && -n $url ]]
+printf '%s' "$url" > "$destination"
+EOF
+
+  cat > "$fake_bin/sha256sum" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if (( $# )); then
+  content="$(<"$1")"
+  label="$1"
+else
+  content="$(cat)"
+  label="-"
+fi
+case "$content" in
+  *JetBrainsMonoNerdFontMono-Regular.ttf)
+    checksum=f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c
+    ;;
+  *JetBrainsMonoNerdFontMono-Bold.ttf)
+    checksum=5bdd4a873f3cd32f882d2c55545089123926e27707d5880fc9eaf84eb01b6686
+    ;;
+  *SymbolsNerdFontMono-Regular.ttf)
+    checksum=f0f624d9b474bea1662cf7e862d44aebe1ae1f6c7f9cb7a0ca5d0e5ac9561c60
+    ;;
+  *) exit 1 ;;
+esac
+if [[ ${FAKE_BAD_FONT_CHECKSUM:-0} == 1 && $content == *SymbolsNerdFontMono* ]]; then
+  checksum=bad
+fi
+printf '%s  %s\n' "$checksum" "$label"
+EOF
+
+  chmod +x "$fake_bin/run-as" "$fake_bin/gum" "$fake_bin/git" \
+    "$fake_bin/curl" "$fake_bin/sha256sum"
   cp "$fake_adb" "$fake_bin/adb"
-  sed -i "1c #!$test_bash" "$fake_bin/run-as" "$fake_bin/gum" "$fake_bin/git" "$fake_bin/adb"
+  sed -i "1c #!$test_bash" \
+    "$fake_bin/run-as" "$fake_bin/gum" "$fake_bin/git" "$fake_bin/curl" \
+    "$fake_bin/sha256sum" "$fake_bin/adb"
   chmod +x "$fake_bin/adb"
 
   export PATH="$fake_bin:$PATH"
@@ -123,7 +181,8 @@ EOF
   export REAL_GIT="$real_git"
   export TERMACS_TERMUX_GIT="$fake_bin/git"
   export TERMACS_TIMESTAMP="20260904-120000"
-  unset FAKE_FAIL_CLONE FAKE_FAIL_FINAL_VERIFY FAKE_RUN_AS_UNAVAILABLE
+  unset FAKE_BAD_FONT_CHECKSUM FAKE_FAIL_CLONE FAKE_FAIL_FINAL_VERIFY \
+    FAKE_RUN_AS_UNAVAILABLE
 }
 
 run_setup() {
@@ -148,6 +207,37 @@ test_fresh_clone() {
   [[ $("$real_git" -C "$emacs_home/.config/emacs" remote get-url origin) == "$FAKE_EXPECTED_ORIGIN" ]] ||
     fail "fresh clone has wrong origin"
   assert_output "Configuration HEAD:"
+  for font in "${font_names[@]}"; do
+    assert_exists "$emacs_home/fonts/$font"
+  done
+}
+
+test_existing_font_is_not_overwritten() {
+  new_case existing-font
+  mkdir -p "$emacs_home/fonts"
+  printf '%s' custom > "$emacs_home/fonts/${font_names[0]}"
+  run_setup
+  [[ $(<"$emacs_home/fonts/${font_names[0]}") == custom ]] ||
+    fail "existing font was overwritten"
+  assert_exists "$emacs_home/fonts/${font_names[1]}"
+  assert_exists "$emacs_home/fonts/${font_names[2]}"
+}
+
+test_bad_font_checksum_rolls_back() {
+  local -a staging_files
+
+  new_case bad-font-checksum
+  export FAKE_BAD_FONT_CHECKSUM=1
+  run_setup
+  for font in "${font_names[@]}"; do
+    assert_absent "$emacs_home/fonts/$font"
+  done
+  staging_files=("$emacs_home"/fonts/.*.installer-*)
+  if [[ -e ${staging_files[0]} ]]; then
+    fail "failed font setup left staging files"
+  fi
+  assert_exists "$emacs_home/.config/emacs/init.el"
+  assert_output "Font setup failed"
 }
 
 test_legacy_migration_and_timestamp() {
@@ -269,6 +359,8 @@ test_run_as_unavailable() {
 
 for test_name in \
   test_fresh_clone \
+  test_existing_font_is_not_overwritten \
+  test_bad_font_checksum_rolls_back \
   test_legacy_migration_and_timestamp \
   test_clone_failure_rollback \
   test_verification_failure_rollback \

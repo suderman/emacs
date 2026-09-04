@@ -8,6 +8,27 @@
 
 (require 'package)
 
+(defun suderman/package-import-keyring-from-android-assets
+    (function &optional file)
+  "Call FUNCTION with a physical copy when Android keyring FILE is an asset."
+  (if (and (eq system-type 'android)
+           file
+           (string-match-p "\\`/assets/" (expand-file-name file)))
+      (let ((temporary (make-temp-file "package-keyring-")))
+        (unwind-protect
+            (progn
+              ;; Android assets are visible to Emacs but not external GPG.
+              (copy-file file temporary t)
+              (funcall function temporary))
+          (ignore-errors (delete-file temporary))))
+    (funcall function file)))
+
+(when (eq system-type 'android)
+  (advice-remove 'package-import-keyring
+                 #'suderman/package-import-keyring-from-android-assets)
+  (advice-add 'package-import-keyring :around
+              #'suderman/package-import-keyring-from-android-assets))
+
 (setq package-archives
       '(("gnu"    . "https://elpa.gnu.org/packages/")
         ("nongnu" . "https://elpa.nongnu.org/nongnu/")

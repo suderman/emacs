@@ -4,38 +4,25 @@
 (require 'ert)
 (require 'suderman-android)
 
-(ert-deftest suderman/android-font-install-verifies-before-committing ()
-  (let* ((directory (make-temp-file "suderman-android-fonts-" t))
-         (suderman/android-font-directory directory)
-         (content "verified font")
-         (checksum (secure-hash 'sha256 content))
-         (suderman/android-fonts
-          `(("font.ttf" . ("https://example.test/font.ttf" ,checksum)))))
-    (unwind-protect
-        (cl-letf (((symbol-function 'url-copy-file)
-                   (lambda (_url destination &optional _ok-if-exists)
-                     (with-temp-file destination (insert content)))))
-          (suderman/android-install-fonts)
-          (should (equal
-                   (with-temp-buffer
-                     (insert-file-contents (expand-file-name "font.ttf" directory))
-                     (buffer-string))
-                   content)))
-      (delete-directory directory t))))
-
-(ert-deftest suderman/android-font-install-rejects-a-bad-download ()
-  (let* ((directory (make-temp-file "suderman-android-fonts-" t))
-         (suderman/android-font-directory directory)
-         (suderman/android-fonts
-          '(("font.ttf" . ("https://example.test/font.ttf" "wrong")))))
-    (unwind-protect
-        (cl-letf (((symbol-function 'url-copy-file)
-                   (lambda (_url destination &optional _ok-if-exists)
-                     (with-temp-file destination (insert "corrupt")))))
-          (suderman/android-install-fonts)
-          (should-not (file-exists-p (expand-file-name "font.ttf" directory)))
-          (should (null (directory-files directory nil "\\`\\.font" t))))
-      (delete-directory directory t))))
+(ert-deftest suderman/android-toolbar-is-bottom-and-escape-exits-insert ()
+  (let ((tool-bar-map (make-sparse-keymap))
+        (input-decode-map (make-sparse-keymap))
+        customizations)
+    (cl-letf (((symbol-function 'modifier-bar-mode) #'ignore)
+              ((symbol-function 'customize-set-variable)
+               (lambda (symbol value)
+                 (push (list symbol value) customizations)))
+              ((symbol-function 'tool-bar--image-expression)
+               (lambda (&rest _) 'image))
+              ((symbol-function 'tool-bar--flush-cache) #'ignore)
+              ((symbol-function 'tool-bar-mode) #'ignore)
+              ((symbol-function 'force-mode-line-update) #'ignore))
+      (suderman/android-setup-tool-bar)
+      (should (member '(tool-bar-position bottom) customizations))
+      (should (eq (lookup-key tool-bar-map [suderman-escape])
+                  'meow-insert-exit))
+      (should-not
+       (lookup-key input-decode-map [tool-bar suderman-escape])))))
 
 (ert-deftest suderman/android-volume-buttons-support-modifiers-and-chords ()
   (cl-letf (((symbol-function 'read-event) (lambda (&rest _) 'volume-up)))
