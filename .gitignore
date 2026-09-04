@@ -77,3 +77,7 @@ local.el
 .DS_Store
 Thumbs.db
 .cache/
+
+# Android package output
+*.apk
+/result-android

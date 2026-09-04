@@ -1,5 +1,5 @@
 #+title: suderman/emacs 🐈
-#+subtitle: My Emacs 31 configuration, packaged with Nix
+#+subtitle: My Emacs 31 configuration for NixOS and Android
 #+author: Jon Suderman
 #+options: toc:2 num:nil
 #+startup: content
@@ -55,6 +55,93 @@ package.
 
 The flake exposes =x86_64-linux= and =aarch64-linux= packages. I use and test
 the x86_64 build.
+
+* Android
+
+The same checkout also runs in native graphical GNU Emacs on Android. The APK
+is signed with the public certificate used by official Termux GitHub releases,
+so Android grants Emacs the APK's =com.termux= shared UID and Emacs can execute
+programs under =/data/data/com.termux/files/usr/bin=.
+
+The Android build currently targets Emacs 31.0.50, Android API 35 or newer, and
+=arm64-v8a=. Build it on x86_64 Linux with:
+
+#+begin_src sh
+nix build .#emacs-android --out-link result-android
+#+end_src
+
+The result is
+=result-android/emacs-31.0.50-35-arm64-v8a-termux.apk=. The flake checks the
+package, version, minimum and target APIs, shared UID, ABI, certificate,
+manifest, and 16 KiB ZIP alignment. The Android tools are also available in:
+
+#+begin_src sh
+nix develop .#android
+#+end_src
+
+** Guided installation
+
+The installer builds and verifies the APK, waits for exactly one authorized
+phone, checks its API, ABI, active profile, installed Termux certificate, and
+any installed Emacs certificate, then asks before installing or updating:
+
+#+begin_src sh
+./android/install.sh
+#+end_src
+
+It never installs, removes, re-signs, or changes Termux or its plugins. It also
+refuses to replace an Emacs app signed with another certificate and refuses a
+downgrade.
+
+Official Termux GitHub releases use a public test key. This APK must use that
+same key to join Termux's shared UID. The expected certificate SHA-256 is:
+
+#+begin_example
+B6:DA:01:48:0E:EF:D5:FB:F2:CD:37:71:B8:D1:02:1E:
+C7:91:30:4B:DD:6C:4B:F4:1D:3F:AA:BA:D4:8E:E5:E1
+#+end_example
+
+The key is not secret. Anyone can forge updates signed with it, so only install
+an APK built from sources you trust. GitHub and F-Droid Termux builds use
+different signing identities. Stop if the installed certificate does not match;
+do not replace or uninstall Termux to work around it.
+
+** Install the configuration
+
+The APK installer does not copy this repository. In a shell running inside
+Android Emacs, clone it as the app's XDG configuration:
+
+#+begin_src sh
+mkdir -p "$HOME/.config"
+/data/data/com.termux/files/usr/bin/git clone \
+  https://github.com/suderman/emacs "$HOME/.config/emacs"
+#+end_src
+
+Restart Emacs after cloning. The Android module adds Termux's binary directory
+to =PATH= and =exec-path=. Keep =LD_LIBRARY_PATH= unset. Check the connection
+with =(executable-find "git")=, =(executable-find "rg")=, and
+=(executable-find "fd")=.
+
+Android keeps the portable editing core: Meow, completion, Org, Magit,
+Dashboard, Dired and Dirvish, Markdown, and Image mode. Ghostel, Nix
+tree-sitter integration, automatic formatting, Pi, PDF Tools, and Kitty graphics
+remain desktop-only. Dashboard and Dirvish only show destinations present on
+the current device. EPUB, audio, and video files open through Android's native
+app chooser.
+
+** Fonts and input
+
+On first startup, Emacs offers to download the three Nerd Font files used by
+the desktop configuration. It downloads immutable Nerd Fonts 3.4.0 files,
+checks their SHA-256 hashes, and installs them under =$HOME/fonts=. Restart
+Emacs after installation because Android scans that directory only at process
+startup. If a download fails or is declined, the config uses the Android system
+font and text labels instead of icon glyphs. Retry with =M-x
+suderman/android-install-fonts=.
+
+The bottom toolbar supplies Escape, Tab, Ctrl, and Meta. Volume Down applies
+Ctrl to the next key, and Volume Up applies Meta. Press Volume Down then Volume
+Up for Escape, or Volume Up then Volume Down for Tab.
 
 * Nix and mutability
 
@@ -385,11 +472,13 @@ Dirvish.
 | Path                            | Role                                             |
 |---------------------------------+--------------------------------------------------|
 | [[file:flake.nix][flake.nix]]                       | Flake inputs and Blueprint outputs               |
-| =nix/=                          | Blueprint package, checks, and Emacs patch       |
+| =nix/=                          | Desktop and Android packages, shells, and checks |
+| =android/install.sh=            | Guided Android APK installer                     |
 | =assets/=                       | Dashboard and Markdown preview assets            |
 | [[file:early-init.el][early-init.el]]                 | Process-level startup and frame defaults         |
 | [[file:init.el][init.el]]                       | Boring dependency-ordered module loader          |
 | =lisp/suderman-paths.el=        | XDG state paths                                  |
+| =lisp/suderman-android.el=      | Android paths, input toolbar, and font installer |
 | =lisp/suderman-packages.el=     | =package.el= and =use-package= bootstrap          |
 | =lisp/suderman-defaults.el=     | Small built-in behavior changes                  |
 | =lisp/suderman-appearance.el=   | Fonts, faces, modeline, and visual guides        |

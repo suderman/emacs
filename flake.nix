@@ -11,14 +11,32 @@
     kitty-graphics.flake = false;
   };
 
-  outputs = inputs: let
-    blueprint = inputs.blueprint {
-      inherit inputs;
-      prefix = "nix";
-      systems = ["x86_64-linux" "aarch64-linux"];
-      nixpkgs.overlays = [inputs.emacs-overlay.overlays.default];
+  outputs =
+    inputs:
+    let
+      blueprint = inputs.blueprint {
+        inherit inputs;
+        prefix = "nix";
+        systems = [
+          "x86_64-linux"
+          "aarch64-linux"
+        ];
+        nixpkgs.overlays = [ inputs.emacs-overlay.overlays.default ];
+        nixpkgs.config = {
+          android_sdk.accept_license = true;
+          allowUnfreePredicate =
+            package:
+            builtins.elem (inputs.nixpkgs.lib.getName package) [
+              "android-sdk-build-tools"
+              "build-tools"
+            ];
+        };
+      };
+    in
+    {
+      inherit (blueprint) checks packages;
+      devShells = inputs.nixpkgs.lib.mapAttrs (
+        system: shells: if system == "x86_64-linux" then shells else removeAttrs shells [ "android" ]
+      ) blueprint.devShells;
     };
-  in {
-    inherit (blueprint) checks packages;
-  };
 }
