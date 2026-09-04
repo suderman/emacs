@@ -71,6 +71,7 @@ private.el
 local.el
 .env
 .env.*
+.direnv/
 
 # OS/editor junk
 .plans/
