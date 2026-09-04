@@ -72,8 +72,9 @@ nix build .#emacs-android --out-link result-android
 
 The result is
 =result-android/emacs-31.0.50-35-arm64-v8a-termux.apk=. The flake checks the
-package, version, minimum and target APIs, shared UID, ABI, certificate,
-manifest, and 16 KiB ZIP alignment. The Android tools are also available in:
+package, version, minimum and target APIs, shared UID, debuggable manifest flag,
+ABI, certificate, unchanged manifest, and 16 KiB ZIP alignment. The Android
+tools are also available in:
 
 #+begin_src sh
 nix develop .#android
@@ -89,9 +90,18 @@ any installed Emacs certificate, then asks before installing or updating:
 ./android/install.sh
 #+end_src
 
-It never installs, removes, re-signs, or changes Termux or its plugins. It also
-refuses to replace an Emacs app signed with another certificate and refuses a
-downgrade.
+After Android verifies the installation, the installer discovers the app data
+directory with =run-as org.gnu.emacs pwd=. It checks that Termux Git runs from
+the Emacs app context before offering to clone or update this repository at
+=$HOME/.config/emacs=. A managed checkout must have =init.el=, a clean worktree,
+the expected GitHub origin, a resolvable HEAD, and no local divergence. Updates
+use =git pull --ff-only= and report the resulting commit.
+
+Every configuration change needs explicit confirmation. The launch prompt
+appears afterward, whether setup succeeds, is declined, or needs manual repair.
+The installer never installs, removes, re-signs, or changes Termux or its
+plugins. It also refuses to replace an Emacs app signed with another certificate
+and refuses a downgrade.
 
 Official Termux GitHub releases use a public test key. This APK must use that
 same key to join Termux's shared UID. The expected certificate SHA-256 is:
@@ -108,19 +118,71 @@ do not replace or uninstall Termux to work around it.
 
 ** Install the configuration
 
-The APK installer does not copy this repository. In a shell running inside
-Android Emacs, clone it as the app's XDG configuration:
+For a fresh install, the installer clones into an installer-owned temporary
+directory and verifies it before moving it to =$HOME/.config/emacs=. It refuses
+non-Git, nonempty, dirty, divergent, or wrong-origin targets without changing
+them.
+
+Emacs checks =$HOME/.emacs.d= before the XDG configuration. If that legacy path
+remains, =$HOME/.config/emacs= will not load. The installer explains this and
+asks before moving the directory to:
+
+#+begin_example
+$HOME/.local/state/emacs/legacy-emacs.d-YYYYMMDD-HHMMSS
+#+end_example
+
+It never deletes the legacy directory. During a fresh migration, cloning and
+initial verification finish before the legacy directory moves. If a later move
+or verification fails, the installer removes only its temporary or newly
+installed checkout and restores =$HOME/.emacs.d=. With an existing managed
+checkout, it updates first and asks separately before moving the legacy path.
+
+If =run-as= or Termux Git is unavailable, setup is declined, or the target is
+unsafe, the successful APK installation stands and the installer prints manual
+recovery commands. Termux and Emacs share a UID, but they have different
+=$HOME= values. Use the absolute Emacs home printed by the installer when
+running the fallback from Termux. If =run-as= cannot discover it, open =M-x
+shell= in Emacs and use =$HOME= there.
+
+The complete fallback is:
 
 #+begin_src sh
-mkdir -p "$HOME/.config"
-/data/data/com.termux/files/usr/bin/git clone \
-  https://github.com/suderman/emacs "$HOME/.config/emacs"
+set -eu
+EMACS_HOME='/path/printed/by/the/installer'
+GIT=/data/data/com.termux/files/usr/bin/git
+CONFIG="$EMACS_HOME/.config/emacs"
+ORIGIN=https://github.com/suderman/emacs.git
+
+mkdir -p "$EMACS_HOME/.config"
+if [ -d "$CONFIG/.git" ]; then
+  test -z "$("$GIT" -C "$CONFIG" status --porcelain)"
+  case "$("$GIT" -C "$CONFIG" remote get-url origin)" in
+    https://github.com/suderman/emacs|https://github.com/suderman/emacs.git) ;;
+    *) printf '%s\n' "Refusing unexpected origin" >&2; exit 1 ;;
+  esac
+  "$GIT" -C "$CONFIG" pull --ff-only
+elif [ -e "$CONFIG" ]; then
+  printf '%s\n' "Refusing existing non-Git target: $CONFIG" >&2
+  exit 1
+else
+  "$GIT" clone "$ORIGIN" "$CONFIG"
+fi
+test -f "$CONFIG/init.el"
+test -z "$("$GIT" -C "$CONFIG" status --porcelain)"
+"$GIT" -C "$CONFIG" rev-parse --verify HEAD
+
+if [ -e "$EMACS_HOME/.emacs.d" ]; then
+  BACKUP="$EMACS_HOME/.local/state/emacs/legacy-emacs.d-$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$EMACS_HOME/.local/state/emacs"
+  mv "$EMACS_HOME/.emacs.d" "$BACKUP"
+  printf 'Legacy configuration moved to %s\n' "$BACKUP"
+fi
 #+end_src
 
-Restart Emacs after cloning. The Android module adds Termux's binary directory
-to =PATH= and =exec-path=. Keep =LD_LIBRARY_PATH= unset. Check the connection
-with =(executable-find "git")=, =(executable-find "rg")=, and
-=(executable-find "fd")=.
+The installer and these commands never modify Termux. Restart Emacs after setup.
+The Android module adds Termux's binary directory to =PATH= and =exec-path=.
+Keep =LD_LIBRARY_PATH= unset. Check the connection with =(executable-find
+"git")=, =(executable-find "rg")=, and =(executable-find "fd")=.
 
 Android keeps the portable editing core: Meow, completion, Org, Magit,
 Dashboard, Dired and Dirvish, Markdown, and Image mode. Ghostel, Nix

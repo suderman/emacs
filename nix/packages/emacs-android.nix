@@ -92,6 +92,7 @@ pkgs.stdenvNoCC.mkDerivation {
     require "unexpected minimum Android API" grep -Fq "minSdkVersion:'${minimumAndroidApi}'" badging.txt
     require "unexpected target Android API" grep -Fq "targetSdkVersion:'${targetAndroidApi}'" badging.txt
     require "unexpected or missing shared UID" grep -Eq 'A: .*sharedUserId[^=]*="com\.termux"' manifest.txt
+    require "source APK is not debuggable" grep -Eq 'A: .*:debuggable[^=]*=true$' manifest.txt
     require "APK has no ${abi} native libraries" grep -Eq '^lib/${abi}/[^/]+\.so$' entries.txt
     if grep -E '^lib/.+\.so$' entries.txt | grep -Evq '^lib/${abi}/[^/]+\.so$'; then
       echo "APK contains native libraries outside ${abi}" >&2

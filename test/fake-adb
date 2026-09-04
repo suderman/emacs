@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ ${FAKE_RUN_AS_UNAVAILABLE:-0} == 1 ]]; then
+  exit 1
+fi
+
+[[ ${1:-} == -s ]]
+shift 2
+[[ ${1:-} == shell ]]
+shift
+[[ $# == 1 ]]
+
+PATH="$FAKE_DEVICE_PATH:$PATH" bash -c "$1"

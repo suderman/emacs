@@ -294,6 +294,12 @@ installed_version_code="$(apk_version_code "$temporary_directory/emacs-after.apk
 
 success "Emacs $TERMACS_EMACS_VERSION was $completed_action and verified."
 
+heading "6. Configure Emacs"
+if ! bash "$script_directory/setup-config.sh" "$device"; then
+  note "Configuration setup failed unexpectedly. The verified APK remains installed."
+fi
+
+heading "7. Launch Emacs"
 if gum confirm "Launch Emacs on the phone now?"; then
   if adb -s "$device" shell monkey \
     -p "$emacs_package" \
@@ -305,15 +311,5 @@ if gum confirm "Launch Emacs on the phone now?"; then
     note "Android could not launch Emacs automatically. Open it from the launcher."
   fi
 fi
-
-heading "Next: clone this configuration in Emacs"
-gum style \
-  --border normal \
-  --border-foreground 240 \
-  --padding "1 2" \
-  "Clone this repository to \$HOME/.config/emacs inside Android Emacs." \
-  "Keep LD_LIBRARY_PATH unset." \
-  "The configuration adds /data/data/com.termux/files/usr/bin to PATH and exec-path." \
-  "Then check (executable-find \"git\"), \"rg\", and \"fd\"."
 
 success "Finished. Termux and its plugins were not changed."
