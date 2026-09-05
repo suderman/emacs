@@ -763,6 +763,30 @@ An active selection is replaced without modifying the kill ring."
 (use-package move-text
   :commands (move-text-up move-text-down))
 
+(declare-function set-text-conversion-style "textconv.c"
+                  (value &optional after-key-sequence))
+
+(defvar-local suderman/android-meow-text-conversion-style nil)
+(defvar-local suderman/android-meow-text-conversion-style-saved-p nil)
+
+(defun suderman/android-sync-meow-text-conversion ()
+  "Enable Android IME text conversion only in Meow Insert state."
+  (when (eq system-type 'android)
+    (if (and (bound-and-true-p meow-mode)
+             (not (bound-and-true-p meow-insert-mode)))
+        (progn
+          (unless suderman/android-meow-text-conversion-style-saved-p
+            (setq suderman/android-meow-text-conversion-style
+                  text-conversion-style
+                  suderman/android-meow-text-conversion-style-saved-p t))
+          (when text-conversion-style
+            (set-text-conversion-style nil)))
+      (when suderman/android-meow-text-conversion-style-saved-p
+        (let ((style suderman/android-meow-text-conversion-style))
+          (setq suderman/android-meow-text-conversion-style-saved-p nil)
+          (unless (equal text-conversion-style style)
+            (set-text-conversion-style style)))))))
+
 (defun suderman/repeat-fu-mode-maybe ()
   "Enable Repeat-FU in buffers that start in Meow normal state."
   (repeat-fu-mode
@@ -824,6 +848,11 @@ An active selection is replaced without modifying the kill ring."
                  #'suderman/meow--cheatsheet-command-name)
   (advice-add 'meow--short-command-name :around
               #'suderman/meow--cheatsheet-command-name)
+  (add-hook 'meow-mode-hook #'suderman/android-sync-meow-text-conversion)
+  (add-hook 'meow-insert-enter-hook
+            #'suderman/android-sync-meow-text-conversion)
+  (add-hook 'meow-insert-exit-hook
+            #'suderman/android-sync-meow-text-conversion)
   (suderman/meow-reset-leader-map)
   (suderman/meow-setup-qwerty)
   (meow-global-mode 1))
