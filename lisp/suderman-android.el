@@ -7,6 +7,13 @@
 
 (require 'subr-x)
 
+(defvar pixel-scroll-precision-use-momentum)
+(defvar touch-screen-current-tool)
+(defvar touch-screen-precision-scroll)
+
+(declare-function pixel-scroll-accumulate-velocity "pixel-scroll" (delta))
+(declare-function pixel-scroll-start-momentum "pixel-scroll" (event))
+
 (defconst suderman/android-termux-bin
   "/data/data/com.termux/files/usr/bin")
 
@@ -37,6 +44,34 @@
   "Show the Android software keyboard for the selected frame."
   (interactive)
   (frame-toggle-on-screen-keyboard (selected-frame) nil))
+
+(defun suderman/android-record-touch-scroll (_dx dy)
+  "Record vertical touch movement DY for kinetic scrolling."
+  (pixel-scroll-accumulate-velocity (- dy)))
+
+(defun suderman/android-start-touch-momentum (event &rest _)
+  "Start momentum after a completed touch-scroll EVENT."
+  (when (and (eq (car event) 'touchscreen-end)
+             (eq (caadr event) (car touch-screen-current-tool))
+             (eq (nth 3 touch-screen-current-tool) 'scroll)
+             (not (caddr event)))
+    (pixel-scroll-start-momentum event)))
+
+(defun suderman/android-setup-touch-scrolling ()
+  "Enable pixel-precise touch scrolling with momentum idempotently."
+  (require 'pixel-scroll)
+  (require 'touch-screen)
+  (setq touch-screen-precision-scroll t
+        pixel-scroll-precision-use-momentum t)
+  (setq-default make-cursor-line-fully-visible nil)
+  (advice-remove 'touch-screen-handle-scroll
+                 #'suderman/android-record-touch-scroll)
+  (advice-add 'touch-screen-handle-scroll :before
+              #'suderman/android-record-touch-scroll)
+  (advice-remove 'touch-screen-handle-touch
+                 #'suderman/android-start-touch-momentum)
+  (advice-add 'touch-screen-handle-touch :before
+              #'suderman/android-start-touch-momentum))
 
 (defun suderman/android-setup-tool-bar (&optional _theme)
   "Configure the touch-friendly Android input toolbar idempotently."
@@ -102,6 +137,7 @@
                         (cons suderman/android-termux-bin
                               (parse-colon-path (getenv "PATH"))))
                        path-separator))
+  (suderman/android-setup-touch-scrolling)
   (add-hook 'enable-theme-functions #'suderman/android-setup-tool-bar t)
   (suderman/android-setup-tool-bar)
   (define-key function-key-map [volume-down] #'suderman/android-volume-control)

@@ -2,7 +2,9 @@
 
 (require 'cl-lib)
 (require 'ert)
+(require 'pixel-scroll)
 (require 'suderman-android)
+(require 'touch-screen)
 
 (ert-deftest suderman/android-toolbar-has-only-phone-actions ()
   (let ((original-tool-bar-map (default-value 'tool-bar-map))
@@ -112,6 +114,63 @@
                (lambda (&rest arguments) (setq call arguments))))
       (suderman/android-show-keyboard)
       (should (equal call '(phone-frame nil))))))
+
+(ert-deftest suderman/android-touch-scroll-enables-momentum-idempotently ()
+  (let ((touch-screen-precision-scroll nil)
+        (pixel-scroll-precision-use-momentum nil)
+        calls
+        defaults)
+    (cl-letf (((symbol-function 'advice-remove)
+               (lambda (symbol function)
+                 (push (list 'remove symbol function) calls)))
+              ((symbol-function 'advice-add)
+               (lambda (symbol where function &rest _)
+                 (push (list 'add symbol where function) calls)))
+              ((symbol-function 'set-default)
+               (lambda (symbol value)
+                 (push (list symbol value) defaults))))
+      (suderman/android-setup-touch-scrolling)
+      (should touch-screen-precision-scroll)
+      (should pixel-scroll-precision-use-momentum)
+      (should (equal defaults
+                     '((make-cursor-line-fully-visible nil))))
+      (should
+       (equal
+        (nreverse calls)
+        '((remove touch-screen-handle-scroll
+                  suderman/android-record-touch-scroll)
+          (add touch-screen-handle-scroll :before
+               suderman/android-record-touch-scroll)
+          (remove touch-screen-handle-touch
+                  suderman/android-start-touch-momentum)
+          (add touch-screen-handle-touch :before
+               suderman/android-start-touch-momentum)))))))
+
+(ert-deftest suderman/android-touch-scroll-records-finger-velocity ()
+  (let (velocity)
+    (cl-letf (((symbol-function 'pixel-scroll-accumulate-velocity)
+               (lambda (delta) (setq velocity delta))))
+      (suderman/android-record-touch-scroll 4 17)
+      (should (= velocity -17)))))
+
+(ert-deftest suderman/android-touch-scroll-flings-only-after-scrolling ()
+  (let ((touch-screen-current-tool '(1 nil nil scroll))
+        events)
+    (cl-letf (((symbol-function 'pixel-scroll-start-momentum)
+               (lambda (event) (push event events))))
+      (suderman/android-start-touch-momentum
+       '(touchscreen-update ((1 . position))))
+      (let ((touch-screen-current-tool '(1 nil nil held)))
+        (suderman/android-start-touch-momentum
+         '(touchscreen-end (1 . position) nil)))
+      (suderman/android-start-touch-momentum
+       '(touchscreen-end (2 . position) nil))
+      (suderman/android-start-touch-momentum
+       '(touchscreen-end (1 . position) t))
+      (suderman/android-start-touch-momentum
+       '(touchscreen-end (1 . position) nil))
+      (should (equal events
+                     '((touchscreen-end (1 . position) nil)))))))
 
 (ert-deftest suderman/android-volume-buttons-support-modifiers-and-chords ()
   (cl-letf (((symbol-function 'read-event) (lambda (&rest _) 'volume-up)))
