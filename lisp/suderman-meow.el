@@ -776,6 +776,8 @@ An active selection is replaced without modifying the kill ring."
 
 (defvar meow--current-state)
 
+;; FUTO spacebar swipes work only in Insert.  Normal and Motion disable text
+;; conversion so IME text cannot bypass Meow's command keymaps.
 (defun suderman/android-meow-text-conversion (state)
   "Set Android text conversion appropriately for Meow STATE."
   (when (eq system-type 'android)
