@@ -24,28 +24,67 @@
         [tab]
       (vector (event-apply-modifier event 'meta 27 "M-")))))
 
-(defun suderman/android-setup-tool-bar ()
-  "Configure the compact Android input toolbar idempotently."
+(defun suderman/android-tool-bar-image (name)
+  "Return a theme-aware tool-bar image expression for NAME."
+  `(create-image
+    ,(expand-file-name (format "assets/android-toolbar/%s.pbm" name)
+                       user-emacs-directory)
+    'pbm nil :scale 1
+    :foreground ,(face-foreground 'tool-bar nil t)
+    :background ,(face-background 'tool-bar nil t)))
+
+(defun suderman/android-show-keyboard ()
+  "Show the Android software keyboard for the selected frame."
+  (interactive)
+  (frame-toggle-on-screen-keyboard (selected-frame) nil))
+
+(defun suderman/android-setup-tool-bar (&optional _theme)
+  "Configure the touch-friendly Android input toolbar idempotently."
   (require 'tool-bar)
   (modifier-bar-mode -1)
   (customize-set-variable 'tool-bar-position 'bottom)
+  (set-face-attribute 'tool-bar nil
+                      :foreground (face-background 'default nil t)
+                      :background (face-foreground 'default nil t))
   (setq secondary-tool-bar-map nil
-        tool-bar-button-margin 24)
-  (dolist (key '(suderman-escape suderman-tab control meta))
-    (define-key tool-bar-map (vector key) nil))
-  (define-key tool-bar-map [suderman-escape]
-    `(menu-item "Escape" meow-insert-exit
-                 :image ,(tool-bar--image-expression "left-arrow")
-                 :help "Leave Meow Insert state"))
-  (define-key-after tool-bar-map [suderman-tab]
-    `(menu-item "Tab" ignore
-                :image ,(tool-bar--image-expression "right-arrow")
-                :help "Send Tab")
-    'suderman-escape)
-  (tool-bar-add-item "ctrl" #'ignore 'control
-                     :label "Ctrl" :help "Apply Control to the next key")
-  (tool-bar-add-item "meta" #'ignore 'meta
-                     :label "Meta" :help "Apply Meta to the next key")
+        tool-bar-button-margin '(48 . 20)
+        tool-bar-always-show-default t)
+  (let ((map (make-sparse-keymap)))
+    (define-key-after map [suderman-escape]
+      `(menu-item "ESC" meow-insert-exit
+                  :image ,(suderman/android-tool-bar-image "escape")
+                  :help "Leave Meow Insert state"))
+    (define-key-after map [suderman-tab]
+      `(menu-item "TAB" ignore
+                  :image ,(suderman/android-tool-bar-image "tab")
+                  :help "Send Tab")
+      'suderman-escape)
+    (define-key-after map [suderman-files]
+      `(menu-item "FILES" suderman/dirvish
+                  :image ,(suderman/android-tool-bar-image "files")
+                  :help "Open Dirvish")
+      'suderman-tab)
+    (define-key-after map [suderman-buffers]
+      `(menu-item "BUFFERS" suderman/ibuffer-toggle
+                  :image ,(suderman/android-tool-bar-image "buffers")
+                  :help "Open IBuffer")
+      'suderman-files)
+    (define-key-after map [suderman-keyboard]
+      `(menu-item "KEYBOARD" suderman/android-show-keyboard
+                  :image ,(suderman/android-tool-bar-image "keyboard")
+                  :help "Show the software keyboard")
+      'suderman-buffers)
+    (define-key-after map [control]
+      `(menu-item "CTRL" ignore
+                  :image ,(suderman/android-tool-bar-image "control")
+                  :help "Apply Control to the next key")
+      'suderman-keyboard)
+    (define-key-after map [meta]
+      `(menu-item "META" ignore
+                  :image ,(suderman/android-tool-bar-image "meta")
+                  :help "Apply Meta to the next key")
+      'control)
+    (set-default 'tool-bar-map map))
   (define-key input-decode-map [tool-bar suderman-escape] nil)
   (define-key input-decode-map [tool-bar suderman-tab] [tab])
   (define-key input-decode-map [tool-bar control]
@@ -63,6 +102,7 @@
                         (cons suderman/android-termux-bin
                               (parse-colon-path (getenv "PATH"))))
                        path-separator))
+  (add-hook 'enable-theme-functions #'suderman/android-setup-tool-bar t)
   (suderman/android-setup-tool-bar)
   (define-key function-key-map [volume-down] #'suderman/android-volume-control)
   (define-key function-key-map [volume-up] #'suderman/android-volume-meta))
