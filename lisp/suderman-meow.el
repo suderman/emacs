@@ -13,6 +13,7 @@
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/dirvish-side-toggle "suderman-files")
+(declare-function meow-insert-exit "meow" ())
 
 ;;;; Leader integration
 
@@ -32,6 +33,13 @@
   (interactive)
   (let (meow--beacon-overlays)
     (meow-keypad)))
+
+(defun suderman/meow-escape ()
+  "Exit Meow Insert state, or run the current `C-g' command."
+  (interactive)
+  (if (bound-and-true-p meow-insert-mode)
+      (meow-insert-exit)
+    (call-interactively (key-binding (kbd "C-g")))))
 
 ;;;; Selection and motion
 
@@ -667,7 +675,7 @@ An active selection is replaced without modifying the kill ring."
    '("l" . meow-right)
    '("S" . suderman/dirvish-side-toggle)
    '("`" . suderman/dashboard)
-   '("<escape>" . ignore))
+   '("<escape>" . suderman/meow-escape))
   
   (meow-normal-define-key
    '("0" . meow-expand-0)
@@ -755,7 +763,7 @@ An active selection is replaced without modifying the kill ring."
    '("Z" . suderman/meow-buffer-end)
    '("'" . suderman/meow-repeat)
    '("/" . meow-visit)
-   '("<escape>" . meow-cancel-selection)))
+   '("<escape>" . suderman/meow-escape)))
 
 (use-package evil-matchit
   :commands evilmi-jump-items-native)

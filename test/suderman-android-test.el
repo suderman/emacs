@@ -65,7 +65,7 @@
                  (test-image "keyboard") (test-image "control")
                  (test-image "meta"))))
             (should (eq (lookup-key tool-bar-map [suderman-escape])
-                        'meow-insert-exit))
+                        'suderman/meow-escape))
             (should (eq (lookup-key tool-bar-map [suderman-files])
                         'suderman/dirvish))
             (should (eq (lookup-key tool-bar-map [suderman-buffers])

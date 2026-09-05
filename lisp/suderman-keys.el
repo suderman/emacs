@@ -165,6 +165,7 @@
 
 (setq tab-bar-close-last-tab-choice 'delete-frame)
 
+(global-set-key (kbd "<escape>") #'suderman/meow-escape)
 (global-set-key (kbd "<f5>") #'suderman/reload-config)
 (global-set-key (kbd "s-+") #'suderman/frame-text-scale-increase)
 (global-set-key (kbd "s-=") #'suderman/frame-text-scale-increase)

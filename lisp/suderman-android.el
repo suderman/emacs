@@ -100,9 +100,9 @@
         tool-bar-always-show-default t)
   (let ((map (make-sparse-keymap)))
     (define-key-after map [suderman-escape]
-      `(menu-item "ESC" meow-insert-exit
+      `(menu-item "ESC" suderman/meow-escape
                   :image ,(suderman/android-tool-bar-image "escape")
-                  :help "Leave Meow Insert state"))
+                  :help "Leave Insert state or cancel"))
     (define-key-after map [suderman-tab]
       `(menu-item "TAB" ignore
                   :image ,(suderman/android-tool-bar-image "tab")
