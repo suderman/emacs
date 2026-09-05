@@ -8,12 +8,18 @@
 (require 'subr-x)
 
 (defvar global-text-scale-adjust-limits)
+(defvar modifier-bar-modifier-list)
+(defvar overriding-text-conversion-style)
 (defvar pixel-scroll-precision-use-momentum)
+(defvar text-conversion-style)
 (defvar touch-screen-current-tool)
 (defvar touch-screen-precision-scroll)
 
 (declare-function pixel-scroll-accumulate-velocity "pixel-scroll" (delta))
 (declare-function pixel-scroll-start-momentum "pixel-scroll" (event))
+(declare-function set-text-conversion-style "textconv.c"
+                  (style &optional keep-selection))
+(declare-function tool-bar-apply-modifiers "tool-bar" (event modifiers))
 
 (defconst suderman/android-termux-bin
   "/data/data/com.termux/files/usr/bin")
@@ -40,6 +46,58 @@
     'pbm nil :scale 1
     :foreground ,(face-foreground 'tool-bar nil t)
     :background ,(face-background 'tool-bar nil t)))
+
+(defun suderman/android-tool-bar-state-images (name)
+  "Return evaluated active and normal tool-bar images for NAME."
+  (let ((active (eval (suderman/android-tool-bar-image
+                       (concat name "-active")) t))
+        (normal (eval (suderman/android-tool-bar-image name) t)))
+    (vector active normal active normal)))
+
+(defun suderman/android-modifier-bar-button (modifier)
+  "Toggle MODIFIER while decoding the next non-toolbar event."
+  (let ((old-text-conversion-style text-conversion-style)
+        (modifier-bar-modifier-list (list modifier)))
+    (when (fboundp 'set-text-conversion-style)
+      (set-text-conversion-style nil))
+    (unwind-protect
+        (progn
+          (frame-toggle-on-screen-keyboard nil nil)
+          (force-mode-line-update)
+          (let ((modifiers (list modifier))
+                (overriding-text-conversion-style nil)
+                event modifier-event)
+            (setq event (read-event))
+            (while (and modifiers (eq event 'tool-bar))
+              (setq modifier-event (event-basic-type (read-event)))
+              (unless (memq modifier-event
+                            '(alt super hyper shift control meta))
+                (user-error "Unknown tool-bar event %s" modifier-event))
+              (if (memq modifier-event modifiers)
+                  (setq modifiers (delq modifier-event modifiers)
+                        modifier-bar-modifier-list
+                        (delq modifier-event modifier-bar-modifier-list))
+                (push modifier-event modifiers)
+                (push modifier-event modifier-bar-modifier-list))
+              (force-mode-line-update)
+              (redisplay)
+              (when modifiers
+                (setq event (read-event))))
+            (if modifiers
+                (vector (tool-bar-apply-modifiers event modifiers))
+              [])))
+      (unless (or (not (fboundp 'set-text-conversion-style))
+                  (eq old-text-conversion-style text-conversion-style))
+        (set-text-conversion-style old-text-conversion-style t))
+      (force-mode-line-update))))
+
+(defun suderman/android-toggle-control-modifier (_prompt)
+  "Toggle Control while decoding the next event."
+  (suderman/android-modifier-bar-button 'control))
+
+(defun suderman/android-toggle-meta-modifier (_prompt)
+  "Toggle Meta while decoding the next event."
+  (suderman/android-modifier-bar-button 'meta))
 
 (defun suderman/android-keyboard-visible-p (frame)
   "Return non-nil when FRAME appears shortened by the Android keyboard.
@@ -142,21 +200,25 @@ resize can therefore be mistaken for the keyboard."
       'suderman-buffers)
     (define-key-after map [control]
       `(menu-item "CTRL" ignore
-                  :image ,(suderman/android-tool-bar-image "control")
+                  :image ,(suderman/android-tool-bar-state-images "control")
+                  :button (:toggle . (memq 'control
+                                           modifier-bar-modifier-list))
                   :help "Apply Control to the next key")
       'suderman-keyboard)
     (define-key-after map [meta]
       `(menu-item "META" ignore
-                  :image ,(suderman/android-tool-bar-image "meta")
+                  :image ,(suderman/android-tool-bar-state-images "meta")
+                  :button (:toggle . (memq 'meta
+                                           modifier-bar-modifier-list))
                   :help "Apply Meta to the next key")
       'control)
     (set-default 'tool-bar-map map))
   (define-key input-decode-map [tool-bar suderman-escape] nil)
   (define-key input-decode-map [tool-bar suderman-tab] [tab])
   (define-key input-decode-map [tool-bar control]
-              #'tool-bar-event-apply-control-modifier)
+              #'suderman/android-toggle-control-modifier)
   (define-key input-decode-map [tool-bar meta]
-              #'tool-bar-event-apply-meta-modifier)
+              #'suderman/android-toggle-meta-modifier)
   (tool-bar--flush-cache)
   (tool-bar-mode 1)
   (force-mode-line-update t))
