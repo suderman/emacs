@@ -6,6 +6,8 @@
 (require 'suderman-android)
 (require 'touch-screen)
 
+(defvar global-text-scale-adjust-limits)
+
 (ert-deftest suderman/android-toolbar-has-only-phone-actions ()
   (let ((original-tool-bar-map (default-value 'tool-bar-map))
         (tool-bar-map (make-sparse-keymap))
@@ -171,6 +173,24 @@
        '(touchscreen-end (1 . position) nil))
       (should (equal events
                      '((touchscreen-end (1 . position) nil)))))))
+
+(ert-deftest suderman/android-pinch-scales-the-default-face-continuously ()
+  (let ((global-text-scale-adjust-limits '(100 . 300))
+        heights)
+    (cl-letf (((symbol-function 'face-attribute)
+               (lambda (&rest _) 200))
+              ((symbol-function 'set-face-attribute)
+               (lambda (_face _frame &rest attributes)
+                 (push (plist-get attributes :height) heights))))
+      (suderman/android-global-pinch
+       '(touchscreen-pinch position 0.1 0 0 0.1))
+      (suderman/android-global-pinch
+       '(touchscreen-pinch position 1.1 0 0 0.1))
+      (suderman/android-global-pinch
+       '(touchscreen-pinch position 2.0 0 0 1.0))
+      (suderman/android-global-pinch
+       '(touchscreen-pinch position 0.4 0 0 -0.6))
+      (should (equal (nreverse heights) '(220 300 100))))))
 
 (ert-deftest suderman/android-volume-buttons-support-modifiers-and-chords ()
   (cl-letf (((symbol-function 'read-event) (lambda (&rest _) 'volume-up)))

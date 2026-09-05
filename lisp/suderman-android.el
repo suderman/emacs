@@ -7,6 +7,7 @@
 
 (require 'subr-x)
 
+(defvar global-text-scale-adjust-limits)
 (defvar pixel-scroll-precision-use-momentum)
 (defvar touch-screen-current-tool)
 (defvar touch-screen-precision-scroll)
@@ -44,6 +45,19 @@
   "Show the Android software keyboard for the selected frame."
   (interactive)
   (frame-toggle-on-screen-keyboard (selected-frame) nil))
+
+(defun suderman/android-global-pinch (event)
+  "Use Android pinch EVENT to scale the default face globally."
+  (interactive "e")
+  (let* ((ratio (nth 2 event))
+         (previous-ratio (- ratio (nth 5 event))))
+    (when (> previous-ratio 0)
+      (let* ((height (face-attribute 'default :height nil 'default))
+             (new-height (round (* height (/ ratio previous-ratio)))))
+        (setq new-height
+              (max (car global-text-scale-adjust-limits)
+                   (min (cdr global-text-scale-adjust-limits) new-height)))
+        (set-face-attribute 'default nil :height new-height)))))
 
 (defun suderman/android-record-touch-scroll (_dx dy)
   "Record vertical touch movement DY for kinetic scrolling."
@@ -137,6 +151,8 @@
                         (cons suderman/android-termux-bin
                               (parse-colon-path (getenv "PATH"))))
                        path-separator))
+  (require 'face-remap)
+  (global-set-key [touchscreen-pinch] #'suderman/android-global-pinch)
   (suderman/android-setup-touch-scrolling)
   (add-hook 'enable-theme-functions #'suderman/android-setup-tool-bar t)
   (suderman/android-setup-tool-bar)
