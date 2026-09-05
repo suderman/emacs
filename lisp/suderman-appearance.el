@@ -23,7 +23,7 @@
 (defun suderman/default-font-size ()
   "Return the platform's default `font-spec' size."
   ;; A floating-point font size is measured in points; an integer is pixels.
-  (if (eq system-type 'android) 18.0 11))
+  (if (eq system-type 'android) 17.0 11))
 
 (defun suderman/nerd-fonts-available-p (&optional frame)
   "Return non-nil when FRAME can display the configured Nerd Fonts."

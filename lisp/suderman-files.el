@@ -83,6 +83,11 @@
   (with-selected-window (dv-root-window session)
     (dirvish-quit)))
 
+(defun suderman/dirvish-default-layout ()
+  "Return the platform's default Dirvish layout."
+  (unless (eq system-type 'android)
+    '(1 0.125 0.5)))
+
 (defun suderman/dirvish (&optional path)
   "Toggle Dirvish for PATH, selecting it when it is a file."
   (interactive)
@@ -94,8 +99,12 @@
                           target
                         (file-name-directory target))))
       (dirvish directory)
-      (unless (and (>= (frame-width) 80) (one-window-p t))
-        (dirvish-layout-toggle))
+      (if (eq system-type 'android)
+          (when-let* ((session (dirvish-curr))
+                      ((dv-curr-layout session)))
+            (dirvish-layout-toggle))
+        (unless (and (>= (frame-width) 80) (one-window-p t))
+          (dirvish-layout-toggle)))
       (unless (file-directory-p target)
         (dired-goto-file target)))))
 
@@ -274,6 +283,13 @@
   (interactive "e")
   (mouse-set-point event)
   (suderman/dired-open))
+
+(defun suderman/dired-mouse-secondary-open (event)
+  "Open the Dired entry in place on Android, or in another window elsewhere."
+  (interactive "e")
+  (if (eq system-type 'android)
+      (suderman/dired-mouse-open event)
+    (dired-mouse-find-file-other-window event)))
 
 (defun suderman/dirvish-enable-subtree-mouse ()
   "Make Dirvish subtree state arrows toggle their directory on click."
@@ -620,7 +636,7 @@
         (append '(vc-state subtree-state)
                 (when (suderman/nerd-fonts-available-p) '(nerd-icons))
                 '(collapse file-size))
-        dirvish-default-layout '(1 0.125 0.5)
+        dirvish-default-layout (suderman/dirvish-default-layout)
         dirvish-mode-line-format
         '(:left (suderman-dashboard suderman-dirvish suderman-ibuffer
                  sort vc-info symlink yank)
@@ -735,6 +751,7 @@
     (keymap-set map "M-i" #'suderman/split-window-right-and-focus)
     (keymap-set map "M-w" #'suderman/delete-window-or-tab)
     (keymap-set map "<mouse-1>" #'mouse-set-point)
+    (keymap-set map "<mouse-2>" #'suderman/dired-mouse-secondary-open)
     (keymap-set map "<double-mouse-1>" #'suderman/dired-mouse-open)
     (keymap-set map "<mouse-3>" #'context-menu-open))
   (keymap-set dirvish-directory-view-mode-map

@@ -209,7 +209,7 @@ configuration setup. Fix the reported network or host-tool problem and rerun
 text labels instead of icon glyphs. Android scans =$HOME/fonts= at process
 startup, so restart an already-running Emacs after a standalone setup retry.
 
-Android uses an 18 point default font while desktop frames remain at 11 points.
+Android uses a 17 point default font while desktop frames remain at 11 points.
 The default face carries that size into ordinary buffers, modelines, and
 minibuffers.
 
@@ -497,9 +497,11 @@ from IBuffer uses the selected buffer or project heading as context.
 
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
 marked. Copies remain staged after =v=; cuts clear once the move starts.
-Period opens the full-frame layout when no other window is visible; with splits
-or the sidebar it uses only the selected editor window. The =f= key toggles
-between those layouts. Comma closes a full-frame layout before opening IBuffer.
+On Android, Period always opens a single-column view and files replace Dirvish
+in its current window. On desktop, Period opens the full-frame layout when no
+other window is visible; with splits or the sidebar it uses only the selected
+editor window. The =f= key toggles between those layouts. Comma closes a
+full-frame layout before opening IBuffer.
 From the sidebar it opens IBuffer in an editor window and leaves the sidebar
 visible. Closing IBuffer restores the prior editor window.
 Dotfiles start hidden in the parent and current panes, and =i= toggles them
@@ -510,15 +512,16 @@ directory. The =?= popup reads the current bindings instead of Dirvish's default
 command menu. Semicolon opens the original Dirvish menu. Directory arrows toggle
 subtrees on click, matching =TAB=.
 
-Single left click selects a row, double left click opens it, and right click
-opens Dired's file or directory context menu. PDF files open in PDF Tools; EPUB
-files use the desktop reader, and audio and video use the desktop player. NixOS
-currently maps those to Zathura and mpv. A single click in the center keeps focus
-there instead of activating the preview. The left parent column is also
-clickable: directories change the center column, while files change directory
-and select that file. In that column, =j/k= move between directories and update
-the center, =h= goes up another level, and =l= returns to the center. Breadcrumb
-clicks run in the center, and =M-hjkl= skips breadcrumb and footer windows.
+On Android, one tap opens a row in the current window. On desktop, single left
+click selects a row and double left click opens it. Right click opens Dired's
+file or directory context menu. PDF files open in PDF Tools; EPUB files use the
+desktop reader, and audio and video use the desktop player. NixOS currently maps
+those to Zathura and mpv. A desktop single click in the center keeps focus there
+instead of activating the preview. The left parent column is also clickable:
+directories change the center column, while files change directory and select
+that file. In that column, =j/k= move between directories and update the center,
+=h= goes up another level, and =l= returns to the center. Breadcrumb clicks run
+in the center, and =M-hjkl= skips breadcrumb and footer windows.
 
 Dirvish previews video, images, looping GIFs, audio metadata, EPUB covers,
 archives, fonts, and PDFs. Minibuffer file selection uses the same preview

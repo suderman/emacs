@@ -11,14 +11,14 @@
   (let ((system-type 'android)
         (custom-enabled-themes nil)
         attributes)
-    (should (equal (suderman/default-font-size) 18.0))
+    (should (equal (suderman/default-font-size) 17.0))
     (cl-letf (((symbol-function 'suderman/nerd-fonts-available-p)
                (lambda (&optional _) nil))
               ((symbol-function 'set-face-attribute)
                (lambda (face frame &rest values)
                  (setq attributes (append (list face frame) values)))))
       (suderman/apply-default-font)
-      (should (equal attributes '(default nil :height 180)))))
+      (should (equal attributes '(default nil :height 170)))))
   (let ((system-type 'gnu/linux))
     (should (equal (suderman/default-font-size) 11))))
 
@@ -35,7 +35,7 @@
               ((symbol-function 'set-face-attribute) #'ignore))
       (suderman/apply-default-font)
       ;; `font-spec' treats integers as pixels and floats as points.
-      (should (equal font-size 18.0)))))
+      (should (equal font-size 17.0)))))
 
 (ert-deftest suderman/android-uses-nerd-fonts-only-when-both-are-available ()
   (let ((system-type 'android))

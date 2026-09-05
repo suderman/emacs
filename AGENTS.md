@@ -102,6 +102,7 @@ Important parts of the current grammar follow.
 - `,` opens project-grouped IBuffer and selects the invoking buffer.
 - `.` opens Dirvish for the current file or directory. It uses the full-frame
   layout when no other window is visible and the selected window otherwise.
+  Android always starts with one column and opens files in that window.
 - `S` toggles the Dirvish sidebar in Normal and Motion states without moving
   editor focus when it opens. Inside the sidebar, it hides the tree.
 - Backtick opens the Dashboard in Normal and Motion states, IBuffer, and
@@ -142,7 +143,9 @@ Dirvish also disables Meow locally so Dired's map can own `hjkl`, marking, and
 file operations. `SPC` invokes Meow's keypad directly without enabling a Meow
 state. Its optional full-frame layout follows Yazi's parent/current/preview
 proportions, but its commands remain Dired commands rather than a second Yazi
-emulation. `f` toggles between the selected-window and full-frame layouts.
+emulation. Android starts in the selected-window layout because its screen is
+too narrow for useful parent and preview panes. `f` toggles between the
+selected-window and full-frame layouts.
 Meta window navigation, resizing, splitting, and closing remain available.
 Comma closes a full-frame layout before opening IBuffer, period closes Dirvish,
 and dotfiles start hidden in the parent and current panes while `i`
@@ -157,17 +160,19 @@ dispatcher. `TAB` toggles subtrees, `N` narrows, `E` manages emerge groups, and
 moving, and `U` clears all marks. Clicking a directory's subtree-state arrow
 also toggles its subtree without changing ordinary row-click behavior.
 
-Single left click selects a file, double left click opens it, and right click
-opens the native Dired context menu. `l` and double-click open PDFs in PDF Tools
-and delegate EPUB, audio, or video to the desktop MIME handler; other files still
-use normal Emacs mode selection. Single click must keep focus in the root pane
-rather than activating the preview. In the parent pane, left click changes the
-root directory or selects the clicked file in its directory. Its `j/k` bindings
-move between sibling directories and update the root, `h` moves both panes up a
-level, and `l` returns focus to the root. Breadcrumb clicks run in the root pane,
-while Meta window movement excludes breadcrumb and footer windows. Preview panes
-remain normal windows because `o` can deliberately turn one into an editable
-file buffer.
+Android taps open files in the current window because Emacs translates a tap on
+Dired's highlighted filename to `mouse-2`; do not let native Dired's other-window
+binding win there. On desktop, single left click selects a file, double left
+click opens it, and right click opens the native Dired context menu. `l` and
+double-click open PDFs in PDF Tools and delegate EPUB, audio, or video to the
+desktop MIME handler; other files still use normal Emacs mode selection. Desktop
+single click must keep focus in the root pane rather than activating the preview.
+In the parent pane, left click changes the root directory or selects the clicked
+file in its directory. Its `j/k` bindings move between sibling directories and
+update the root, `h` moves both panes up a level, and `l` returns focus to the
+root. Breadcrumb clicks run in the root pane, while Meta window movement excludes
+breadcrumb and footer windows. Preview panes remain normal windows because `o`
+can deliberately turn one into an editable file buffer.
 
 Magit disables Meow locally because its single-letter commands and Transient
 menus are the interface. `j/k` move between visible sections, while native
