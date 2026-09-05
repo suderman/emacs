@@ -41,7 +41,8 @@
          (begin-xy (posn-x-y begin-posn))
          (moved nil))
     (with-selected-window begin-window
-      (let ((begin-scroll-pos vertico--scroll))
+      (let ((begin-scroll-pos vertico--scroll)
+            (last-dline 0))
         (while
             (let ((event (read-event)))
               (pcase (car-safe event)
@@ -52,20 +53,23 @@
                         (dx (- (car update-xy) (car begin-xy)))
                         (dy (- (cdr update-xy) (cdr begin-xy))))
                    (when (and (not moved)
-                              (>= (+ (* dx dx) (* dy dy)) (* 2 2)))
+                              (or (> (abs dx) 10) (> (abs dy) 10)))
                      (setq moved t))
                    (when moved
-                     (let* ((dline (/ dy (default-line-height)))
-                            (new-scroll-pos (- begin-scroll-pos dline)))
-                       (cond
-                        ((< new-scroll-pos vertico--scroll)
-                         (vertico--goto
-                          (+ new-scroll-pos vertico-scroll-margin)))
-                        ((> new-scroll-pos vertico--scroll)
-                         (vertico--goto
-                          (+ new-scroll-pos vertico-count
-                             (- vertico-scroll-margin)))))
-                       (vertico--exhibit)))
+                     (let ((dline
+                            (round (/ (float dy) (default-line-height)))))
+                       (unless (= dline last-dline)
+                         (setq last-dline dline)
+                         (let ((new-scroll-pos (- begin-scroll-pos dline)))
+                           (cond
+                            ((< new-scroll-pos vertico--scroll)
+                             (vertico--goto
+                              (+ new-scroll-pos vertico-scroll-margin)))
+                            ((> new-scroll-pos vertico--scroll)
+                             (vertico--goto
+                              (+ new-scroll-pos vertico-count
+                                 (- vertico-scroll-margin)))))
+                           (vertico--exhibit)))))
                    t))
                 ('touchscreen-end
                  (unless moved
