@@ -41,10 +41,27 @@
     :foreground ,(face-foreground 'tool-bar nil t)
     :background ,(face-background 'tool-bar nil t)))
 
-(defun suderman/android-show-keyboard ()
-  "Show the Android software keyboard for the selected frame."
+(defun suderman/android-keyboard-visible-p (frame)
+  "Return non-nil when FRAME appears shortened by the Android keyboard.
+Android exposes no keyboard visibility query to Lisp, so remember the
+largest frame height seen at the current width.  Another same-width frame
+resize can therefore be mistaken for the keyboard."
+  (let* ((size (cons (frame-pixel-width frame) (frame-pixel-height frame)))
+         (full-size
+          (frame-parameter frame 'suderman/android-keyboard-full-size)))
+    (when (or (not (consp full-size))
+              (/= (car size) (car full-size))
+              (> (cdr size) (cdr full-size)))
+      (setq full-size size)
+      (set-frame-parameter frame 'suderman/android-keyboard-full-size size))
+    (< (cdr size) (cdr full-size))))
+
+(defun suderman/android-toggle-keyboard ()
+  "Show or hide the Android software keyboard for the selected frame."
   (interactive)
-  (frame-toggle-on-screen-keyboard (selected-frame) nil))
+  (let ((frame (selected-frame)))
+    (frame-toggle-on-screen-keyboard
+     frame (suderman/android-keyboard-visible-p frame))))
 
 (defun suderman/android-global-pinch (event)
   "Use Android pinch EVENT to scale the default face globally."
@@ -119,9 +136,9 @@
                   :help "Open IBuffer")
       'suderman-files)
     (define-key-after map [suderman-keyboard]
-      `(menu-item "KEYBOARD" suderman/android-show-keyboard
+      `(menu-item "KEYBOARD" suderman/android-toggle-keyboard
                   :image ,(suderman/android-tool-bar-image "keyboard")
-                  :help "Show the software keyboard")
+                  :help "Show or hide the software keyboard")
       'suderman-buffers)
     (define-key-after map [control]
       `(menu-item "CTRL" ignore
@@ -156,6 +173,7 @@
   (suderman/android-setup-touch-scrolling)
   (add-hook 'enable-theme-functions #'suderman/android-setup-tool-bar t)
   (suderman/android-setup-tool-bar)
+  (suderman/android-keyboard-visible-p (selected-frame))
   (define-key function-key-map [volume-down] #'suderman/android-volume-control)
   (define-key function-key-map [volume-up] #'suderman/android-volume-meta))
 
