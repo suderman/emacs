@@ -9,42 +9,55 @@
 
 (defvar dirvish-mode-map)
 
-(ert-deftest suderman/android-meow-text-conversion-follows-insert-state ()
+(ert-deftest suderman/android-meow-text-conversion-follows-state ()
   (with-temp-buffer
     (let ((system-type 'android)
-          (meow-mode t)
-          (meow-insert-mode nil)
           (text-conversion-style t)
           calls)
       (cl-letf (((symbol-function 'set-text-conversion-style)
                  (lambda (style &optional _after-key-sequence)
                    (setq text-conversion-style style)
                    (push style calls))))
-        (suderman/android-sync-meow-text-conversion)
+        (suderman/android-meow-text-conversion 'normal)
+        (suderman/android-meow-text-conversion 'motion)
+        (suderman/android-meow-text-conversion 'insert)
+        (suderman/android-meow-text-conversion 'keypad)
         (should-not text-conversion-style)
-        (should suderman/android-meow-text-conversion-style-saved-p)
+        (should (equal (nreverse calls) '(nil t nil)))))))
 
-        (setq meow-insert-mode t)
-        (suderman/android-sync-meow-text-conversion)
-        (should text-conversion-style)
-        (should-not suderman/android-meow-text-conversion-style-saved-p)
+(ert-deftest suderman/android-meow-text-conversion-initializes-current-state ()
+  (dolist (case '((normal t nil) (insert nil t)))
+    (with-temp-buffer
+      (let ((system-type 'android)
+            (meow--current-state (nth 0 case))
+            (text-conversion-style (nth 1 case)))
+        (cl-letf (((symbol-function 'set-text-conversion-style)
+                   (lambda (style &optional _after-key-sequence)
+                     (setq text-conversion-style style))))
+          (suderman/android-initialize-meow-text-conversion)
+          (should (eq text-conversion-style (nth 2 case))))))))
 
-        (setq meow-insert-mode nil)
-        (suderman/android-sync-meow-text-conversion)
-        (should-not text-conversion-style)
-
-        (setq meow-mode nil)
-        (suderman/android-sync-meow-text-conversion)
-        (should text-conversion-style)
-        (should-not suderman/android-meow-text-conversion-style-saved-p)
-        (should (equal (nreverse calls) '(nil t nil t)))))))
+(ert-deftest suderman/android-meow-text-conversion-leaves-desktop-alone ()
+  (let ((system-type 'gnu/linux)
+        (text-conversion-style 'unchanged)
+        calls)
+    (cl-letf (((symbol-function 'set-text-conversion-style)
+               (lambda (&rest arguments) (push arguments calls))))
+      (suderman/android-meow-text-conversion 'insert)
+      (should (eq text-conversion-style 'unchanged))
+      (should-not calls))))
 
 (ert-deftest suderman/android-meow-text-conversion-hooks-are-installed ()
-  (should (memq #'suderman/android-sync-meow-text-conversion meow-mode-hook))
-  (should (memq #'suderman/android-sync-meow-text-conversion
-                meow-insert-enter-hook))
-  (should (memq #'suderman/android-sync-meow-text-conversion
-                meow-insert-exit-hook)))
+  (should (memq #'suderman/android-initialize-meow-text-conversion
+                meow-mode-hook))
+  (should (memq #'suderman/android-meow-text-conversion
+                meow-switch-state-hook))
+  (should-not (memq 'suderman/android-sync-meow-text-conversion
+                    meow-mode-hook))
+  (should-not (memq 'suderman/android-sync-meow-text-conversion
+                    meow-insert-enter-hook))
+  (should-not (memq 'suderman/android-sync-meow-text-conversion
+                    meow-insert-exit-hook)))
 
 (ert-deftest suderman/meow-insert-dispatches-by-state ()
   (with-temp-buffer

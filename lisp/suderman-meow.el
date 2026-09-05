@@ -774,26 +774,18 @@ An active selection is replaced without modifying the kill ring."
 (declare-function set-text-conversion-style "textconv.c"
                   (value &optional after-key-sequence))
 
-(defvar-local suderman/android-meow-text-conversion-style nil)
-(defvar-local suderman/android-meow-text-conversion-style-saved-p nil)
+(defvar meow--current-state)
 
-(defun suderman/android-sync-meow-text-conversion ()
-  "Enable Android IME text conversion only in Meow Insert state."
+(defun suderman/android-meow-text-conversion (state)
+  "Set Android text conversion appropriately for Meow STATE."
   (when (eq system-type 'android)
-    (if (and (bound-and-true-p meow-mode)
-             (not (bound-and-true-p meow-insert-mode)))
-        (progn
-          (unless suderman/android-meow-text-conversion-style-saved-p
-            (setq suderman/android-meow-text-conversion-style
-                  text-conversion-style
-                  suderman/android-meow-text-conversion-style-saved-p t))
-          (when text-conversion-style
-            (set-text-conversion-style nil)))
-      (when suderman/android-meow-text-conversion-style-saved-p
-        (let ((style suderman/android-meow-text-conversion-style))
-          (setq suderman/android-meow-text-conversion-style-saved-p nil)
-          (unless (equal text-conversion-style style)
-            (set-text-conversion-style style)))))))
+    (let ((style (eq state 'insert)))
+      (unless (eq text-conversion-style style)
+        (set-text-conversion-style style)))))
+
+(defun suderman/android-initialize-meow-text-conversion ()
+  "Set Android text conversion for the current Meow state."
+  (suderman/android-meow-text-conversion meow--current-state))
 
 (defun suderman/repeat-fu-mode-maybe ()
   "Enable Repeat-FU in buffers that start in Meow normal state."
@@ -856,14 +848,19 @@ An active selection is replaced without modifying the kill ring."
                  #'suderman/meow--cheatsheet-command-name)
   (advice-add 'meow--short-command-name :around
               #'suderman/meow--cheatsheet-command-name)
-  (add-hook 'meow-mode-hook #'suderman/android-sync-meow-text-conversion)
-  (add-hook 'meow-insert-enter-hook
-            #'suderman/android-sync-meow-text-conversion)
-  (add-hook 'meow-insert-exit-hook
-            #'suderman/android-sync-meow-text-conversion)
+  (remove-hook 'meow-mode-hook 'suderman/android-sync-meow-text-conversion)
+  (remove-hook 'meow-insert-enter-hook
+               'suderman/android-sync-meow-text-conversion)
+  (remove-hook 'meow-insert-exit-hook
+               'suderman/android-sync-meow-text-conversion)
+  (add-hook 'meow-mode-hook
+            #'suderman/android-initialize-meow-text-conversion)
+  (add-hook 'meow-switch-state-hook
+            #'suderman/android-meow-text-conversion)
   (suderman/meow-reset-leader-map)
   (suderman/meow-setup-qwerty)
-  (meow-global-mode 1))
+  (meow-global-mode 1)
+  (suderman/android-initialize-meow-text-conversion))
 
 (provide 'suderman-meow)
 ;;; suderman-meow.el ends here
