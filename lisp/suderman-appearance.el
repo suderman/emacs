@@ -21,8 +21,9 @@
 (defconst suderman/background-opacity 90)
 
 (defun suderman/default-font-size ()
-  "Return the platform's default font size in points."
-  (if (eq system-type 'android) 18 11))
+  "Return the platform's default `font-spec' size."
+  ;; A floating-point font size is measured in points; an integer is pixels.
+  (if (eq system-type 'android) 18.0 11))
 
 (defun suderman/nerd-fonts-available-p (&optional frame)
   "Return non-nil when FRAME can display the configured Nerd Fonts."
@@ -75,7 +76,8 @@
                                        :size (suderman/default-font-size)))
       (when (eq system-type 'android)
         (set-face-attribute 'default nil
-                            :height (* 10 (suderman/default-font-size)))))))
+                            :height (round
+                                     (* 10 (suderman/default-font-size))))))))
 
 ;; Stylix's default.el loads after init.el and replaces this fallback when
 ;; enabled.  Avoid overriding it on systems where it loads earlier instead.

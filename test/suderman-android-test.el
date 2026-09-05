@@ -7,6 +7,7 @@
 (ert-deftest suderman/android-toolbar-is-bottom-and-escape-exits-insert ()
   (let ((tool-bar-map (make-sparse-keymap))
         (input-decode-map (make-sparse-keymap))
+        (tool-bar-button-margin 4)
         customizations)
     (cl-letf (((symbol-function 'modifier-bar-mode) #'ignore)
               ((symbol-function 'customize-set-variable)
@@ -19,6 +20,7 @@
               ((symbol-function 'force-mode-line-update) #'ignore))
       (suderman/android-setup-tool-bar)
       (should (member '(tool-bar-position bottom) customizations))
+      (should (= tool-bar-button-margin 24))
       (should (eq (lookup-key tool-bar-map [suderman-escape])
                   'meow-insert-exit))
       (should-not

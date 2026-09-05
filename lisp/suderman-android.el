@@ -30,7 +30,7 @@
   (modifier-bar-mode -1)
   (customize-set-variable 'tool-bar-position 'bottom)
   (setq secondary-tool-bar-map nil
-        tool-bar-button-margin 10)
+        tool-bar-button-margin 24)
   (dolist (key '(suderman-escape suderman-tab control meta))
     (define-key tool-bar-map (vector key) nil))
   (define-key tool-bar-map [suderman-escape]
