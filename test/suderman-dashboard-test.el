@@ -12,7 +12,11 @@
   (should (eq dashboard-projects-backend 'project-el))
   (should (eq dashboard-projects-switch-function #'suderman/dirvish))
   (should (eq initial-buffer-choice #'dashboard-open))
-  (should (commandp #'suderman/dashboard)))
+  (should (commandp #'suderman/dashboard))
+  (should (= (apply #'max
+                    (mapcar #'string-width
+                            (split-string dashboard-banner-ascii "\n")))
+             12)))
 
 (ert-deftest suderman/dashboard-closes-full-frame-dirvish-first ()
   (let ((session (make-dirvish :curr-layout t :root-window (selected-window)))
@@ -41,10 +45,9 @@
                             (nerd-icons-mdicon "nf-md-briefcase")
                             (nerd-icons-sucicon "nf-custom-emacs")
                             (nerd-icons-mdicon "nf-md-nix")
-                            (nerd-icons-mdicon "nf-md-folder_cog")
                             (nerd-icons-mdicon "nf-md-note_edit")))))
       (should (equal (mapcar #'cadr buttons)
-                     '("1" "2" "3" "4" "5" "6" "7" "8")))
+                     '("1" "2" "3" "4" "5" "6" "7")))
       (should (equal (mapcar #'caddr buttons)
                      '("Open home directory"
                        "Open Org directory"
@@ -52,14 +55,13 @@
                        "Open work source"
                        "Open Emacs configuration"
                        "Open NixOS configuration"
-                       "Open config directory"
                        "Open scratch buffer")))
       (cl-letf (((symbol-function 'suderman/dirvish)
                  (lambda (&optional path)
                    (push path destinations)))
                 ((symbol-function 'scratch-buffer)
                  (lambda () (push 'scratch destinations))))
-        (dotimes (index 8)
+        (dotimes (index 7)
           (suderman/dashboard-open-destination index)))
       (should (equal (nreverse destinations)
                      (list "~/"
@@ -68,7 +70,6 @@
                            "~/src/nonfiction/"
                            user-emacs-directory
                            "/etc/nixos/"
-                           "~/.config/"
                            'scratch))))))
 
 (ert-deftest suderman/dashboard-filters-and-renumbers-missing-destinations ()
@@ -80,6 +81,29 @@
       (let ((buttons (suderman/dashboard-destinations)))
         (should (equal (mapcar #'car buttons) '("Home" "Emacs" "Scratch")))
         (should (equal (mapcar #'cadr buttons) '("1" "2" "3")))))))
+
+(ert-deftest suderman/android-dashboard-keeps-future-org-and-source-destinations ()
+  (let ((system-type 'android)
+        (user-emacs-directory "/config/emacs/")
+        (existing (list (expand-file-name "~/") "/config/emacs/"))
+        destinations)
+    (cl-letf (((symbol-function 'file-directory-p)
+               (lambda (path) (member path existing)))
+              ((symbol-function 'suderman/nerd-fonts-available-p) #'ignore)
+              ((symbol-function 'suderman/dirvish)
+               (lambda (&optional path) (push path destinations)))
+              ((symbol-function 'scratch-buffer)
+               (lambda () (push 'scratch destinations))))
+      (let ((buttons (suderman/dashboard-destinations)))
+        (should (equal (mapcar #'car buttons)
+                       '("Home" "Org" "Source" "Emacs" "Scratch")))
+        (should (equal (mapcar #'cadr buttons)
+                       '("1" "2" "3" "4" "5")))
+        (dolist (button buttons)
+          (funcall (nth 3 button)))
+        (should (equal (nreverse destinations)
+                       (list "~/" "~/org/" "~/src/"
+                             user-emacs-directory 'scratch)))))))
 
 (ert-deftest suderman/dashboard-uses-native-navigation ()
   (dolist (key '("h" "j" "k" "l"))
@@ -143,8 +167,9 @@
                               (nerd-icons-mdicon "nf-md-home"))
                              " 1")))
       (goto-char (point-min))
-      (should (search-forward "██████╗██╗" nil t))
-      (should (search-forward "╱ emacs" nil t))
+      (should (search-forward "+----------+" nil t))
+      (should (search-forward "| SUDERMAN |" nil t))
+      (should (search-forward "+-- emacs -+" nil t))
       (dolist (icon (mapcar (lambda (button)
                               (substring-no-properties (car button)))
                             (car dashboard-navigator-buttons)))

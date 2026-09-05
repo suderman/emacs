@@ -638,8 +638,8 @@
                 '(collapse file-size))
         dirvish-default-layout (suderman/dirvish-default-layout)
         dirvish-mode-line-format
-        '(:left (suderman-dashboard suderman-dirvish suderman-ibuffer
-                 sort vc-info symlink yank)
+        `(:left (,@(suderman/mode-line-navigation-segments)
+                  sort vc-info symlink yank)
           :right (file-size file-modes index))
         dirvish-preview-dired-sync-omit nil
         dirvish-preview-dispatchers

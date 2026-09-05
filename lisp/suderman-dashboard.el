@@ -113,24 +113,26 @@
   (funcall (nth 3 (nth index (car dashboard-navigator-buttons)))))
 
 (defun suderman/dashboard-destinations ()
-  "Return pinned Dashboard destinations that exist on this device."
+  "Return pinned Dashboard destinations available on this device."
   (let ((entries
-         `((nerd-icons-mdicon "nf-md-home" "Home"
-            "Open home directory" "~/")
-           (nerd-icons-sucicon "nf-custom-orgmode" "Org"
-            "Open Org directory" "~/org/")
-           (nerd-icons-mdicon "nf-md-account" "Personal"
-            "Open personal source" "~/src/suderman/")
-           (nerd-icons-mdicon "nf-md-briefcase" "Work"
-            "Open work source" "~/src/nonfiction/")
-           (nerd-icons-sucicon "nf-custom-emacs" "Emacs"
-            "Open Emacs configuration" ,user-emacs-directory)
-           (nerd-icons-mdicon "nf-md-nix" "NixOS"
-            "Open NixOS configuration" "/etc/nixos/")
-           (nerd-icons-mdicon "nf-md-folder_cog" "Config"
-            "Open config directory" "~/.config/")
-           (nerd-icons-mdicon "nf-md-note_edit" "Scratch"
-            "Open scratch buffer" scratch)))
+         (append
+          `((nerd-icons-mdicon "nf-md-home" "Home"
+             "Open home directory" "~/")
+            (nerd-icons-sucicon "nf-custom-orgmode" "Org"
+             "Open Org directory" "~/org/"))
+          (if (eq system-type 'android)
+              '((nerd-icons-mdicon "nf-md-code_braces" "Source"
+                 "Open source directory" "~/src/"))
+            '((nerd-icons-mdicon "nf-md-account" "Personal"
+               "Open personal source" "~/src/suderman/")
+              (nerd-icons-mdicon "nf-md-briefcase" "Work"
+               "Open work source" "~/src/nonfiction/")))
+          `((nerd-icons-sucicon "nf-custom-emacs" "Emacs"
+             "Open Emacs configuration" ,user-emacs-directory)
+            (nerd-icons-mdicon "nf-md-nix" "NixOS"
+             "Open NixOS configuration" "/etc/nixos/")
+            (nerd-icons-mdicon "nf-md-note_edit" "Scratch"
+             "Open scratch buffer" scratch))))
         (index 0))
     (delq
      nil
@@ -138,6 +140,8 @@
       (lambda (entry)
         (let ((target (nth 4 entry)))
           (when (or (eq target 'scratch)
+                    (and (eq system-type 'android)
+                         (member target '("~/org/" "~/src/")))
                     (file-directory-p (expand-file-name target)))
             (setq index (1+ index))
             (list (if (suderman/nerd-fonts-available-p)

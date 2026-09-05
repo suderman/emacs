@@ -32,6 +32,12 @@
            (find-font (font-spec :family suderman/font-family) frame)
            (find-font (font-spec :family suderman/nerd-symbol-font) frame))))
 
+(defun suderman/mode-line-navigation-segments ()
+  "Return navigation segments appropriate for the current platform."
+  (append '(suderman-dashboard)
+          (unless (eq system-type 'android)
+            '(suderman-dirvish suderman-ibuffer))))
+
 ;; Emacs 31 rejects the Gnus inheritance cycles created by base16-theme
 ;; 20260419.235 and upstream main as of 2026-08-25.  Remove this when the empty
 ;; Gnus faces inherit their corresponding outline faces instead of the
@@ -359,9 +365,10 @@
   (doom-modeline-remove-segment 'suderman-dashboard)
   (doom-modeline-remove-segment 'suderman-dirvish)
   (doom-modeline-remove-segment 'suderman-ibuffer)
-  (doom-modeline-add-segment 'suderman-dashboard 'bar :after)
-  (doom-modeline-add-segment 'suderman-dirvish 'suderman-dashboard :after)
-  (doom-modeline-add-segment 'suderman-ibuffer 'suderman-dirvish :after)
+  (let ((anchor 'bar))
+    (dolist (segment (suderman/mode-line-navigation-segments))
+      (doom-modeline-add-segment segment anchor :after)
+      (setq anchor segment)))
   (doom-modeline-mode 1))
 
 (suderman/set-nerd-font-fallbacks)

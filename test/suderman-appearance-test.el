@@ -48,6 +48,14 @@
               ((symbol-function 'find-font) (lambda (&rest _) 'font)))
       (should (suderman/nerd-fonts-available-p)))))
 
+(ert-deftest suderman/mode-line-navigation-segments-follow-platform ()
+  (let ((system-type 'android))
+    (should (equal (suderman/mode-line-navigation-segments)
+                   '(suderman-dashboard))))
+  (let ((system-type 'gnu/linux))
+    (should (equal (suderman/mode-line-navigation-segments)
+                   '(suderman-dashboard suderman-dirvish suderman-ibuffer)))))
+
 (ert-deftest suderman/base16-gnus-faces-avoid-emacs-31-inheritance-cycles ()
   (let (faces transformed)
     (dolist (group '(mail news))
