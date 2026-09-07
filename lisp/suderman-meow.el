@@ -34,6 +34,18 @@
   (let (meow--beacon-overlays)
     (meow-keypad)))
 
+(defun suderman/meow-keypad-next-page ()
+  "Show the next Which-Key page without leaving Meow KEYPAD state."
+  (interactive)
+  (which-key-show-next-page-cycle)
+  nil)
+
+(defun suderman/meow-keypad-previous-page ()
+  "Show the previous Which-Key page without leaving Meow KEYPAD state."
+  (interactive)
+  (which-key-show-previous-page-cycle)
+  nil)
+
 (defun suderman/meow-escape ()
   "Exit Meow Insert state, or run the current `C-g' command."
   (interactive)
@@ -861,6 +873,14 @@ An active selection is replaced without modifying the kill ring."
             #'suderman/android-meow-text-conversion)
   (suderman/meow-reset-leader-map)
   (suderman/meow-setup-qwerty)
+  (keymap-set meow-keypad-state-keymap "<right>"
+              #'suderman/meow-keypad-next-page)
+  (keymap-set meow-keypad-state-keymap "<down>"
+              #'suderman/meow-keypad-next-page)
+  (keymap-set meow-keypad-state-keymap "<left>"
+              #'suderman/meow-keypad-previous-page)
+  (keymap-set meow-keypad-state-keymap "<up>"
+              #'suderman/meow-keypad-previous-page)
   (meow-global-mode 1)
   (suderman/android-initialize-meow-text-conversion))
 
