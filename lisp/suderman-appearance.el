@@ -254,6 +254,12 @@
     (global-display-line-numbers-mode 1)
     (suderman/disable-line-numbers-in-special-buffers)))
 
+(defun suderman/initialize-line-modes ()
+  "Set line highlighting and numbers to their platform defaults."
+  (let ((enabled (if (eq system-type 'android) -1 1)))
+    (global-hl-line-mode enabled)
+    (global-display-line-numbers-mode enabled)))
+
 (defun suderman/disable-line-numbers-in-meow-cheatsheet (&rest _)
   "Disable line numbers in Meow's read-only cheatsheet."
   (display-line-numbers-mode -1))
@@ -267,10 +273,9 @@
       (setq display-line-numbers line-numbers))))
 
 (setq-default hl-line-range-function #'suderman/hl-line-range)
-(global-hl-line-mode 1)
 (add-hook 'special-mode-hook #'suderman/disable-line-numbers-in-special-mode)
 (add-hook 'image-mode-hook #'suderman/disable-line-numbers-in-special-mode)
-(global-display-line-numbers-mode 1)
+(suderman/initialize-line-modes)
 (suderman/disable-line-numbers-in-special-buffers)
 (with-eval-after-load 'meow-cheatsheet
   (advice-add 'meow-cheatsheet :after

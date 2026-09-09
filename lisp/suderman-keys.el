@@ -132,7 +132,7 @@
 (suderman/keys--define suderman/leader-toggle-map "c" #'display-fill-column-indicator-mode)
 (suderman/keys--define suderman/leader-toggle-map "d" #'suderman/dirvish-side-toggle)
 (suderman/keys--define suderman/leader-toggle-map "h" #'hl-line-mode)
-(suderman/keys--define suderman/leader-toggle-map "l" #'suderman/toggle-line-numbers)
+(suderman/keys--define suderman/leader-toggle-map "n" #'suderman/toggle-line-numbers)
 (suderman/keys--define suderman/leader-toggle-map "o" #'org-indent-mode)
 (suderman/keys--define suderman/leader-toggle-map "r" #'read-only-mode)
 (when (fboundp 'jinx-mode)
@@ -247,7 +247,7 @@
   "c" "column indicator"
   "d" "dirvish sidebar"
   "h" "current line"
-  "l" "line numbers"
+  "n" "line numbers"
   "o" "org indentation"
   "r" "read only"
   "s" "spelling"

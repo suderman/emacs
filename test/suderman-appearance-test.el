@@ -174,6 +174,20 @@
       (kill-buffer special-buffer)
       (kill-buffer image-buffer))))
 
+(ert-deftest suderman/android-line-modes-default-off ()
+  (dolist (case '((gnu/linux 1) (android -1)))
+    (let ((system-type (car case))
+          calls)
+      (cl-letf (((symbol-function 'global-hl-line-mode)
+                 (lambda (argument) (push (list 'hl-line argument) calls)))
+                ((symbol-function 'global-display-line-numbers-mode)
+                 (lambda (argument)
+                   (push (list 'line-numbers argument) calls))))
+        (suderman/initialize-line-modes)
+        (should (equal (nreverse calls)
+                       `((hl-line ,(cadr case))
+                         (line-numbers ,(cadr case)))))))))
+
 (ert-deftest suderman/dirvish-preview-keeps-line-numbers-disabled ()
   (with-temp-buffer
     (display-line-numbers-mode 1)
