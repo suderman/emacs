@@ -20,7 +20,7 @@
   "Suderman features that `suderman/reload-config' should not unload.")
 
 (defconst suderman/reload-modal-keys
-  '("<f5>"
+  '("<f5>" "<f6>" "<f9>"
     "M-p"
     "M-h" "M-j" "M-k" "M-l"
     "M-H" "M-J" "M-K" "M-L"
@@ -75,9 +75,17 @@
   "Remove rebuilt key prefixes before unloading `suderman-keys'."
   (dolist (map-symbol '(meow-normal-state-keymap meow-motion-state-keymap))
     (suderman/reload--clear-keymap-symbol map-symbol))
-  (global-set-key (kbd "<f5>") nil)
+  (dolist (key '("<f5>" "<f6>" "<f9>"))
+    (global-set-key (kbd key) nil))
   (when (fboundp 'suderman/meow-reset-leader-map)
     (suderman/meow-reset-leader-map)))
+
+;;;###autoload
+(defun suderman/pull-config ()
+  "Run `git pull' asynchronously in `user-emacs-directory'."
+  (interactive)
+  (let ((default-directory user-emacs-directory))
+    (async-shell-command "git pull" "*Emacs config pull*")))
 
 (defun suderman/reload--unload-feature (feature)
   "Unload FEATURE, clearing keymaps first when needed."

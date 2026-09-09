@@ -354,5 +354,14 @@
     (should (eq (lookup-key suderman/leader-toggle-map (kbd (car binding)))
                 (cdr binding)))))
 
+(ert-deftest suderman/function-keys-work-globally-and-in-meow ()
+  (dolist (binding '(("<f5>" . suderman/reload-config)
+                     ("<f6>" . suderman/pull-config)
+                     ("<f9>" . tool-bar-mode)))
+    (dolist (map (list global-map meow-normal-state-keymap
+                       meow-motion-state-keymap))
+      (should (eq (lookup-key map (kbd (car binding)))
+                  (cdr binding))))))
+
 (provide 'suderman-meow-test)
 ;;; suderman-meow-test.el ends here

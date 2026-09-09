@@ -84,9 +84,8 @@
     (dirvish-quit)))
 
 (defun suderman/dirvish-default-layout ()
-  "Return the platform's default Dirvish layout."
-  (unless (eq system-type 'android)
-    '(1 0.125 0.5)))
+  "Return the full-frame Dirvish layout used by `dirvish-layout-toggle'."
+  '(1 0.125 0.5))
 
 (defun suderman/dirvish (&optional path)
   "Toggle Dirvish for PATH, selecting it when it is a file."
@@ -99,12 +98,9 @@
                           target
                         (file-name-directory target))))
       (dirvish directory)
-      (if (eq system-type 'android)
-          (when-let* ((session (dirvish-curr))
-                      ((dv-curr-layout session)))
-            (dirvish-layout-toggle))
-        (unless (and (>= (frame-width) 80) (one-window-p t))
-          (dirvish-layout-toggle)))
+      (when-let* ((session (dirvish-curr))
+                  ((dv-curr-layout session)))
+        (dirvish-layout-toggle))
       (unless (file-directory-p target)
         (dired-goto-file target)))))
 

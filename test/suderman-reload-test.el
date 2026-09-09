@@ -18,5 +18,20 @@
   (should-not (member "M-g" suderman/reload-modal-keys))
   (should-not (member "M-;" suderman/reload-modal-keys)))
 
+(ert-deftest suderman/reload-clears-config-function-keys ()
+  (dolist (key '("<f5>" "<f6>" "<f9>"))
+    (should (member key suderman/reload-modal-keys))))
+
+(ert-deftest suderman/pull-config-runs-git-in-user-emacs-directory ()
+  (let ((user-emacs-directory "/tmp/emacs-config/")
+        call)
+    (cl-letf (((symbol-function 'async-shell-command)
+               (lambda (command output-buffer)
+                 (setq call (list command output-buffer default-directory)))))
+      (suderman/pull-config)
+      (should (equal call
+                     '("git pull" "*Emacs config pull*"
+                       "/tmp/emacs-config/"))))))
+
 (provide 'suderman-reload-test)
 ;;; suderman-reload-test.el ends here
