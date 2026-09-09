@@ -12,6 +12,7 @@
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
 (declare-function org-agenda-deadline "org-agenda" (arg &optional time))
+(declare-function org-agenda-maybe-redo "org-agenda" ())
 (declare-function org-agenda-refile "org-agenda" (&optional goto rfloc no-update))
 (declare-function org-agenda-schedule "org-agenda" (arg &optional time))
 (declare-function org-agenda-todo "org-agenda" (&optional arg))
@@ -34,6 +35,34 @@
     (set-face-attribute (car face-height) nil :height (cdr face-height))))
 
 (add-hook 'org-mode-hook #'suderman/org-apply-heading-faces)
+
+(defun suderman/org-auto-save-visited-p ()
+  "Return non-nil when the current Org file is safe to save automatically."
+  (and (derived-mode-p 'org-mode)
+       buffer-file-name
+       (file-in-directory-p buffer-file-name org-directory)
+       (verify-visited-file-modtime (current-buffer))))
+
+(defun suderman/org-refresh-agenda-after-revert ()
+  "Refresh a visible Org Agenda after reverting a synced Org file."
+  (when (fboundp 'org-agenda-maybe-redo)
+    (save-current-buffer
+      (save-selected-window
+        (org-agenda-maybe-redo)))))
+
+(defun suderman/org-enable-synced-file-behavior ()
+  "Refresh Agenda when the current file under `org-directory' is reverted."
+  (when (and buffer-file-name
+             (file-in-directory-p buffer-file-name org-directory))
+    (add-hook 'after-revert-hook
+              #'suderman/org-refresh-agenda-after-revert nil t)))
+
+(add-hook 'org-mode-hook #'suderman/org-enable-synced-file-behavior)
+
+(dolist (buffer (buffer-list))
+  (with-current-buffer buffer
+    (when (derived-mode-p 'org-mode)
+      (suderman/org-enable-synced-file-behavior))))
 
 (defun suderman/org-mouse-cycle-todo (event)
   "Cycle the TODO keyword clicked by EVENT."
@@ -147,7 +176,9 @@
 (use-package org
   :ensure nil
   :init
-  (setq org-M-RET-may-split-line '((default . nil))
+  (setq auto-save-visited-interval 3
+        auto-save-visited-predicate #'suderman/org-auto-save-visited-p
+        org-M-RET-may-split-line '((default . nil))
         org-insert-heading-respect-content t
         org-log-done 'time
         org-log-into-drawer t
@@ -180,7 +211,8 @@
         '(("d" "Dashboard"
            ((agenda "" ((org-agenda-span 7)))
             (todo "PROG|EVAL|HOLD")
-            (todo "TODO"))))))
+            (todo "TODO")))))
+  (auto-save-visited-mode 1))
 
 (use-package org-tempo
   :ensure nil

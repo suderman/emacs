@@ -9,6 +9,10 @@
 (require 'suderman-org)
 
 (ert-deftest suderman/org-uses-phone-friendly-workflow-files ()
+  (should auto-save-visited-mode)
+  (should (= auto-save-visited-interval 3))
+  (should (eq auto-save-visited-predicate
+              #'suderman/org-auto-save-visited-p))
   (should (equal org-M-RET-may-split-line '((default . nil))))
   (should org-insert-heading-respect-content)
   (should (eq org-log-done 'time))
@@ -42,6 +46,62 @@
     (should org-agenda-skip-scheduled-if-done)
     (should org-agenda-skip-deadline-if-done)
     (should (assoc "d" org-agenda-custom-commands))))
+
+(ert-deftest suderman/org-auto-saves-only-safe-files-under-org-directory ()
+  (let* ((org-directory (make-temp-file "suderman-org-" t))
+         (inside (expand-file-name "todo.org" org-directory))
+         (outside (make-temp-file "suderman-org-outside-" nil ".org"))
+         (current t))
+    (unwind-protect
+        (cl-letf (((symbol-function 'verify-visited-file-modtime)
+                   (lambda (&optional _buffer) current)))
+          (with-temp-buffer
+            (setq buffer-file-name inside)
+            (org-mode)
+            (should (suderman/org-auto-save-visited-p))
+            (setq current nil)
+            (should-not (suderman/org-auto-save-visited-p))
+            (setq current t)
+            (text-mode)
+            (should-not (suderman/org-auto-save-visited-p)))
+          (with-temp-buffer
+            (setq buffer-file-name outside)
+            (org-mode)
+            (should-not (suderman/org-auto-save-visited-p))))
+      (delete-directory org-directory t)
+      (delete-file outside))))
+
+(ert-deftest suderman/org-revert-refreshes-visible-agenda-only-for-synced-files ()
+  (let* ((org-directory (make-temp-file "suderman-org-" t))
+         (inside (expand-file-name "todo.org" org-directory))
+         (outside (make-temp-file "suderman-org-outside-" nil ".org"))
+         (agenda-buffer (generate-new-buffer " *suderman-org-agenda*"))
+         refreshed)
+    (unwind-protect
+        (cl-letf (((symbol-function 'org-agenda-maybe-redo)
+                   (lambda ()
+                     (setq refreshed t)
+                     (set-buffer agenda-buffer))))
+          (with-temp-buffer
+            (setq buffer-file-name inside)
+            (org-mode)
+            (should (local-variable-p 'after-revert-hook))
+            (should (memq #'suderman/org-refresh-agenda-after-revert
+                          after-revert-hook))
+            (run-hooks 'after-revert-hook)
+            (should refreshed)
+            (should-not (eq (current-buffer) agenda-buffer)))
+          (setq refreshed nil)
+          (with-temp-buffer
+            (setq buffer-file-name outside)
+            (org-mode)
+            (should-not
+             (memq #'suderman/org-refresh-agenda-after-revert
+                   after-revert-hook)))
+          (should-not refreshed))
+      (delete-directory org-directory t)
+      (delete-file outside)
+      (kill-buffer agenda-buffer))))
 
 (ert-deftest suderman/org-prefix-enters-through-meow-keypad ()
   (should (eq (lookup-key suderman/meow-leader-map (kbd "o"))
