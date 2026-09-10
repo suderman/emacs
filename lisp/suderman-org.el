@@ -183,11 +183,14 @@
         org-log-done 'time
         org-log-into-drawer t
         org-startup-indented t
+        org-startup-with-link-previews t
         org-tags-column 0
         org-auto-align-tags nil
         org-todo-keywords
         '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))
         org-directory (expand-file-name "~/org")
+        org-attach-id-dir (expand-file-name "data/" org-directory)
+        org-attach-use-inheritance t
         org-agenda-files
         (mapcar (lambda (file) (expand-file-name file org-directory))
                 '("inbox.org" "todo.org" "routines.org" "fresha.org"))

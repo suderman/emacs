@@ -58,7 +58,8 @@
     (let ((system-type system))
       (should (equal (suderman/dirvish-default-layout) '(1 0.125 0.5)))
       (dolist (layout '(nil full-frame))
-        (let ((session (make-dirvish :curr-layout layout))
+        (let ((session (make-dirvish :curr-layout layout
+                                     :root-window (selected-window)))
               (current-calls 0)
               opened toggled)
           (cl-letf (((symbol-function 'dirvish-curr)
@@ -73,6 +74,31 @@
             (should opened)
             (should (eq toggled (and layout t)))
             (should-not (dv-curr-layout session))))))))
+
+(ert-deftest suderman/dirvish-normalizes-layout-from-an-ambient-buffer ()
+  (save-window-excursion
+    (let* ((root-buffer (generate-new-buffer " *suderman-dirvish-root*"))
+           (root-window (selected-window))
+           (session (make-dirvish :curr-layout 'full-frame
+                                  :root-window root-window))
+           toggled)
+      (unwind-protect
+          (progn
+            (set-window-buffer root-window root-buffer)
+            (with-temp-buffer
+              (cl-letf (((symbol-function 'dirvish-curr)
+                         (lambda ()
+                           (and (eq (current-buffer) root-buffer) session)))
+                        ((symbol-function 'dirvish) #'ignore)
+                        ((symbol-function 'dirvish-layout-toggle)
+                         (lambda ()
+                           (should (eq (selected-window) root-window))
+                           (setq toggled t)
+                           (setf (dv-curr-layout session) nil))))
+                (suderman/dirvish "/tmp/")))
+            (should toggled)
+            (should-not (dv-curr-layout session)))
+        (kill-buffer root-buffer)))))
 
 (ert-deftest suderman/dirvish-single-click-does-not-follow-dired-links ()
   (with-temp-buffer

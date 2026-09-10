@@ -18,8 +18,12 @@
   (should (eq org-log-done 'time))
   (should org-log-into-drawer)
   (should org-startup-indented)
+  (should org-startup-with-link-previews)
   (let ((directory (expand-file-name "~/org")))
     (should (equal org-directory directory))
+    (should (equal org-attach-id-dir
+                   (expand-file-name "data/" directory)))
+    (should org-attach-use-inheritance)
     (should (equal org-agenda-files
                    (mapcar (lambda (file) (expand-file-name file directory))
                             '("inbox.org" "todo.org" "routines.org" "fresha.org"))))

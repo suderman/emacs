@@ -98,9 +98,16 @@
                           target
                         (file-name-directory target))))
       (dirvish directory)
-      (when-let* ((session (dirvish-curr))
-                  ((dv-curr-layout session)))
-        (dirvish-layout-toggle))
+      (when-let* ((session
+                   (seq-some
+                    (lambda (window)
+                      (with-current-buffer (window-buffer window)
+                        (when-let* ((session (dirvish-curr)))
+                          (and (eq (dv-type session) 'default) session))))
+                    (window-list)))
+                   ((dv-curr-layout session)))
+        (with-selected-window (dv-root-window session)
+          (dirvish-layout-toggle)))
       (unless (file-directory-p target)
         (dired-goto-file target)))))
 
