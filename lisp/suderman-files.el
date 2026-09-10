@@ -19,6 +19,7 @@
 (defvar dirvish-preview-setup-hook)
 (defvar dirvish-preview-dispatchers)
 (defvar dirvish-peek-key)
+(defvar dirvish-path-separators)
 (defvar dirvish-yank-sources)
 (defvar dirvish-side-attributes)
 (defvar dirvish-side-mode-line-format)
@@ -183,6 +184,7 @@
     ("c" . "Stage copy")
     ("x" . "Stage cut")
     ("v" . "Paste staged files")
+    ("V" . "Paste clipboard PNG")
     ("C" . "Copy immediately")
     ("D" . "Delete immediately")
     ("d" . "Flag for deletion")
@@ -530,6 +532,64 @@
     (revert-buffer)
     (dired-goto-file (if directoryp (directory-file-name path) path))))
 
+(defun suderman/dired-paste-image ()
+  "Save a PNG from the local Wayland clipboard in the current directory."
+  (interactive)
+  (let* ((directory (file-name-as-directory (dired-current-directory)))
+         (wl-paste (let ((default-directory "/"))
+                     (executable-find "wl-paste")))
+         file)
+    (unless wl-paste
+      (user-error "wl-paste is not installed"))
+    (setq file
+          (with-temp-buffer
+            (set-buffer-multibyte nil)
+            (let ((coding-system-for-read 'binary)
+                  (coding-system-for-write 'binary))
+              (let ((default-directory "/"))
+                (let ((status (call-process wl-paste nil t nil "--list-types")))
+                  (unless (eq status 0)
+                    (user-error
+                     "Could not inspect clipboard types (wl-paste status %s)"
+                     status))))
+              (unless (member "image/png"
+                              (split-string (buffer-string) "[\r\n]+" t))
+                (user-error "Clipboard does not contain image/png"))
+              (erase-buffer)
+              (let ((default-directory "/"))
+                (let ((status (call-process wl-paste nil t nil
+                                            "--type" "image/png" "--no-newline")))
+                  (unless (eq status 0)
+                    (user-error
+                     "Could not read PNG image from clipboard (wl-paste status %s)"
+                     status))))
+              (when (zerop (buffer-size))
+                (user-error "Clipboard returned no PNG image data"))
+              (let ((timestamp (format-time-string "%Y%m%d-%H%M%S"))
+                    (attempt 1)
+                    destination)
+                (while (not destination)
+                  (let ((candidate
+                         (expand-file-name
+                          (format "screenshot-%s%s.png"
+                                  timestamp
+                                  (if (= attempt 1) "" (format "-%d" attempt)))
+                          directory)))
+                    (condition-case error-data
+                        (progn
+                          (write-region nil nil candidate nil 'silent nil 'excl)
+                          (setq destination candidate))
+                      (file-already-exists
+                       (setq attempt (1+ attempt)))
+                      (file-error
+                       (user-error "Could not write PNG image to %s: %s"
+                                   directory
+                                   (error-message-string error-data))))))
+                destination))))
+    (revert-buffer)
+    (dired-goto-file file)
+    (message "Saved clipboard image to %s" file)))
+
 (defvar suderman/dired-transfer nil
   "Staged file operation as (METHOD . FILES).")
 
@@ -644,6 +704,7 @@
         `(:left (,@(suderman/mode-line-navigation-segments)
                   sort vc-info symlink yank)
           :right (file-size file-modes index))
+        dirvish-path-separators '("  ⌂" "  /" " ⋗ ")
         dirvish-preview-dired-sync-omit nil
         dirvish-preview-dispatchers
         '(video image gif audio epub archive font pdf)
@@ -740,6 +801,7 @@
     (keymap-set map "s" #'dirvish-quicksort)
     (keymap-set map "u" #'suderman/dired-unmark)
     (keymap-set map "v" #'suderman/dired-paste-files)
+    (keymap-set map "V" #'suderman/dired-paste-image)
     (keymap-set map "x" #'suderman/dired-cut-files)
     (keymap-set map "z" #'dirvish-quick-access)
     (keymap-set map "M-h" #'suderman/window-left)
