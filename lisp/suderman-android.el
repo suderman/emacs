@@ -38,58 +38,16 @@
         [tab]
       (vector (event-apply-modifier event 'meta 27 "M-")))))
 
-;; GTK reloads toolbar :file images itself, bypassing Emacs image scaling,
-;; theme colors, and masks.  Its natural button padding is also the minimum,
-;; so render desktop glyphs directly at their final size as SVG :data.
-(defun suderman/tool-bar-desktop-svg-data (name foreground background)
-  "Return a final-size desktop toolbar SVG for NAME using theme colors."
-  (let* ((active (string-suffix-p "-active" name))
-         (name (string-remove-suffix "-active" name))
-         (spec
-          (pcase name
-            ("control" '("Ctrl" 28 11 14 "JetBrainsMono Nerd Font Mono"))
-            ("meta" '("Meta" 28 11 14 "JetBrainsMono Nerd Font Mono"))
-            ("tab" '("Tab" 22 11 14 "JetBrainsMono Nerd Font Mono"))
-            ("escape" '("Esc" 22 11 14 "JetBrainsMono Nerd Font Mono"))
-            ("buffers" '("&#xF018F;" 22 18 18 "Symbols Nerd Font Mono"))
-            ("keyboard" '("&#xF097B;" 22 18 18 "Symbols Nerd Font Mono"))
-            ("files" '("&#xF0256;" 22 18 18 "Symbols Nerd Font Mono"))
-            (_ (error "Unknown toolbar image %s" name))))
-         (text (nth 0 spec))
-         (width (nth 1 spec))
-         (height 22)
-         (font-size (nth 2 spec))
-         (baseline (nth 3 spec))
-         (family (nth 4 spec)))
-    (format
-     (concat "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" "
-             "height=\"%d\" viewBox=\"0 0 %d %d\" "
-             "text-rendering=\"geometricPrecision\">%s"
-             "<text x=\"50%%\" y=\"%d\" text-anchor=\"middle\" "
-             "font-family=\"%s\" font-size=\"%d\" font-weight=\"600\" "
-             "fill=\"%s\">%s</text></svg>")
-     width height width height
-     (if active
-         (format "<rect width=\"%d\" height=\"%d\" rx=\"2\" fill=\"%s\"/>"
-                 width height foreground)
-       "")
-     baseline family font-size (if active background foreground) text)))
-
 (defun suderman/android-tool-bar-image (name)
   "Return a theme-aware tool-bar image expression for NAME."
   (let* ((file (expand-file-name (format "assets/android-toolbar/%s.pbm" name)
                                  user-emacs-directory))
-         (android (eq system-type 'android))
          (foreground (face-foreground 'tool-bar nil t))
          (background (face-background 'tool-bar nil t)))
-    (if android
-        `(create-image ,file 'pbm nil :scale 1
-                       :foreground ,foreground :background ,background
-                       :mask ',(unless (string-suffix-p "-active" name)
-                                 'heuristic))
-      `(create-image
-        ,(suderman/tool-bar-desktop-svg-data name foreground background)
-        'svg t :scale 1))))
+    `(create-image ,file 'pbm nil :scale 1
+                   :foreground ,foreground :background ,background
+                   :mask ',(unless (string-suffix-p "-active" name)
+                             'heuristic))))
 
 (defun suderman/android-tool-bar-state-images (name)
   "Return platform-appropriate state images for toolbar item NAME."
@@ -107,6 +65,13 @@
 (defun suderman/tool-bar-refresh ()
   "Rebuild the toolbar after its dynamic modifier state changes."
   (let ((tool-bar-map (default-value 'tool-bar-map)))
+    (unless (eq system-type 'android)
+      (dolist (button '((control "Ctrl") (meta "Meta")))
+        (when-let* ((binding (assq (car button) (cdr tool-bar-map))))
+          (setcar (nthcdr 2 binding)
+                  (if (memq (car button) modifier-bar-modifier-list)
+                      (upcase (cadr button))
+                    (cadr button))))))
     (tool-bar--flush-cache))
   (force-mode-line-update t))
 
@@ -232,44 +197,53 @@ THEME is non-nil when refreshing the toolbar after a theme change."
                       :background (face-background 'default nil t))
   (setq secondary-tool-bar-map nil
         tool-bar-button-margin (if (eq system-type 'android) '(48 . 20) 4)
-        tool-bar-style 'image
+        tool-bar-style (if (eq system-type 'android) 'image 'text)
         tool-bar-always-show-default t)
   (let ((map (make-sparse-keymap)))
     (define-key-after map [control]
-      `(menu-item "CTRL" ignore
+      `(menu-item "Ctrl" ignore
                   :image ,(suderman/android-tool-bar-state-images "control")
                   :button (:toggle . (memq 'control
                                             modifier-bar-modifier-list))
                   :help "Apply Control to the next key"))
     (define-key-after map [meta]
-      `(menu-item "META" ignore
+      `(menu-item "Meta" ignore
                   :image ,(suderman/android-tool-bar-state-images "meta")
                   :button (:toggle . (memq 'meta
                                             modifier-bar-modifier-list))
                   :help "Apply Meta to the next key")
       'control)
     (define-key-after map [suderman-buffers]
-      `(menu-item "BUFFERS" suderman/ibuffer-toggle
+      `(menu-item ,(if (eq system-type 'android)
+                       "BUFFERS"
+                     (string #xF018F))
+                  suderman/ibuffer-toggle
                   :image ,(suderman/android-tool-bar-image "buffers")
                   :help "Open IBuffer")
       'meta)
     (define-key-after map [suderman-keyboard]
-      `(menu-item "KEYBOARD" suderman/android-toggle-keyboard
+      `(menu-item ,(if (eq system-type 'android)
+                       "KEYBOARD"
+                     (string #xF097B))
+                  suderman/android-toggle-keyboard
                   :image ,(suderman/android-tool-bar-image "keyboard")
                   :help "Show or hide the software keyboard")
       'suderman-buffers)
     (define-key-after map [suderman-files]
-      `(menu-item "FILES" suderman/dirvish
+      `(menu-item ,(if (eq system-type 'android)
+                       "FILES"
+                     (string #xF0256))
+                  suderman/dirvish
                   :image ,(suderman/android-tool-bar-image "files")
                   :help "Open Dirvish")
       'suderman-keyboard)
     (define-key-after map [suderman-tab]
-      `(menu-item "TAB" ignore
+      `(menu-item "Tab" ignore
                   :image ,(suderman/android-tool-bar-image "tab")
                   :help "Send Tab")
       'suderman-files)
     (define-key-after map [suderman-escape]
-      `(menu-item "ESC" suderman/meow-escape
+      `(menu-item "Esc" suderman/meow-escape
                   :image ,(suderman/android-tool-bar-image "escape")
                   :help "Leave Insert state or cancel")
       'suderman-tab)
