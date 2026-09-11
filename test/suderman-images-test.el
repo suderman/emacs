@@ -75,6 +75,10 @@
 
 (ert-deftest suderman/image-gallery-uses-xdg-thumbnails-and-owned-bindings ()
   (should (eq image-dired-thumbnail-storage 'standard-large))
+  (should (equal image-dired-dir
+                 (expand-file-name "image-dired/" suderman/cache-dir)))
+  (should (equal image-dired-tags-db-file
+                 (expand-file-name "image-dired/tags" suderman/state-dir)))
   (dolist (map (list dired-mode-map dirvish-mode-map))
     (should (eq (lookup-key map (kbd "G"))
                 #'suderman/image-dired-gallery)))
