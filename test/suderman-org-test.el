@@ -26,7 +26,8 @@
     (should org-attach-use-inheritance)
     (should (equal org-agenda-files
                    (mapcar (lambda (file) (expand-file-name file directory))
-                            '("inbox.org" "todo.org" "routines.org" "fresha.org"))))
+                            '("inbox.org" "todo.org" "routines.org"
+                              "projects" "calendar"))))
     (should (equal org-todo-keywords
                    '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))))
     (should (equal org-default-notes-file
