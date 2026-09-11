@@ -169,6 +169,7 @@
     ("k" . "Previous entry")
     ("l" . "Open entry")
     ("f" . "Toggle fullscreen")
+    ("G" . "Open image gallery")
     ("TAB" . "Toggle subtree")
     ("S" . "Toggle file sidebar")
     ("H" . "History backward")
