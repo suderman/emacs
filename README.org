@@ -1,5 +1,5 @@
 #+title: suderman/emacs 🐈
-#+subtitle: My Emacs 31 configuration for NixOS and Android
+#+subtitle: Personal Emacs 31 configuration for NixOS & Android
 #+author: Jon Suderman
 #+options: toc:2 num:nil
 #+startup: content
