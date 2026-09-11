@@ -36,8 +36,11 @@
 
 (defun suderman/reload--user-init-file ()
   "Return the init file path used by `suderman/reload-config'."
-  (or user-init-file
-      (expand-file-name "init.el" user-emacs-directory)))
+  (let ((file (or user-init-file
+                  (expand-file-name "init.el" user-emacs-directory))))
+    (if (string-suffix-p ".elc" file)
+        (string-remove-suffix "c" file)
+      file)))
 
 (defun suderman/reload--config-modules ()
   "Return ordered `suderman-*' modules required by the user init file."

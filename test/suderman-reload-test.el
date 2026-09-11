@@ -7,6 +7,11 @@
 (require 'seq)
 (require 'suderman-reload)
 
+(ert-deftest suderman/reload-reads-source-when-emacs-loaded-init-elc ()
+  (let ((user-init-file "/tmp/emacs/init.elc"))
+    (should (equal (suderman/reload--user-init-file)
+                   "/tmp/emacs/init.el"))))
+
 (ert-deftest suderman/reload-loads-keys-after-command-modules ()
   (let ((modules (suderman/reload--config-modules)))
     (should (eq (car (last modules)) 'suderman-keys))
