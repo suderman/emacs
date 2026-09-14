@@ -22,7 +22,7 @@
   (let ((directory (expand-file-name "~/org")))
     (should (equal org-directory directory))
     (should (equal org-attach-id-dir
-                   (expand-file-name "data/" directory)))
+                   (expand-file-name ".attach/" directory)))
     (should org-attach-use-inheritance)
     (should (equal org-agenda-files
                    (mapcar (lambda (file) (expand-file-name file directory))

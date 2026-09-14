@@ -189,7 +189,7 @@
         org-todo-keywords
         '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))
         org-directory (expand-file-name "~/org")
-        org-attach-id-dir (expand-file-name "data/" org-directory)
+        org-attach-id-dir (expand-file-name ".attach/" org-directory)
         org-attach-use-inheritance t
         org-agenda-files
         (mapcar (lambda (file) (expand-file-name file org-directory))
