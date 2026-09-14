@@ -27,7 +27,7 @@
     (should (equal org-agenda-files
                    (mapcar (lambda (file) (expand-file-name file directory))
                             '("inbox.org" "todo.org" "routines.org"
-                              "projects" "calendar"))))
+                              "projects" "calendar" "family"))))
     (should (equal org-todo-keywords
                    '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))))
     (should (equal org-default-notes-file

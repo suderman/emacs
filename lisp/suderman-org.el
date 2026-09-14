@@ -194,7 +194,7 @@
         org-agenda-files
         (mapcar (lambda (file) (expand-file-name file org-directory))
                 '("inbox.org" "todo.org" "routines.org"
-                  "projects" "calendar"))
+                  "projects" "calendar" "family"))
         org-default-notes-file (expand-file-name "inbox.org" org-directory)
         org-capture-templates
         `(("t" "Task" entry (file ,org-default-notes-file)
