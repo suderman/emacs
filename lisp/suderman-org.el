@@ -99,6 +99,32 @@
 
 (add-hook 'org-mode-hook #'suderman/org-inhibit-electric-angle-pairing)
 
+(defun suderman/org--direct-org-files (directory)
+  "Return sorted non-hidden Org files directly inside DIRECTORY."
+  (when (file-directory-p directory)
+    (delq nil
+          (mapcar (lambda (file)
+                    (and (file-regular-p file) file))
+                  (directory-files directory t "\\`[^.].*\\.org\\'")))))
+
+(defun suderman/org-work-agenda-files (directory)
+  "Return agenda files selected by the work hierarchy under DIRECTORY."
+  (let (files)
+    (dolist (domain (when (file-directory-p directory)
+                      (directory-files directory t "\\`[^.]")))
+      (when (file-directory-p domain)
+        (setq files (append (suderman/org--direct-org-files domain) files))
+        (dolist (project (directory-files domain t "\\`[^.]"))
+          (when (file-directory-p project)
+            (let ((file (expand-file-name
+                         (concat (file-name-nondirectory
+                                  (directory-file-name project))
+                                 ".org")
+                         project)))
+              (when (file-regular-p file)
+                (push file files)))))))
+    (sort files #'string<)))
+
 (defun suderman/org--call-contextually
     (org-command &optional agenda-command fallback-command)
   "Call the command appropriate for the current Org context."
@@ -192,9 +218,15 @@
         org-attach-id-dir (expand-file-name ".attach/" org-directory)
         org-attach-use-inheritance t
         org-agenda-files
-        (mapcar (lambda (file) (expand-file-name file org-directory))
-                '("inbox.org" "todo.org" "routines.org"
-                  "projects" "calendar" "family"))
+        (append
+         (mapcar (lambda (file) (expand-file-name file org-directory))
+                 '("inbox.org" "todo.org" "routines.org"))
+         (suderman/org--direct-org-files
+          (expand-file-name "calendar" org-directory))
+         (suderman/org--direct-org-files
+          (expand-file-name "family" org-directory))
+         (suderman/org-work-agenda-files
+          (expand-file-name "work" org-directory)))
         org-default-notes-file (expand-file-name "inbox.org" org-directory)
         org-capture-templates
         `(("t" "Task" entry (file ,org-default-notes-file)

@@ -24,10 +24,19 @@
     (should (equal org-attach-id-dir
                    (expand-file-name ".attach/" directory)))
     (should org-attach-use-inheritance)
-    (should (equal org-agenda-files
-                   (mapcar (lambda (file) (expand-file-name file directory))
-                            '("inbox.org" "todo.org" "routines.org"
-                              "projects" "calendar" "family"))))
+    (should
+     (equal org-agenda-files
+            (append
+             (mapcar (lambda (file) (expand-file-name file directory))
+                     '("inbox.org" "todo.org" "routines.org"))
+             (suderman/org--direct-org-files
+              (expand-file-name "calendar" directory))
+             (suderman/org--direct-org-files
+              (expand-file-name "family" directory))
+             (suderman/org-work-agenda-files
+              (expand-file-name "work" directory)))))
+    (should-not (member (expand-file-name "projects" directory)
+                        org-agenda-files))
     (should (equal org-todo-keywords
                    '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))))
     (should (equal org-default-notes-file
@@ -51,6 +60,46 @@
     (should org-agenda-skip-scheduled-if-done)
     (should org-agenda-skip-deadline-if-done)
     (should (assoc "d" org-agenda-custom-commands))))
+
+(ert-deftest suderman/org-discovers-work-agenda-files-by-convention ()
+  (let* ((work (make-temp-file "suderman-org-work-" t))
+         (nonfiction (expand-file-name "nonfiction" work))
+         (project (expand-file-name "beefresearch" nonfiction))
+         (task (expand-file-name "2026-09-14-economic-value-of-feeds" project))
+         (suderman (expand-file-name "suderman" work)))
+    (unwind-protect
+        (progn
+          (dolist (directory (list task
+                                   (expand-file-name "upick" nonfiction)
+                                   (expand-file-name "not-a-file.org" nonfiction)
+                                   (expand-file-name ".secret" nonfiction)
+                                   (expand-file-name ".hidden" work)
+                                   (expand-file-name "emacs" suderman)))
+            (make-directory directory t))
+          (dolist (file (list (expand-file-name "bcrc.org" nonfiction)
+                              (expand-file-name ".private.org" nonfiction)
+                              (expand-file-name "beefresearch.org" project)
+                              (expand-file-name "quote-review.org" task)
+                              (expand-file-name "notes.org"
+                                                (expand-file-name "upick" nonfiction))
+                              (expand-file-name ".secret.org"
+                                                (expand-file-name ".secret" nonfiction))
+                              (expand-file-name "client.org"
+                                                (expand-file-name ".hidden" work))
+                              (expand-file-name "davy.org" suderman)
+                              (expand-file-name "emacs.org"
+                                                (expand-file-name "emacs" suderman))))
+            (with-temp-file file))
+          (should
+           (equal (suderman/org-work-agenda-files work)
+                  (list (expand-file-name "bcrc.org" nonfiction)
+                        (expand-file-name "beefresearch.org" project)
+                        (expand-file-name "davy.org" suderman)
+                        (expand-file-name "emacs/emacs.org" suderman))))
+          (should-not
+           (suderman/org-work-agenda-files
+            (expand-file-name "missing" work))))
+      (delete-directory work t))))
 
 (ert-deftest suderman/org-auto-saves-only-safe-files-under-org-directory ()
   (let* ((org-directory (make-temp-file "suderman-org-" t))

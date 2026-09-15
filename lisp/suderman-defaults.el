@@ -6,6 +6,10 @@
 
 ;;; Code:
 
+(require 'project)
+
+(add-to-list 'project-vc-extra-root-markers ".stignore")
+
 (setq ring-bell-function #'ignore
       use-short-answers t
       read-answer-short t
