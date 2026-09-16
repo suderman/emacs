@@ -53,10 +53,9 @@
                     (mapcar
                      (lambda (file)
                        (cons (expand-file-name file directory) '(:maxlevel . 3)))
-                     '("todo.org" "routines.org" "ideas.org" "archive.org"))))
-    (should (equal org-archive-location
-                   (concat (expand-file-name "archive.org" directory)
-                           "::* From %s")))
+                     '("todo.org" "routines.org" "ideas.org"))))
+    (should (equal org-archive-location "archive.org::"))
+    (should-not org-archive-file-header-format)
     (should org-agenda-skip-scheduled-if-done)
     (should org-agenda-skip-deadline-if-done)
     (should (assoc "d" org-agenda-custom-commands))))
@@ -66,10 +65,12 @@
          (nonfiction (expand-file-name "nonfiction" work))
          (project (expand-file-name "beefresearch" nonfiction))
          (task (expand-file-name "2026-09-14-economic-value-of-feeds" project))
+         (archive (expand-file-name "archive" nonfiction))
          (suderman (expand-file-name "suderman" work)))
     (unwind-protect
         (progn
           (dolist (directory (list task
+                                   (expand-file-name "gta" archive)
                                    (expand-file-name "upick" nonfiction)
                                    (expand-file-name "not-a-file.org" nonfiction)
                                    (expand-file-name ".secret" nonfiction)
@@ -77,6 +78,8 @@
                                    (expand-file-name "emacs" suderman)))
             (make-directory directory t))
           (dolist (file (list (expand-file-name "bcrc.org" nonfiction)
+                              (expand-file-name "archive.org" nonfiction)
+                              (expand-file-name "gta/gta.org" archive)
                               (expand-file-name ".private.org" nonfiction)
                               (expand-file-name "beefresearch.org" project)
                               (expand-file-name "quote-review.org" task)
@@ -100,6 +103,96 @@
            (suderman/org-work-agenda-files
             (expand-file-name "missing" work))))
       (delete-directory work t))))
+
+(ert-deftest suderman/org-excludes-archive-files-and-directories ()
+  (let* ((directory (make-temp-file "suderman-org-files-" t))
+         (active (expand-file-name "active.org" directory))
+         (archive-file (expand-file-name "archive.org" directory))
+         (archive-directory (expand-file-name "archive" directory))
+         (archived (expand-file-name "client.org" archive-directory)))
+    (unwind-protect
+        (progn
+          (make-directory archive-directory)
+          (dolist (file (list active archive-file archived))
+            (with-temp-file file))
+          (should (equal (suderman/org--direct-org-files directory)
+                         (list active)))
+          (should-not (suderman/org--direct-org-files archive-directory)))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-archives-into-a-sibling-file-with-context ()
+  (let* ((directory (make-temp-file "suderman-org-archive-" t))
+         (source (expand-file-name "cnrl.org" directory))
+         (archive (expand-file-name "archive.org" directory))
+         source-buffer archive-buffer)
+    (unwind-protect
+        (progn
+          (with-temp-file source
+            (insert "#+CATEGORY: cnrl\n"
+                    "* Client work\n"
+                    "** Analytics\n"
+                    "*** DONE Fix GA4 cross-domain tracking\n"))
+          (setq source-buffer (find-file-noselect source))
+          (with-current-buffer source-buffer
+            (goto-char (point-min))
+            (search-forward "Fix GA4")
+            (org-back-to-heading)
+            (org-archive-subtree))
+          (should (file-exists-p archive))
+          (setq archive-buffer (find-file-noselect archive))
+          (with-current-buffer archive-buffer
+            (goto-char (point-min))
+            (should (search-forward "Fix GA4 cross-domain tracking" nil t))
+            (org-back-to-heading)
+            (should (= (org-outline-level) 1))
+            (should (org-entry-get nil "ARCHIVE_TIME"))
+            (should (equal (org-entry-get nil "ARCHIVE_FILE") source))
+            (should (equal (org-entry-get nil "ARCHIVE_OLPATH")
+                           "Client work/Analytics"))
+            (should (equal (org-entry-get nil "ARCHIVE_CATEGORY") "cnrl"))
+            (should (equal (org-entry-get nil "ARCHIVE_TODO") "DONE"))))
+      (when (buffer-live-p source-buffer)
+        (kill-buffer source-buffer))
+      (when (buffer-live-p archive-buffer)
+        (kill-buffer archive-buffer))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-archives-agenda-items-into-the-source-sibling ()
+  (let* ((directory (make-temp-file "suderman-org-agenda-archive-" t))
+         (source (expand-file-name "client.org" directory))
+         (archive (expand-file-name "archive.org" directory))
+         (agenda-buffer (generate-new-buffer " *suderman-archive-agenda*"))
+         source-buffer archive-buffer marker)
+    (unwind-protect
+        (progn
+          (with-temp-file source
+            (insert "#+CATEGORY: client\n* DONE Archive from Agenda\n"))
+          (setq source-buffer (find-file-noselect source))
+          (with-current-buffer source-buffer
+            (goto-char (point-min))
+            (search-forward "Archive from Agenda")
+            (org-back-to-heading)
+            (setq marker (point-marker)))
+          (with-current-buffer agenda-buffer
+            (org-agenda-mode)
+            (let ((inhibit-read-only t))
+              (insert "Archive from Agenda\n")
+              (add-text-properties (point-min) (point-max)
+                                   `(org-marker ,marker)))
+            (goto-char (point-min))
+            (org-agenda-archive))
+          (setq archive-buffer (find-file-noselect archive))
+          (with-current-buffer archive-buffer
+            (goto-char (point-min))
+            (should (search-forward "Archive from Agenda" nil t))
+            (org-back-to-heading)
+            (should (= (org-outline-level) 1))))
+      (when marker
+        (set-marker marker nil))
+      (dolist (buffer (list source-buffer archive-buffer agenda-buffer))
+        (when (buffer-live-p buffer)
+          (kill-buffer buffer)))
+      (delete-directory directory t))))
 
 (ert-deftest suderman/org-auto-saves-only-safe-files-under-org-directory ()
   (let* ((org-directory (make-temp-file "suderman-org-" t))

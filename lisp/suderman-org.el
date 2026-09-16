@@ -99,12 +99,21 @@
 
 (add-hook 'org-mode-hook #'suderman/org-inhibit-electric-angle-pairing)
 
+(defun suderman/org--archived-path-p (file)
+  "Return non-nil when FILE is archived by name or directory."
+  (or (string-equal (file-name-nondirectory file) "archive.org")
+      (member "archive"
+              (file-name-split
+               (directory-file-name (file-name-directory file))))))
+
 (defun suderman/org--direct-org-files (directory)
-  "Return sorted non-hidden Org files directly inside DIRECTORY."
+  "Return sorted active, non-hidden Org files directly inside DIRECTORY."
   (when (file-directory-p directory)
     (delq nil
           (mapcar (lambda (file)
-                    (and (file-regular-p file) file))
+                    (and (file-regular-p file)
+                         (not (suderman/org--archived-path-p file))
+                         file))
                   (directory-files directory t "\\`[^.].*\\.org\\'")))))
 
 (defun suderman/org-work-agenda-files (directory)
@@ -121,7 +130,8 @@
                                   (directory-file-name project))
                                  ".org")
                          project)))
-              (when (file-regular-p file)
+              (when (and (file-regular-p file)
+                         (not (suderman/org--archived-path-p file)))
                 (push file files)))))))
     (sort files #'string<)))
 
@@ -238,9 +248,9 @@
         org-refile-targets
         (mapcar (lambda (file)
                   (cons (expand-file-name file org-directory) '(:maxlevel . 3)))
-                '("todo.org" "routines.org" "ideas.org" "archive.org"))
-        org-archive-location
-        (concat (expand-file-name "archive.org" org-directory) "::* From %s")
+                '("todo.org" "routines.org" "ideas.org"))
+        org-archive-location "archive.org::"
+        org-archive-file-header-format nil
         org-agenda-skip-scheduled-if-done t
         org-agenda-skip-deadline-if-done t
         org-agenda-custom-commands
