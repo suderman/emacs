@@ -24,6 +24,10 @@
     (should (equal org-attach-id-dir
                    (expand-file-name ".attach/" directory)))
     (should org-attach-use-inheritance)
+    (should (equal org-id-locations-file
+                   (expand-file-name "org-id-locations" suderman/state-dir)))
+    (should (eq org-id-link-to-org-use-id
+                'create-if-interactive-and-no-custom-id))
     (should
      (equal org-agenda-files
             (append
@@ -31,10 +35,7 @@
                      '("inbox.org" "todo.org" "routines.org"))
              (suderman/org--direct-org-files
               (expand-file-name "calendar" directory))
-             (suderman/org--direct-org-files
-              (expand-file-name "family" directory))
-             (suderman/org-work-agenda-files
-              (expand-file-name "work" directory)))))
+             (suderman/org-context-files))))
     (should-not (member (expand-file-name "projects" directory)
                         org-agenda-files))
     (should (equal org-todo-keywords
@@ -46,19 +47,25 @@
                        "* TODO %?\n  %U\n  %a")
                       ("n" "Note" entry (file ,org-default-notes-file)
                        "* %?\n  %U\n  %a")
-                      ("i" "Idea" entry
-                       (file ,(expand-file-name "ideas.org" directory))
+                      ("i" "Idea" entry (file ,org-default-notes-file)
                        "* %?\n  %U\n  %a"))))
     (should (equal org-refile-targets
-                    (mapcar
-                     (lambda (file)
-                       (cons (expand-file-name file directory) '(:maxlevel . 3)))
-                     '("todo.org" "routines.org" "ideas.org"))))
+                   '((suderman/org-refile-files :maxlevel . 3))))
+    (should (eq org-refile-use-outline-path 'file))
+    (should-not org-outline-path-complete-in-steps)
+    (should (eq org-refile-allow-creating-parent-nodes 'confirm))
     (should (equal org-archive-location "archive.org::"))
     (should-not org-archive-file-header-format)
     (should org-agenda-skip-scheduled-if-done)
     (should org-agenda-skip-deadline-if-done)
-    (should (assoc "d" org-agenda-custom-commands))))
+    (should
+     (equal (assoc "d" org-agenda-custom-commands)
+            '("d" "Dashboard"
+              ((agenda "" ((org-agenda-span 7)))
+               (todo "PROG" ((org-agenda-overriding-header "In progress")))
+               (todo "EVAL" ((org-agenda-overriding-header "In review")))
+               (todo "HOLD" ((org-agenda-overriding-header "On hold")))
+               (todo "TODO" ((org-agenda-overriding-header "Todo")))))))))
 
 (ert-deftest suderman/org-discovers-work-agenda-files-by-convention ()
   (let* ((work (make-temp-file "suderman-org-work-" t))
@@ -103,6 +110,45 @@
            (suderman/org-work-agenda-files
             (expand-file-name "missing" work))))
       (delete-directory work t))))
+
+(ert-deftest suderman/org-builds-context-and-refile-file-lists ()
+  (let* ((org-directory (make-temp-file "suderman-org-contexts-" t))
+         (life (expand-file-name "life/kids.org" org-directory))
+         (notes (expand-file-name "notes/reference.org" org-directory))
+         (calendar (expand-file-name "calendar/import.org" org-directory))
+         (client (expand-file-name "work/acme/acme.org" org-directory))
+         (project (expand-file-name "work/acme/widget/widget.org" org-directory))
+         (inbox (expand-file-name "inbox.org" org-directory))
+         (todo (expand-file-name "todo.org" org-directory))
+         (routines (expand-file-name "routines.org" org-directory))
+         (draft (expand-file-name "draft.org" org-directory))
+         (archive (expand-file-name "notes/archive.org" org-directory))
+         (contexts (list life notes client project))
+         (destinations (append (list todo routines) contexts)))
+    (unwind-protect
+        (progn
+          (dolist (directory (list (file-name-directory life)
+                                   (file-name-directory notes)
+                                   (file-name-directory calendar)
+                                   (file-name-directory project)))
+            (make-directory directory t))
+          (dolist (file (append (list inbox todo routines draft calendar archive)
+                                contexts))
+            (with-temp-file file))
+          (should (equal (suderman/org-context-files) contexts))
+          (with-temp-buffer
+            (setq buffer-file-name inbox)
+            (should (equal (suderman/org-refile-files) destinations)))
+          (with-temp-buffer
+            (setq buffer-file-name draft)
+            (should (equal (suderman/org-refile-files)
+                           (cons draft destinations))))
+          (dolist (excluded (list inbox calendar archive))
+            (with-temp-buffer
+              (setq buffer-file-name excluded)
+              (should-not (member excluded (suderman/org-refile-files)))))
+          (should (cl-every #'file-regular-p destinations)))
+      (delete-directory org-directory t))))
 
 (ert-deftest suderman/org-excludes-archive-files-and-directories ()
   (let* ((directory (make-temp-file "suderman-org-files-" t))
@@ -255,6 +301,10 @@
               suderman/leader-org-map))
   (should (eq (lookup-key suderman/leader-org-map (kbd "g"))
               #'suderman/org-heading))
+  (should (eq (lookup-key suderman/leader-org-map (kbd "n"))
+              #'org-toggle-narrow-to-subtree))
+  (should (eq (lookup-key suderman/leader-org-map (kbd "v"))
+              #'suderman/org-dashboard))
   (let (called)
     (cl-letf (((symbol-function 'org-agenda)
                (lambda ()
@@ -266,8 +316,17 @@
         (execute-kbd-macro (kbd "SPC o a"))
         (should called)))))
 
+(ert-deftest suderman/org-dashboard-opens-the-direct-custom-view ()
+  (let (received)
+    (cl-letf (((symbol-function 'org-agenda)
+               (lambda (arg keys &optional _restriction)
+                 (setq received (list arg keys)))))
+      (call-interactively #'suderman/org-dashboard))
+    (should (equal received '(nil "d")))))
+
 (ert-deftest suderman/org-item-commands-follow-buffer-context ()
-  (dolist (binding '(("d" . suderman/org-deadline)
+  (dolist (binding '(("A" . suderman/org-archive)
+                     ("d" . suderman/org-deadline)
                      ("e" . suderman/org-export)
                      ("g" . suderman/org-heading)
                      ("i" . suderman/org-insert-link)
@@ -280,6 +339,8 @@
   (let (called)
     (cl-letf (((symbol-function 'consult-org-agenda)
                (lambda () (interactive) (setq called 'consult-org-agenda)))
+              ((symbol-function 'org-agenda-archive)
+               (lambda () (interactive) (setq called 'org-agenda-archive)))
               ((symbol-function 'consult-org-heading)
                (lambda () (interactive) (setq called 'consult-org-heading)))
               ((symbol-function 'org-agenda-deadline)
@@ -296,6 +357,8 @@
                (lambda () (interactive) (setq called 'org-deadline)))
               ((symbol-function 'org-export-dispatch)
                (lambda () (interactive) (setq called 'org-export-dispatch)))
+              ((symbol-function 'org-archive-subtree)
+               (lambda () (interactive) (setq called 'org-archive-subtree)))
               ((symbol-function 'org-insert-link)
                (lambda () (interactive) (setq called 'org-insert-link)))
               ((symbol-function 'org-refile)
@@ -308,7 +371,8 @@
                (lambda () (interactive) (setq called 'org-todo-list)))
               ((symbol-function 'org-toggle-checkbox)
                (lambda () (interactive) (setq called 'org-toggle-checkbox))))
-      (dolist (case '((org-mode suderman/org-deadline org-deadline)
+      (dolist (case '((org-mode suderman/org-archive org-archive-subtree)
+                      (org-mode suderman/org-deadline org-deadline)
                       (org-mode suderman/org-export org-export-dispatch)
                       (org-mode suderman/org-heading consult-org-heading)
                       (org-mode suderman/org-insert-link org-insert-link)
@@ -316,6 +380,7 @@
                       (org-mode suderman/org-schedule org-schedule)
                       (org-mode suderman/org-todo org-todo)
                       (org-mode suderman/org-toggle-checkbox org-toggle-checkbox)
+                      (org-agenda-mode suderman/org-archive org-agenda-archive)
                       (org-agenda-mode suderman/org-deadline org-agenda-deadline)
                       (org-agenda-mode suderman/org-export org-agenda-write)
                       (org-agenda-mode suderman/org-heading consult-org-agenda)
@@ -334,6 +399,7 @@
         (should (eq called (nth 2 case))))
       (dolist (case '((org-agenda-mode suderman/org-insert-link)
                       (org-agenda-mode suderman/org-toggle-checkbox)
+                      (markdown-ts-mode suderman/org-archive)
                       (markdown-ts-mode suderman/org-export)
                       (markdown-ts-mode suderman/org-insert-link)
                       (markdown-ts-mode suderman/org-toggle-checkbox)))

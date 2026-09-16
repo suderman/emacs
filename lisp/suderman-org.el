@@ -11,6 +11,8 @@
 
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
+(declare-function org-agenda "org-agenda" (&optional arg keys restriction))
+(declare-function org-agenda-archive "org-agenda" (&optional arg))
 (declare-function org-agenda-deadline "org-agenda" (arg &optional time))
 (declare-function org-agenda-maybe-redo "org-agenda" ())
 (declare-function org-agenda-refile "org-agenda" (&optional goto rfloc no-update))
@@ -135,6 +137,29 @@
                 (push file files)))))))
     (sort files #'string<)))
 
+(defun suderman/org-context-files ()
+  "Return active Org files from life, notes, and work contexts."
+  (append
+   (suderman/org--direct-org-files (expand-file-name "life" org-directory))
+   (suderman/org--direct-org-files (expand-file-name "notes" org-directory))
+   (suderman/org-work-agenda-files (expand-file-name "work" org-directory))))
+
+(defun suderman/org-refile-files ()
+  "Return valid refile destinations, including the current Org file."
+  (let* ((current (and buffer-file-name (expand-file-name buffer-file-name)))
+         (inbox (expand-file-name "inbox.org" org-directory))
+         (calendar (expand-file-name "calendar" org-directory)))
+    (delete-dups
+     (append
+      (and current
+           (not (equal current inbox))
+           (not (file-in-directory-p current calendar))
+           (not (suderman/org--archived-path-p current))
+           (list current))
+      (mapcar (lambda (file) (expand-file-name file org-directory))
+              '("todo.org" "routines.org"))
+      (suderman/org-context-files)))))
+
 (defun suderman/org--call-contextually
     (org-command &optional agenda-command fallback-command)
   "Call the command appropriate for the current Org context."
@@ -149,6 +174,16 @@
     (call-interactively fallback-command))
    (t
     (user-error "This command requires an Org buffer"))))
+
+(defun suderman/org-archive ()
+  "Archive the current Org item or Agenda entry."
+  (interactive)
+  (suderman/org--call-contextually #'org-archive-subtree #'org-agenda-archive))
+
+(defun suderman/org-dashboard ()
+  "Open the custom Org Agenda dashboard."
+  (interactive)
+  (org-agenda nil "d"))
 
 (defun suderman/org-deadline ()
   "Set an Org item's deadline, or open the TODO list."
@@ -222,6 +257,7 @@
         org-startup-with-link-previews t
         org-tags-column 0
         org-auto-align-tags nil
+        org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id
         org-todo-keywords
         '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))
         org-directory (expand-file-name "~/org")
@@ -233,22 +269,19 @@
                  '("inbox.org" "todo.org" "routines.org"))
          (suderman/org--direct-org-files
           (expand-file-name "calendar" org-directory))
-         (suderman/org--direct-org-files
-          (expand-file-name "family" org-directory))
-         (suderman/org-work-agenda-files
-          (expand-file-name "work" org-directory)))
+         (suderman/org-context-files))
         org-default-notes-file (expand-file-name "inbox.org" org-directory)
         org-capture-templates
         `(("t" "Task" entry (file ,org-default-notes-file)
             "* TODO %?\n  %U\n  %a")
           ("n" "Note" entry (file ,org-default-notes-file)
             "* %?\n  %U\n  %a")
-          ("i" "Idea" entry (file ,(expand-file-name "ideas.org" org-directory))
+          ("i" "Idea" entry (file ,org-default-notes-file)
             "* %?\n  %U\n  %a"))
-        org-refile-targets
-        (mapcar (lambda (file)
-                  (cons (expand-file-name file org-directory) '(:maxlevel . 3)))
-                '("todo.org" "routines.org" "ideas.org"))
+        org-refile-targets '((suderman/org-refile-files :maxlevel . 3))
+        org-refile-use-outline-path 'file
+        org-outline-path-complete-in-steps nil
+        org-refile-allow-creating-parent-nodes 'confirm
         org-archive-location "archive.org::"
         org-archive-file-header-format nil
         org-agenda-skip-scheduled-if-done t
@@ -256,8 +289,10 @@
         org-agenda-custom-commands
         '(("d" "Dashboard"
            ((agenda "" ((org-agenda-span 7)))
-            (todo "PROG|EVAL|HOLD")
-            (todo "TODO")))))
+            (todo "PROG" ((org-agenda-overriding-header "In progress")))
+            (todo "EVAL" ((org-agenda-overriding-header "In review")))
+            (todo "HOLD" ((org-agenda-overriding-header "On hold")))
+            (todo "TODO" ((org-agenda-overriding-header "Todo")))))))
   (auto-save-visited-mode 1))
 
 (use-package org-tempo

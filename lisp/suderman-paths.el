@@ -8,6 +8,7 @@
 
 (defvar image-dired-dir)
 (defvar image-dired-tags-db-file)
+(defvar org-id-locations-file)
 
 (defun suderman/xdg-dir (env fallback child)
   "Return CHILD inside ENV's directory, or FALLBACK when ENV is unset."
@@ -35,6 +36,7 @@
       gamegrid-user-score-file-directory (expand-file-name "games" suderman/state-dir)
       image-dired-dir (expand-file-name "image-dired/" suderman/cache-dir)
       image-dired-tags-db-file (expand-file-name "image-dired/tags" suderman/state-dir)
+      org-id-locations-file (expand-file-name "org-id-locations" suderman/state-dir)
       auto-save-list-file-prefix (expand-file-name "auto-save-list/.saves-" suderman/state-dir)
       backup-directory-alist `(("." . ,(expand-file-name "backups" suderman/state-dir)))
       auto-save-file-name-transforms `((".*" ,(expand-file-name "auto-save/" suderman/state-dir) t))
