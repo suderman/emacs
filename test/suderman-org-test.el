@@ -5,6 +5,7 @@
 
 (require 'ert)
 (require 'org-agenda)
+(require 'org-archive)
 (require 'suderman-keys)
 (require 'suderman-org)
 
@@ -240,6 +241,81 @@
           (kill-buffer buffer)))
       (delete-directory directory t))))
 
+(ert-deftest suderman/org-bulk-archive-saves-done-trees-in-their-own-archives ()
+  (let* ((directory (make-temp-file "suderman-org-bulk-" t))
+         (first (expand-file-name "first.org" directory))
+         (second (expand-file-name "second.org" directory))
+         (archive (expand-file-name "archive.org" directory))
+         (override (expand-file-name "special.org" directory))
+         (org-agenda-files (list first second))
+         (org-archive-location "archive.org::")
+         (org-archive-file-header-format nil)
+         refreshed)
+    (unwind-protect
+        (progn
+          (with-temp-file first
+            (insert "* DONE Finished parent\n** DONE Finished child\n"
+                    "* DONE Mixed parent\n** TODO Still open\n"
+                    "** DONE Finished under mixed parent\n"
+                    "* TODO Keep working\n"))
+          (with-temp-file second
+            (insert "* DONE Special\n:PROPERTIES:\n"
+                    ":ARCHIVE: special.org::\n:END:\n"))
+          (cl-letf (((symbol-function 'yes-or-no-p)
+                     (lambda (&rest _) (error "Batch archiving prompted")))
+                    ((symbol-function 'org-agenda-maybe-redo)
+                     (lambda () (setq refreshed t))))
+            (should (= (suderman/org-archive-done) 3)))
+          (should refreshed)
+          (should (string-match-p "Still open"
+                                  (with-temp-buffer
+                                    (insert-file-contents first)
+                                    (buffer-string))))
+          (should-not (string-match-p "Finished parent"
+                                      (with-temp-buffer
+                                        (insert-file-contents first)
+                                        (buffer-string))))
+          (with-temp-buffer
+            (insert-file-contents archive)
+            (should (search-forward "Finished parent" nil t))
+            (should (search-forward "Finished child" nil t))
+            (should (search-forward "Finished under mixed parent" nil t)))
+          (with-temp-buffer
+            (insert-file-contents override)
+            (should (search-forward "Special" nil t))
+            (should (search-forward "ARCHIVE_FILE" nil t)))
+          (should (= (suderman/org-archive-done) 0)))
+      (dolist (file (list first second archive override))
+        (when-let* ((buffer (find-buffer-visiting file)))
+          (with-current-buffer buffer (set-buffer-modified-p nil))
+          (kill-buffer buffer)))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-bulk-archive-confirms-or-accepts-prefix ()
+  (let* ((directory (make-temp-file "suderman-org-confirm-" t))
+         (source (expand-file-name "tasks.org" directory))
+         (org-agenda-files (list source))
+         (org-archive-location "archive.org::")
+         (org-archive-file-header-format nil)
+         (noninteractive nil)
+         asked)
+    (unwind-protect
+        (progn
+          (with-temp-file source (insert "* DONE Finished\n"))
+          (cl-letf (((symbol-function 'yes-or-no-p)
+                     (lambda (_prompt) (setq asked t) nil)))
+            (should (= (call-interactively #'suderman/org-archive-done) 0))
+            (should asked)
+            (should (= (let ((current-prefix-arg '(4)))
+                         (call-interactively #'suderman/org-archive-done))
+                       1)))
+          (should (file-exists-p (expand-file-name "archive.org" directory))))
+      (dolist (file (list source (expand-file-name "archive.org" directory)))
+        (when-let* ((buffer (find-buffer-visiting file)))
+          (with-current-buffer buffer (set-buffer-modified-p nil))
+          (kill-buffer buffer)))
+      (delete-directory directory t))))
+
 (ert-deftest suderman/org-auto-saves-only-safe-files-under-org-directory ()
   (let* ((org-directory (make-temp-file "suderman-org-" t))
          (inside (expand-file-name "todo.org" org-directory))
@@ -303,8 +379,10 @@
               #'suderman/org-heading))
   (should (eq (lookup-key suderman/leader-org-map (kbd "n"))
               #'org-toggle-narrow-to-subtree))
-  (should (eq (lookup-key suderman/leader-org-map (kbd "v"))
+  (should (eq (lookup-key suderman/leader-org-map (kbd "o"))
               #'suderman/org-dashboard))
+  (should (eq (lookup-key suderman/leader-org-map (kbd "B"))
+              #'suderman/org-archive-done))
   (let (called)
     (cl-letf (((symbol-function 'org-agenda)
                (lambda ()
@@ -315,6 +393,61 @@
         (meow-normal-mode 1)
         (execute-kbd-macro (kbd "SPC o a"))
         (should called)))))
+
+(ert-deftest suderman/org-agenda-keeps-buffer-and-file-shortcuts ()
+  (should (eq (lookup-key org-agenda-mode-map (kbd ","))
+              #'suderman/ibuffer-toggle))
+  (should (eq (lookup-key org-agenda-mode-map (kbd "."))
+              #'suderman/org-agenda-dirvish))
+  (should (eq (lookup-key org-agenda-mode-map (kbd "C-c ,"))
+              #'org-agenda-priority))
+  (should (eq (lookup-key org-agenda-mode-map (kbd "C-c ."))
+              #'org-agenda-goto-today))
+  (let (called)
+    (cl-letf (((symbol-function 'org-agenda-goto-today)
+               (lambda () (interactive) (setq called 'today)))
+              ((symbol-function 'org-agenda-priority)
+               (lambda () (interactive) (setq called 'priority))))
+      (with-temp-buffer
+        (org-agenda-mode)
+        (let ((window (selected-window))
+              (previous (window-buffer)))
+          (unwind-protect
+              (progn
+                (set-window-buffer window (current-buffer))
+                (execute-kbd-macro (kbd "SPC c ."))
+                (should (eq called 'today))
+                (execute-kbd-macro (kbd "SPC c ,"))
+                (should (eq called 'priority)))
+            (set-window-buffer window previous)))))))
+
+(ert-deftest suderman/org-agenda-dirvish-uses-selected-entry-file ()
+  (let* ((source (generate-new-buffer " *agenda-source*"))
+         (agenda (generate-new-buffer " *agenda-files*"))
+         (file "/tmp/suderman-agenda-entry.org")
+         (marker (with-current-buffer source
+                   (setq buffer-file-name file)
+                   (point-marker)))
+         opened)
+    (unwind-protect
+        (cl-letf (((symbol-function 'suderman/dirvish)
+                   (lambda (path) (setq opened path))))
+          (with-current-buffer agenda
+            (org-agenda-mode)
+            (let ((inhibit-read-only t))
+              (insert "Entry\n")
+              (put-text-property (point-min) (point-max)
+                                 'org-marker marker))
+            (goto-char (point-min))
+            (suderman/org-agenda-dirvish)
+            (should (equal opened file))
+            (remove-text-properties (point-min) (point-max)
+                                    '(org-marker nil))
+            (suderman/org-agenda-dirvish)
+            (should (equal opened org-directory))))
+      (set-marker marker nil)
+      (kill-buffer source)
+      (kill-buffer agenda))))
 
 (ert-deftest suderman/org-dashboard-opens-the-direct-custom-view ()
   (let (received)

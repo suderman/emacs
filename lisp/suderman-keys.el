@@ -112,6 +112,7 @@
 ;; Org
 (suderman/keys--define suderman/leader-org-map "a" #'org-agenda)
 (suderman/keys--define suderman/leader-org-map "A" #'suderman/org-archive)
+(suderman/keys--define suderman/leader-org-map "B" #'suderman/org-archive-done)
 (suderman/keys--define suderman/leader-org-map "c" #'org-capture)
 (suderman/keys--define suderman/leader-org-map "d" #'suderman/org-deadline)
 (suderman/keys--define suderman/leader-org-map "e" #'suderman/org-export)
@@ -123,7 +124,7 @@
 (suderman/keys--define suderman/leader-org-map "s" #'suderman/org-schedule)
 (suderman/keys--define suderman/leader-org-map "t" #'suderman/org-todo)
 (suderman/keys--define suderman/leader-org-map "T" #'org-todo-list)
-(suderman/keys--define suderman/leader-org-map "v" #'suderman/org-dashboard)
+(suderman/keys--define suderman/leader-org-map "o" #'suderman/org-dashboard)
 (suderman/keys--define suderman/leader-org-map "x" #'suderman/org-toggle-checkbox)
 
 ;; Search

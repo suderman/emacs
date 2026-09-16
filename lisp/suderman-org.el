@@ -8,12 +8,15 @@
 (require 'use-package)
 
 (defvar org-done-keywords)
+(defvar org-not-done-keywords)
+(defvar org-archive-subtree-save-file-p)
 
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
 (declare-function org-agenda "org-agenda" (&optional arg keys restriction))
 (declare-function org-agenda-archive "org-agenda" (&optional arg))
 (declare-function org-agenda-deadline "org-agenda" (arg &optional time))
+(declare-function org-agenda-goto-today "org-agenda" ())
 (declare-function org-agenda-maybe-redo "org-agenda" ())
 (declare-function org-agenda-refile "org-agenda" (&optional goto rfloc no-update))
 (declare-function org-agenda-schedule "org-agenda" (arg &optional time))
@@ -180,6 +183,62 @@
   (interactive)
   (suderman/org--call-contextually #'org-archive-subtree #'org-agenda-archive))
 
+(defun suderman/org-archive-done (&optional no-confirm)
+  "Archive completed Agenda headings without hiding unfinished descendants.
+Ask for confirmation in Emacs, unless given a prefix argument or NO-CONFIRM.
+Batch calls do not prompt.  Save changed files before returning."
+  (interactive "P")
+  (let (headings)
+    (unwind-protect
+        (progn
+          (org-map-entries
+           (lambda ()
+             (let ((parent (point)))
+               (unless (memq t (org-map-entries
+                                (lambda ()
+                                  (and (> (point) parent)
+                                       (member (org-get-todo-state)
+                                               org-not-done-keywords)
+                                       t))
+                                nil 'tree))
+                 (push (point-marker) headings)
+                 (setq org-map-continue-from
+                       (save-excursion (org-end-of-subtree t t))))))
+           "/DONE" (org-agenda-files t) 'archive 'comment)
+          (setq headings (nreverse headings))
+          (let ((count (length headings))
+                (archive-p (and headings
+                                (or no-confirm noninteractive
+                                    (yes-or-no-p
+                                     (format "Archive %d completed Org headings? "
+                                             (length headings)))))))
+            (when archive-p
+              (let ((org-archive-subtree-save-file-p t))
+                (dolist (heading headings)
+                  (with-current-buffer (marker-buffer heading)
+                    (save-excursion
+                      (goto-char heading)
+                      (org-archive-subtree))
+                    (save-buffer))))
+              (suderman/org-refresh-agenda-after-revert)
+              (message "Archived %d completed Org headings" count))
+            (unless headings
+              (when (called-interactively-p 'interactive)
+                (message "No completed Org headings to archive")))
+            (if archive-p count 0)))
+      (dolist (heading headings)
+        (set-marker heading nil)))))
+
+(defun suderman/org-agenda-dirvish ()
+  "Open Dirvish at the file for the selected Agenda entry."
+  (interactive)
+  (let* ((marker (or (org-get-at-bol 'org-marker)
+                     (org-get-at-bol 'org-hd-marker)))
+         (file (and (markerp marker)
+                    (buffer-live-p (marker-buffer marker))
+                    (buffer-file-name (marker-buffer marker)))))
+    (suderman/dirvish (or file org-directory))))
+
 (defun suderman/org-dashboard ()
   "Open the custom Org Agenda dashboard."
   (interactive)
@@ -294,6 +353,14 @@
             (todo "HOLD" ((org-agenda-overriding-header "On hold")))
             (todo "TODO" ((org-agenda-overriding-header "Todo")))))))
   (auto-save-visited-mode 1))
+
+(use-package org-agenda
+  :ensure nil
+  :after org
+  :config
+  (keymap-set org-agenda-mode-map "," #'suderman/ibuffer-toggle)
+  (keymap-set org-agenda-mode-map "." #'suderman/org-agenda-dirvish)
+  (keymap-set org-agenda-mode-map "C-c ." #'org-agenda-goto-today))
 
 (use-package org-tempo
   :ensure nil
