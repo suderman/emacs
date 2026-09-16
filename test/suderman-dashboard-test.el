@@ -175,7 +175,7 @@
       (goto-char (point-min))
       (should (search-forward "+----------+" nil t))
       (should (search-forward "| SUDERMAN |" nil t))
-      (should (search-forward "+-- emacs -+" nil t))
+      (should (search-forward "+- /emacs -+" nil t))
       (dolist (icon (mapcar (lambda (button)
                               (substring-no-properties (car button)))
                             (car dashboard-navigator-buttons)))
