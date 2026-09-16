@@ -86,5 +86,21 @@
     (treesit-update-ranges)
     (should (eq (suderman/test-nix-language-at "util.exec") 'nix))))
 
+(ert-deftest suderman/nix-org-string-highlights-headings-and-inline-markup ()
+  (with-temp-buffer
+    (insert "{ prompt =\n  # org\n  ''\n"
+            "    * Capture dropped task\n"
+            "    ** Instructions\n"
+            "    1. Load =project-org-tasks=.\n"
+            "  '';\n  plain = ''plain string'';\n}\n")
+    (nix-ts-mode)
+    (should (eq (suderman/test-nix-language-at "Capture dropped task") 'org))
+    (font-lock-ensure)
+    (should (eq (suderman/test-nix-face-at "Capture dropped task") 'org-level-1))
+    (should (eq (suderman/test-nix-face-at "Instructions") 'org-level-2))
+    (should (eq (suderman/test-nix-face-at "project-org-tasks") 'org-verbatim))
+    (should (eq (suderman/test-nix-face-at "plain string")
+                'font-lock-string-face))))
+
 (provide 'suderman-nix-test)
 ;;; suderman-nix-test.el ends here

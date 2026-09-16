@@ -313,6 +313,8 @@ Batch calls do not prompt.  Save changed files before returning."
         org-log-done 'time
         org-log-into-drawer t
         org-startup-indented t
+        org-startup-folded 'nofold
+        org-hide-drawer-startup t
         org-startup-with-link-previews t
         org-tags-column 0
         org-auto-align-tags nil

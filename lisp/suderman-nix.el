@@ -9,7 +9,7 @@
 (require 'subr-x)
 (require 'use-package)
 
-(defconst suderman/nix-embedded-languages '(bash elisp html lua python))
+(defconst suderman/nix-embedded-languages '(bash elisp html lua org python))
 
 ;; Tree-sitter capture names cannot contain the usual `suderman/' separator.
 (defun suderman--nix-fontify-included-ranges
@@ -59,6 +59,42 @@
     (treesit-fontify-with-override
      (treesit-node-start node) (treesit-node-end node)
      face override start end)))
+
+(defun suderman--nix-fontify-org-heading (node override start end &rest _)
+  "Fontify Org heading NODE according to its outline level."
+  (let* ((stars (treesit-node-child (treesit-node-parent node) 0 t))
+         (level (min 8 (- (treesit-node-end stars)
+                          (treesit-node-start stars)))))
+    (suderman--nix-fontify-included-ranges
+     node (intern (format "org-level-%d" level)) override start end)))
+
+(defun suderman--nix-fontify-org-indented-heading
+    (node override start end &rest _)
+  "Fontify indented Org headings that the grammar parses as paragraphs."
+  (let* ((parent (treesit-node-parent node))
+         (bullet (and (equal (treesit-node-type parent) "listitem")
+                      (treesit-node-child parent 0 t)))
+         (stars (if (and bullet
+                         (string-match-p "\\`\\*+\\'" (treesit-node-text bullet t)))
+                    (treesit-node-text bullet t)
+                  (when (string-match "\\`\\(\\*+\\) " (treesit-node-text node t))
+                    (match-string 1 (treesit-node-text node t))))))
+    (when stars
+      (suderman--nix-fontify-included-ranges
+       node (intern (format "org-level-%d" (min 8 (length stars))))
+       override start end))))
+
+(defun suderman--nix-fontify-org-verbatim (node override start end &rest _)
+  "Fontify Org verbatim expressions in NODE."
+  (when (string-match "\\`=[^=\n]+=" (treesit-node-text node t))
+    (let ((verbatim-end (+ (treesit-node-start node) (match-end 0))))
+      (dolist (range (treesit-parser-included-ranges (treesit-node-parser node)))
+        (when (< (max (treesit-node-start node) (car range))
+                 (min verbatim-end (cdr range)))
+          (treesit-fontify-with-override
+           (max (treesit-node-start node) (car range))
+           (min verbatim-end (cdr range))
+           'org-verbatim override start end))))))
 
 (defun suderman/nix-embedded-language (node)
   "Return the supported language named by Nix comment NODE."
@@ -128,6 +164,15 @@
                        elisp-query))
             (html . ,(symbol-value 'html-ts-mode--font-lock-settings))
             (lua . ,(symbol-value 'lua-ts--font-lock-settings))
+            (org . ,(treesit-font-lock-rules
+                     :language 'org
+                     :feature 'embedded
+                     :override t
+                     '((headline (item) @suderman--nix-fontify-org-heading)
+                       (paragraph) @suderman--nix-fontify-org-indented-heading
+                       (bullet) @font-lock-builtin-face
+                       (link_desc) @org-link
+                       (expr) @suderman--nix-fontify-org-verbatim)))
             (python . ,(symbol-value 'python--treesit-settings)))))
     (cl-mapcan
      (lambda (entry)
