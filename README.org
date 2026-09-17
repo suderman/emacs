@@ -217,11 +217,28 @@ NixOS/Stylix selects Ioskeley Mono for fixed text and Literata for prose. The
 Only =kit= enables =programs.emacs.exportStyle= to avoid competing writers.
 
 The file sets =suderman/system-style= to a plist with =:mono-font=,
-=:variable-font=, =:icon-font=, =:font-size= in points, and a =:palette= Base16
-plist. Emacs owns the face mapping. Desktop keeps Stylix's Base16 theme;
-Android uses the same Base16 theme engine with the exported colors. If the
-file is absent, existing appearance defaults remain available without a warning.
-Restart or reload the configuration after the file changes.
+=:variable-font=, =:icon-font=, =:font-size= in points, and =:palettes= containing
+=:light= and =:dark= Base16 plists. Both come from the existing Stylix toggle's
+schemes, currently Catppuccin Latte and Mocha. The file contains no active-mode
+state: changing the desktop appearance must not change Android's preference.
+The activation copies real contents rather than a Nix store symlink, which
+would not work on Android.
+
+Emacs defines =suderman-light= and =suderman-dark= using the Base16 face engine
+plus a few semantic face corrections. Nix supplies colors and the desktop
+package, not generated face rules. Stylix's separate Emacs target is disabled.
+Both PGTK and Android use =toolkit-theme-set-functions= and the current
+=toolkit-theme= value at startup. The existing desktop =stylix-theme-toggle=
+activates the light or dark system configuration; GTK notifies every running
+PGTK Emacs. Android's system dark-mode setting sends the equivalent native event.
+There is no polling or separate Emacs preference. TTY-only sessions with no
+toolkit preference use the dark variant.
+
+A missing file leaves the current theme alone. Each appearance event rereads
+the file, so a later sync is picked up on the next switch. Use
+=M-x suderman/apply-system-palette= to load newly synced colors immediately,
+without restarting. Switching disables other themes and resets old definitions
+before rebuilding the selected variant.
 
 Org uses built-in variable pitch for prose and headings, with buffer-local
 fixed-pitch overrides for code, tables, metadata, timestamps, TODO states,

@@ -13,6 +13,7 @@
 (defvar base16-theme-256-color-source)
 
 (declare-function base16-theme-define "base16-theme" (theme colors))
+(declare-function base16-theme-set-faces "base16-theme" (theme colors faces))
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/ibuffer-toggle "suderman-buffers")
@@ -22,7 +23,7 @@
 (defconst suderman/background-opacity 90)
 
 (defvar suderman/system-style nil
-  "Shared font names, point size, and Base16 palette from the Org tree.
+  "Shared font names, point size, and Base16 palettes from the Org tree.
 The producer owns values; this configuration owns their use on faces.")
 (defvar suderman/variable-font-scale 1.12
   "Prose size relative to the default face.")
@@ -106,8 +107,7 @@ The producer owns values; this configuration owns their use on faces.")
                             :height (round
                                      (* 10 (suderman/default-font-size))))))))
 
-;; Stylix's default.el loads after init.el and replaces this fallback when
-;; enabled.  Avoid overriding it on systems where it loads earlier instead.
+;; Shared fonts replace this fallback once a graphical frame is available.
 (suderman/apply-default-font)
 
 (defconst suderman/nerd-font-ranges
@@ -151,23 +151,56 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
   (dolist (frame (frame-list))
     (suderman/apply-system-fonts frame)))
 
-;; Nix desktops retain Stylix's generated theme.  Other machines use the same
-;; Base16 face engine with the exported palette, not a copied set of face rules.
+;; Nix exports only data.  The same face engine runs on PGTK and Android.
 (use-package base16-theme
-  :if (plist-get suderman/system-style :palette)
-  :demand t)
+  :commands (base16-theme-define base16-theme-set-faces))
 
-(deftheme suderman-system "Shared system Base16 palette.")
+(deftheme suderman-light "Light system Base16 palette." :background-mode 'light)
+(deftheme suderman-dark "Dark system Base16 palette." :background-mode 'dark)
 
-(defun suderman/apply-system-palette ()
-  "Use the shared palette where Stylix's generated theme is unavailable."
-  (when (and (plist-get suderman/system-style :palette)
-             (not (locate-library "base16-stylix-theme"))
-             (require 'base16-theme nil t))
-    (base16-theme-define 'suderman-system
-                        (plist-get suderman/system-style :palette))
-    (mapc #'disable-theme custom-enabled-themes)
-    (enable-theme 'suderman-system)))
+(defun suderman/enable-system-theme (theme palette)
+  "Build and enable THEME from PALETTE using Base16's semantic face mappings."
+  ;; Match load-theme's reset: disabled themes retain their old settings list.
+  (mapc #'disable-theme custom-enabled-themes)
+  (put theme 'theme-settings nil)
+  (base16-theme-define theme palette)
+  (enable-theme theme)
+  ;; Amend the enabled theme so Custom replaces, rather than appends, settings.
+  ;; Base16's base03 comments lack contrast, especially in light source blocks.
+  (base16-theme-set-faces
+   theme palette
+   '((shadow :foreground base04)
+     (font-lock-comment-face :foreground base04)
+     (font-lock-comment-delimiter-face :foreground base04)
+     ;; Outline 4 otherwise inherits comments, making it identical to Org tags.
+     (outline-4 :foreground base0D)
+     (org-block-begin-line :foreground base04 :background base01)
+     (mode-line-inactive :foreground base04 :background base01 :box nil)
+     (window-divider :foreground base02)
+     (window-divider-first-pixel :foreground base02)
+     (window-divider-last-pixel :foreground base02)
+     (line-number-current-line :foreground base05 :weight bold)
+     (org-headline-done :foreground base05)
+     (org-time-grid :foreground base04)
+     (org-agenda-current-time :foreground base0D :weight bold)
+     (org-agenda-date-today :foreground base0D :weight bold)
+     (org-agenda-date-weekend :foreground base0D :weight normal))))
+
+(defun suderman/apply-system-palette (&optional appearance)
+  "Follow toolkit APPEARANCE using the synced Stylix palette pair.
+PGTK reports GTK changes; Android reports system dark-mode changes.  With no
+synced data, leave the current theme alone.  A later event or manual call
+retries."
+  (interactive)
+  (suderman/load-system-style)
+  (let* ((appearance (or appearance toolkit-theme 'dark))
+         (key (pcase appearance ('light :light) ('dark :dark)))
+         (palette (plist-get (plist-get suderman/system-style :palettes) key))
+         (theme (if (eq appearance 'light) 'suderman-light 'suderman-dark)))
+    (when (and palette (require 'base16-theme nil t))
+      (suderman/enable-system-theme theme palette))))
+
+(add-hook 'toolkit-theme-set-functions #'suderman/apply-system-palette)
 
 (defun suderman/apply-gui-appearance (&optional frame)
   "Apply GUI background opacity to FRAME."
@@ -457,7 +490,8 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
 (add-hook 'after-init-hook #'suderman/apply-system-palette t)
 (add-hook 'after-init-hook #'suderman/refresh-system-fonts t)
 (add-hook 'after-make-frame-functions #'suderman/apply-system-fonts)
-(when after-init-time
+;; Batch has no display palette; reserve automatic theming for live sessions.
+(when (and after-init-time (not noninteractive))
   (suderman/apply-system-palette))
 (suderman/refresh-system-fonts)
 (suderman/apply-gui-appearance)

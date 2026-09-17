@@ -28,9 +28,11 @@ The current division is intentional.
 - Nix supplies Emacs 31 PGTK, the Emacs daemon and client, native or awkward
   packages, tree-sitter grammars, language modes that are better managed by
   Nix, language servers, formatters, `fd`, `ripgrep`, Pandoc, and fonts.
-- Stylix supplies the desktop theme and typography. Kit exports font and Base16
-  data through `~/org/.generated/emacs/style.el`; Android uses the same data
-  with the Base16 theme engine. This optional generated file stays outside Git.
+- Stylix supplies typography and both light/dark palettes. Kit exports them as
+  portable data through `~/org/.generated/emacs/style.el`, outside Git. Emacs
+  defines `suderman-light` and `suderman-dark` using the Base16 engine and follows
+  native `toolkit-theme` events on PGTK and Android. The separate Stylix Emacs
+  target is disabled; do not add a second theme loader.
 - This repository owns mutable Elisp packages, commands, keymaps, and daily
   editing behavior.
 - `package.el` data lives under `~/.local/share/emacs/elpa`, not in this repo.

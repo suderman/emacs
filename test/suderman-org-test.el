@@ -658,7 +658,7 @@
   (let (base-size)
     (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4
                     org-level-5 org-level-6 org-level-7 org-level-8
-                    org-todo org-done))
+                    org-headline-done org-todo org-done))
       (should-not (equal (face-foreground 'org-tag nil t)
                          (face-foreground face nil t))))
     (should-not (equal (face-foreground 'org-checkbox nil t)

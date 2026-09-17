@@ -222,6 +222,53 @@
           (should (equal (plist-get suderman/system-style :mono-font) "Example")))
       (delete-directory directory t))))
 
+(ert-deftest suderman/system-palettes-switch-without-stacking-themes ()
+  (let* ((colors (cl-loop for index below 16
+                          append (list (intern (format ":base%02X" index))
+                                       "#777777")))
+         (light (plist-put (copy-sequence colors) :base00 "#ffffff"))
+         (dark (plist-put (copy-sequence colors) :base00 "#111111"))
+         (suderman/system-style (list :palettes (list :light light :dark dark)))
+         (original-themes custom-enabled-themes)
+         (toolkit-theme 'light)
+         setting-count)
+    (unwind-protect
+        (cl-letf (((symbol-function 'suderman/load-system-style) #'ignore))
+          ;; Startup reads the current toolkit value, not a separate preference.
+          (suderman/apply-system-palette)
+          (should (equal custom-enabled-themes '(suderman-light)))
+          (setq setting-count (length (get 'suderman-light 'theme-settings)))
+          ;; Face corrections must replace Base16 entries, not create duplicates.
+          (should (= setting-count
+                     (length (delete-dups
+                              (mapcar #'cadr (get 'suderman-light 'theme-settings))))))
+          (dolist (appearance '(dark light light dark light))
+            (run-hook-with-args 'toolkit-theme-set-functions appearance)
+            (let* ((theme (if (eq appearance 'light) 'suderman-light 'suderman-dark))
+                   (setting (cl-find 'default (get theme 'theme-settings) :key #'cadr)))
+              (should (equal custom-enabled-themes (list theme)))
+              (should (= setting-count (length (get theme 'theme-settings))))
+              ;; Inspect the graphic spec even when this test runs in batch.
+              (should (equal (plist-get (cadar (nth 3 setting)) :background)
+                             (if (eq appearance 'light) "#ffffff" "#111111")))))
+          ;; Re-read palette data even when the appearance has not changed.
+          (setf (plist-get light :base00) "#eeeeee")
+          (suderman/apply-system-palette 'light)
+          (let ((setting (cl-find 'default (get 'suderman-light 'theme-settings)
+                                  :key #'cadr)))
+            (should (equal (plist-get (cadar (nth 3 setting)) :background)
+                           "#eeeeee"))))
+      (mapc #'disable-theme custom-enabled-themes)
+      (mapc #'enable-theme (reverse original-themes)))))
+
+(ert-deftest suderman/missing-system-palettes-preserve-current-theme ()
+  (let ((suderman/system-style nil)
+        (original-themes custom-enabled-themes))
+    (cl-letf (((symbol-function 'suderman/load-system-style) #'ignore))
+      (dolist (appearance '(light dark nil))
+        (suderman/apply-system-palette appearance)
+        (should (equal custom-enabled-themes original-themes))))))
+
 (ert-deftest suderman/shared-fonts-are-gui-only-and-keep-point-sizes ()
   (let ((suderman/system-style '(:mono-font "Mono" :variable-font "Prose"
                                 :font-size 12.0))
