@@ -7,6 +7,7 @@
 ;;; Code:
 
 (require 'project)
+(require 'so-long)
 
 (add-to-list 'project-vc-extra-root-markers ".stignore")
 
@@ -30,7 +31,20 @@
 (recentf-mode 1)
 (global-auto-revert-mode 1)
 (electric-pair-mode 1)
-(global-visual-line-mode 1)
+
+(global-visual-line-mode -1)
+(add-hook 'text-mode-hook #'visual-line-mode)
+(dolist (buffer (buffer-list))
+  (with-current-buffer buffer
+    (when (derived-mode-p 'text-mode)
+      (visual-line-mode 1))))
+
+(setq so-long-action 'so-long-minor-mode
+      so-long-variable-overrides
+      (assq-delete-all 'buffer-read-only so-long-variable-overrides))
+(dolist (mode '(display-fill-column-indicator-mode indent-bars-mode))
+  (add-to-list 'so-long-minor-modes mode))
+(global-so-long-mode 1)
 
 (setq gc-cons-threshold (* 64 1024 1024)
       gc-cons-percentage 0.1)

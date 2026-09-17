@@ -40,11 +40,11 @@ CALLBACK follows the formatter function protocol used by Apheleia."
               (with-current-buffer scratch
                 (let ((coding-system-for-write buffer-file-coding-system))
                   (write-region nil nil temp-file nil 'silent)))
-              (let ((default-directory root)
-                    (exec-path (buffer-local-value 'exec-path buffer))
-                    (process-environment
-                     (buffer-local-value 'process-environment buffer)))
-                (with-temp-buffer
+              (with-temp-buffer
+                (let ((default-directory root)
+                      (exec-path (buffer-local-value 'exec-path buffer))
+                      (process-environment
+                       (buffer-local-value 'process-environment buffer)))
                   (let ((status
                          (process-file
                           "treefmt" nil t nil

@@ -41,6 +41,10 @@
 
 (add-hook 'org-mode-hook #'suderman/org-apply-heading-faces)
 
+(defun suderman/org-auto-save-interval ()
+  "Return the platform's visited-file auto-save interval."
+  (if (eq system-type 'android) 10 3))
+
 (defun suderman/org-auto-save-visited-p ()
   "Return non-nil when the current Org file is safe to save automatically."
   (and (derived-mode-p 'org-mode)
@@ -306,7 +310,7 @@ Batch calls do not prompt.  Save changed files before returning."
 (use-package org
   :ensure nil
   :init
-  (setq auto-save-visited-interval 3
+  (setq auto-save-visited-interval (suderman/org-auto-save-interval)
         auto-save-visited-predicate #'suderman/org-auto-save-visited-p
         org-M-RET-may-split-line '((default . nil))
         org-insert-heading-respect-content t

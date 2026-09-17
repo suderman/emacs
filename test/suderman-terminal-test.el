@@ -2,6 +2,7 @@
 
 (require 'ert)
 (require 'suderman-terminal)
+(require 'ghostel)
 
 (ert-deftest suderman/ghostel-preserves-emacs-escape-keys ()
   (dolist (key '("C-c" "C-x" "C-u" "C-h" "M-x" "M-:" "C-\\"

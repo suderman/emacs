@@ -316,6 +316,12 @@
           (kill-buffer buffer)))
       (delete-directory directory t))))
 
+(ert-deftest suderman/org-auto-save-interval-is-longer-on-android ()
+  (let ((system-type 'gnu/linux))
+    (should (= (suderman/org-auto-save-interval) 3)))
+  (let ((system-type 'android))
+    (should (= (suderman/org-auto-save-interval) 10))))
+
 (ert-deftest suderman/org-auto-saves-only-safe-files-under-org-directory ()
   (let* ((org-directory (make-temp-file "suderman-org-" t))
          (inside (expand-file-name "todo.org" org-directory))

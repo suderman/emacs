@@ -65,7 +65,7 @@
 (declare-function meow--disable "meow")
 (declare-function meow-keypad "meow-keypad")
 (declare-function meow-mode "meow")
-(declare-function pdf-tools-install "pdf-tools")
+(declare-function pdf-loader-install "pdf-loader")
 (declare-function android-browse-url "android-win")
 (declare-function which-key-show-keymap "which-key")
 
@@ -684,12 +684,12 @@
 (keymap-unset ibuffer-mode-map "SPC" t)
 (keymap-set dired-mode-map "`" #'suderman/dashboard)
 
-(use-package pdf-tools
+(use-package pdf-loader
   :ensure nil
   :if (not (eq system-type 'android))
   :demand t
   :config
-  (pdf-tools-install))
+  (pdf-loader-install))
 
 (use-package dirvish
   :demand t

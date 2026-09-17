@@ -283,10 +283,17 @@
 (with-eval-after-load 'meow-keypad
   (advice-add 'meow-describe-keymap :around
               #'suderman/meow-describe-keymap-without-line-numbers))
+
+(defun suderman/initialize-fill-column-indicator ()
+  "Set the global column guide to the platform default."
+  (global-display-fill-column-indicator-mode
+   (if (eq system-type 'android) -1 1)))
+
 (setq-default display-fill-column-indicator-column 100)
-(global-display-fill-column-indicator-mode 1)
+(suderman/initialize-fill-column-indicator)
 
 (use-package indent-bars
+  :if (not (eq system-type 'android))
   :hook ((prog-mode conf-mode toml-ts-mode yaml-ts-mode html-ts-mode)
          . indent-bars-mode)
   :custom

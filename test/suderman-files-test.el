@@ -108,12 +108,13 @@
       (should (local-variable-p 'mouse-1-click-follows-link))
       (should-not mouse-1-click-follows-link))))
 
-(ert-deftest suderman/pdf-tools-opens-pdf-files ()
-  (should (featurep 'pdf-tools))
-  (should (eq (assoc-default "example.pdf" auto-mode-alist #'string-match)
-              'pdf-view-mode))
-  (should (eq (assoc-default "%PDF-1.7" magic-mode-alist #'string-match)
-              'pdf-view-mode)))
+(ert-deftest suderman/pdf-tools-loads-only-when-opening-a-pdf ()
+  (should (featurep 'pdf-loader))
+  (should-not (featurep 'pdf-tools))
+  (should (functionp
+           (assoc-default "example.pdf" auto-mode-alist #'string-match)))
+  (should (functionp
+           (assoc-default "%PDF-1.7" magic-mode-alist #'string-match))))
 
 (ert-deftest suderman/dirvish-opens-media-with-desktop-player ()
   (let ((file "/tmp/example.mp3")

@@ -174,6 +174,15 @@
       (kill-buffer special-buffer)
       (kill-buffer image-buffer))))
 
+(ert-deftest suderman/android-column-guide-defaults-off ()
+  (dolist (case '((gnu/linux 1) (android -1)))
+    (let ((system-type (car case))
+          received)
+      (cl-letf (((symbol-function 'global-display-fill-column-indicator-mode)
+                 (lambda (argument) (setq received argument))))
+        (suderman/initialize-fill-column-indicator)
+        (should (= received (cadr case)))))))
+
 (ert-deftest suderman/android-line-modes-default-off ()
   (dolist (case '((gnu/linux 1) (android -1)))
     (let ((system-type (car case))
