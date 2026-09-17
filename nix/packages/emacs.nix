@@ -51,7 +51,6 @@
       in
         (with epkgs; [
           kitty-graphics
-          ghostel
           pdf-tools
           jinx
           treesit-grammars.with-all-grammars

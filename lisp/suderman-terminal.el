@@ -34,6 +34,7 @@
             #'suderman/ghostel-resume-on-meow-insert nil t))
 
 (use-package ghostel
+  :disabled t
   :ensure nil
   :if (not (eq system-type 'android))
   :commands ghostel-project
