@@ -252,6 +252,11 @@ Desktop uses Stylix's terminal point size, currently 12. Android multiplies
 that by =suderman/android-font-scale=, initially =17/12=, to preserve its
 17-point baseline. Pinch and frame scaling remain available.
 
+PROPERTIES and LOGBOOK drawers use separate tinted, full-width backgrounds
+with bold boundary labels. Their colors follow the theme's keyword and function
+accents. Native folding and editable text remain unchanged; logbook prose,
+links, and timestamps keep their usual fonts and colors.
+
 Nerd Font fallback covers BMP private use and =F0001–F1AF0=, checked against
 Symbols Nerd Font Mono 3.4.0. It does not claim ordinary arrows, mathematics,
 box drawing, or the third private-use block. On Android, Ioskeley is the final

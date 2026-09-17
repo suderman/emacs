@@ -15,6 +15,7 @@
 (defvar org-tag-line-re)
 (defvar org-highlight-links)
 (defvar org-font-lock-extra-keywords)
+(defvar font-lock-beg)
 
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
@@ -74,6 +75,96 @@
                  collect rule)))
 
 (add-hook 'org-font-lock-set-keywords-hook #'suderman/org-enable-date-faces)
+
+(defface suderman/org-properties-block
+  '((t (:extend t)))
+  "Background for property drawers."
+  :group 'org-faces)
+
+(defface suderman/org-logbook-block
+  '((t (:extend t)))
+  "Background for logbook drawers."
+  :group 'org-faces)
+
+(defface suderman/org-properties-label
+  '((t (:inherit org-drawer :weight bold)))
+  "Boundary labels for property drawers."
+  :group 'org-faces)
+
+(defface suderman/org-logbook-label
+  '((t (:inherit org-drawer :weight bold)))
+  "Boundary labels for logbook drawers."
+  :group 'org-faces)
+
+(declare-function suderman/theme-blend "suderman-appearance" (face alpha))
+
+(defun suderman/org-apply-drawer-faces (&optional _theme)
+  "Derive distinct drawer colors from the active theme."
+  (dolist (drawer '((suderman/org-properties-block suderman/org-properties-label
+                    font-lock-keyword-face)
+                   (suderman/org-logbook-block suderman/org-logbook-label
+                    font-lock-function-name-face)))
+    (when-let* ((background (suderman/theme-blend (nth 2 drawer) 0.12)))
+      (set-face-attribute (car drawer) nil :background background)
+      (set-face-attribute (cadr drawer) nil
+                          :foreground (face-foreground (nth 2 drawer) nil t)))))
+
+(add-hook 'org-mode-hook #'suderman/org-apply-drawer-faces)
+(add-hook 'enable-theme-functions #'suderman/org-apply-drawer-faces)
+
+(defun suderman/org-fontify-drawer-blocks (limit)
+  "Add contained backgrounds to real PROPERTIES and LOGBOOK drawers to LIMIT."
+  (let ((case-fold-search t))
+    (catch 'found
+      (while (re-search-forward "^[ \t]*:\\(PROPERTIES\\|LOGBOOK\\):[ \t]*$" limit t)
+        (let* ((begin (match-beginning 0))
+               (properties (string-equal (upcase (match-string 1)) "PROPERTIES"))
+               (element (save-excursion (goto-char begin) (org-element-at-point))))
+          ;; Let Org reject drawer-like text inside source/example blocks.
+          (when (and (memq (org-element-type element) '(property-drawer drawer))
+                     (= begin (org-element-property :post-affiliated element)))
+            (let ((end (save-excursion
+                         (re-search-forward "^[ \t]*:END:[ \t]*$"
+                                            (org-element-property :end element) t)
+                         ;; Include the delimiter even without a final newline.
+                         (forward-line 1)
+                         (point)))
+                  (body (if properties 'suderman/org-properties-block
+                          'suderman/org-logbook-block))
+                  (label (if properties 'suderman/org-properties-label
+                           'suderman/org-logbook-label)))
+              (add-face-text-property begin end body)
+              ;; Keep links, dates, property values, and prose typography intact.
+              (save-excursion
+                (goto-char begin)
+                (add-face-text-property begin (line-end-position) label)
+                (goto-char (1- end))
+                (add-face-text-property (line-beginning-position)
+                                        (line-end-position) label))
+              (put-text-property begin end 'font-lock-multiline t)
+              (goto-char end)
+              (throw 'found t)))))
+      nil)))
+
+(defun suderman/org-extend-drawer-region ()
+  "Start partial fontification at the enclosing drawer's opening line."
+  ;; A newly typed :END: has no old font-lock-multiline range to extend.
+  (save-excursion
+    (goto-char font-lock-beg)
+    (when-let* ((drawer (org-element-lineage (org-element-at-point)
+                                           '(drawer property-drawer) t))
+                (begin (org-element-property :post-affiliated drawer)))
+      (when (< begin font-lock-beg)
+        (setq font-lock-beg begin)
+        t))))
+
+(defun suderman/org-enable-drawer-blocks ()
+  "Append drawer backgrounds after Org's semantic fontification."
+  (font-lock-add-keywords nil '((suderman/org-fontify-drawer-blocks)) t)
+  (add-hook 'font-lock-extend-region-functions
+            #'suderman/org-extend-drawer-region nil t))
+
+(add-hook 'org-mode-hook #'suderman/org-enable-drawer-blocks)
 
 (defvar suderman/system-style)
 (defvar suderman/variable-font-scale)

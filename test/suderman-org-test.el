@@ -631,6 +631,128 @@
           (unless (save-excursion (beginning-of-line) (looking-at-p "# "))
             (should-not (get-text-property (match-beginning 0) 'display))))))))
 
+(ert-deftest suderman/org-drawer-blocks-preserve-content-and-folding ()
+  (with-temp-buffer
+    (insert "* Task\n:PROPERTIES:\n:CREATED: [2026-09-17 Thu]\n:END:\n"
+            ":LOGBOOK:\n- Note taken on [2026-09-17 Thu] \\\\\n  Prose with [[https://example.com][a link]].\n:END:\n\nOutside\n")
+    (let ((text (buffer-string)))
+      (org-mode)
+      (set-buffer-modified-p nil)
+      (font-lock-ensure)
+      (should (equal text (buffer-substring-no-properties (point-min) (point-max))))
+      (should-not (buffer-modified-p))
+      (dolist (drawer '((":PROPERTIES:" "CREATED" suderman/org-properties-block
+                        suderman/org-properties-label)
+                       (":LOGBOOK:" "Prose" suderman/org-logbook-block
+                        suderman/org-logbook-label)))
+        (goto-char (point-min))
+        (search-forward (car drawer))
+        (should (memq (nth 3 drawer) (ensure-list (get-text-property (1- (point)) 'face))))
+        (org-fold-hide-drawer-toggle t)
+        (search-forward (cadr drawer))
+        (should (org-invisible-p (1- (point))))
+        (goto-char (point-min))
+        (search-forward (car drawer))
+        (org-fold-hide-drawer-toggle nil)
+        (search-forward (cadr drawer))
+        (should-not (org-invisible-p (1- (point))))
+        (should (memq (nth 2 drawer) (ensure-list (get-text-property (1- (point)) 'face))))
+        (search-forward ":END:")
+        (should (memq (nth 3 drawer) (ensure-list (get-text-property (1- (point)) 'face))))
+        (should (memq (nth 2 drawer) (ensure-list (get-text-property (point) 'face)))))
+      (goto-char (point-min))
+      (search-forward "a link")
+      (should (memq 'org-link (ensure-list (get-text-property (1- (point)) 'face))))
+      (goto-char (point-min))
+      (search-forward "2026-09-17")
+      (should (memq 'org-date (ensure-list (get-text-property (1- (point)) 'face))))
+      (search-forward "Outside")
+      (should-not (memq 'suderman/org-logbook-block
+                        (ensure-list (get-text-property (1- (point)) 'face)))))))
+
+(ert-deftest suderman/org-drawer-blocks-ignore-protected-and-unclosed-text ()
+  (with-temp-buffer
+    (insert "* Task\n#+begin_src text\n:LOGBOOK:\nnot a drawer\n:END:\n#+end_src\n"
+            "#+begin_example\n:PROPERTIES:\n:X: not a drawer\n:END:\n#+end_example\n"
+            ":OTHER:\nOther drawer\n:END:\n"
+            ":LOGBOOK:\nUnclosed drawer\n* Next\nOutside\n")
+    (org-mode)
+    (font-lock-ensure)
+    (let ((position (point-min)))
+      (while (< position (point-max))
+        (dolist (face '(suderman/org-properties-block suderman/org-logbook-block))
+          (should-not (memq face (ensure-list (get-text-property position 'face)))))
+        (setq position (1+ position))))))
+
+(ert-deftest suderman/org-drawer-blocks-refontify-after-edits ()
+  (with-temp-buffer
+    (insert "* Task\n:LOGBOOK:\nFirst note\n:END:\nOutside\n")
+    (org-mode)
+    (org-fold-show-all)
+    (font-lock-ensure)
+    (goto-char (point-min))
+    (search-forward "First")
+    (insert " edited")
+    (font-lock-ensure (line-beginning-position) (line-end-position))
+    (should (memq 'suderman/org-logbook-block
+                  (ensure-list (get-text-property (1- (point)) 'face))))
+    (search-forward ":END:")
+    (delete-region (match-beginning 0) (match-end 0))
+    (font-lock-ensure (line-beginning-position) (line-beginning-position 2))
+    (goto-char (point-min))
+    (search-forward "First")
+    (should-not (memq 'suderman/org-logbook-block
+                      (ensure-list (get-text-property (1- (point)) 'face)))))
+  (with-temp-buffer
+    (insert "* Task\n:LOGBOOK:\nNew note\n")
+    (org-mode)
+    (font-lock-ensure)
+    (goto-char (point-max))
+    (insert ":END:")
+    (font-lock-ensure (line-beginning-position) (point-max))
+    (goto-char (point-min))
+    (search-forward "New note")
+    (should (memq 'suderman/org-logbook-block
+                  (ensure-list (get-text-property (1- (point)) 'face))))))
+
+(ert-deftest suderman/org-drawer-blocks-handle-eof-and-affiliated-keywords ()
+  (dolist (case '(("* Task\n:PROPERTIES:\n:ID: example\n:END:"
+                   "example" suderman/org-properties-block suderman/org-properties-label)
+                  ("* Task\n:LOGBOOK:\nA note\n:END:"
+                   "A note" suderman/org-logbook-block suderman/org-logbook-label)
+                  ("* Task\n#+name: history\n:LOGBOOK:\nA note\n:END:\n"
+                   "A note" suderman/org-logbook-block suderman/org-logbook-label)))
+    (with-temp-buffer
+      (insert (car case))
+      (org-mode)
+      (font-lock-ensure)
+      (goto-char (point-min))
+      (search-forward (cadr case))
+      (let ((faces (ensure-list (get-text-property (1- (point)) 'face))))
+        (should (memq (nth 2 case) faces))
+        (should-not (memq (nth 3 case) faces)))
+      (search-forward ":END:")
+      (let ((faces (ensure-list (get-text-property (1- (point)) 'face))))
+        (should (memq (nth 2 case) faces))
+        (should (memq (nth 3 case) faces)))
+      (goto-char (point-min))
+      (when (search-forward "#+name:" nil t)
+        (should-not (memq (nth 2 case)
+                          (ensure-list (get-text-property (1- (point)) 'face))))))))
+
+(ert-deftest suderman/org-drawer-colors-follow-the-theme ()
+  (skip-unless (display-graphic-p))
+  (suderman/org-apply-drawer-faces)
+  (let ((properties (face-background 'suderman/org-properties-block nil t))
+        (logbook (face-background 'suderman/org-logbook-block nil t)))
+    (should (equal properties (suderman/theme-blend 'font-lock-keyword-face 0.12)))
+    (should (equal logbook (suderman/theme-blend 'font-lock-function-name-face 0.12)))
+    (should-not (equal properties logbook))
+    (should-not (equal properties (face-background 'default nil t)))
+    (should-not (equal logbook (face-background 'default nil t)))
+    (should (eq t (face-attribute 'suderman/org-properties-block :extend)))
+    (should (eq t (face-attribute 'suderman/org-logbook-block :extend)))))
+
 (ert-deftest suderman/org-mixed-pitch-is-local-and-idempotent ()
   (let ((suderman/system-style '(:variable-font "Prose"))
         (todo-color (face-foreground 'org-todo))
