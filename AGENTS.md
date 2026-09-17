@@ -28,7 +28,9 @@ The current division is intentional.
 - Nix supplies Emacs 31 PGTK, the Emacs daemon and client, native or awkward
   packages, tree-sitter grammars, language modes that are better managed by
   Nix, language servers, formatters, `fd`, `ripgrep`, Pandoc, and fonts.
-- Stylix supplies the active Emacs theme and system typography.
+- Stylix supplies the desktop theme and typography. Kit exports font and Base16
+  data through `~/org/.generated/emacs/style.el`; Android uses the same data
+  with the Base16 theme engine. This optional generated file stays outside Git.
 - This repository owns mutable Elisp packages, commands, keymaps, and daily
   editing behavior.
 - `package.el` data lives under `~/.local/share/emacs/elpa`, not in this repo.
@@ -43,8 +45,10 @@ Do not hardcode a replacement palette in this repo. Stylix theme changes must
 continue to affect Emacs. When a derived color is needed, calculate it from
 active semantic faces as `lisp/suderman-appearance.el` does for selections.
 
-The expected icon fonts are `JetBrainsMono Nerd Font Mono` and `Symbols Nerd
-Font Mono`. Nix installs them.
+Shared GUI typography uses `Ioskeley Mono`, `Literata`, and `Symbols Nerd Font
+Mono`. Nix installs them; `android/install-fonts.sh` copies a built font bundle
+to the APK's `~/fonts/` without overwriting existing files. Keep Nerd Font
+fallback limited to its PUA ranges, not the entire symbol charset.
 
 ## Repository shape
 

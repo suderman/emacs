@@ -12,6 +12,7 @@
 
 (defvar base16-theme-256-color-source)
 
+(declare-function base16-theme-define "base16-theme" (theme colors))
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/ibuffer-toggle "suderman-buffers")
@@ -20,17 +21,35 @@
 (defconst suderman/nerd-symbol-font "Symbols Nerd Font Mono")
 (defconst suderman/background-opacity 90)
 
+(defvar suderman/system-style nil
+  "Shared font names, point size, and Base16 palette from the Org tree.
+The producer owns values; this configuration owns their use on faces.")
+(defvar suderman/variable-font-scale 1.12
+  "Prose size relative to the default face.")
+(defvar suderman/android-font-scale (/ 17.0 12.0)
+  "Android point-size adjustment, preserving the existing 17-point baseline.")
+
+(defun suderman/load-system-style (&optional file)
+  "Read shared appearance FILE, defaulting to the optional synced Org file."
+  (setq suderman/system-style nil)
+  (let ((file (or file (expand-file-name "~/org/.generated/emacs/style.el"))))
+    (when (file-readable-p file)
+      (load file nil 'nomessage))))
+
+(suderman/load-system-style)
+
 (defun suderman/default-font-size ()
   "Return the platform's default `font-spec' size."
   ;; A floating-point font size is measured in points; an integer is pixels.
   (if (eq system-type 'android) 17.0 11))
 
 (defun suderman/nerd-fonts-available-p (&optional frame)
-  "Return non-nil when FRAME can display the configured Nerd Fonts."
+  "Return non-nil when FRAME can display Nerd Font icons."
   (or (not (eq system-type 'android))
       (and (display-graphic-p frame)
-           (find-font (font-spec :family suderman/font-family) frame)
-           (find-font (font-spec :family suderman/nerd-symbol-font) frame))))
+           (find-font (font-spec :family
+                                 (or (plist-get suderman/system-style :icon-font)
+                                     suderman/nerd-symbol-font)) frame))))
 
 (defun suderman/mode-line-navigation-segments ()
   "Return navigation segments appropriate for the current platform."
@@ -76,7 +95,9 @@
 (defun suderman/apply-default-font ()
   "Apply the platform font fallback unless Stylix already owns it."
   (unless (memq 'base16-stylix custom-enabled-themes)
-    (if (suderman/nerd-fonts-available-p)
+    (if (and (suderman/nerd-fonts-available-p)
+             (or (not (eq system-type 'android))
+                 (find-font (font-spec :family suderman/font-family))))
         (set-face-attribute 'default nil :font
                             (font-spec :family suderman/font-family
                                        :size (suderman/default-font-size)))
@@ -89,15 +110,64 @@
 ;; enabled.  Avoid overriding it on systems where it loads earlier instead.
 (suderman/apply-default-font)
 
-(defun suderman/set-nerd-font-fallbacks ()
-  "Teach Emacs where Nerd Font private-use icons live."
-  (when (suderman/nerd-fonts-available-p)
-    (dolist (range (list (cons #xe000 #xf8ff)
-                         (cons #xf0000 #xffffd)
-                         (cons #x100000 #x10fffd)))
-      (set-fontset-font t range
-                        (font-spec :family suderman/nerd-symbol-font)
-                        nil 'prepend))))
+(defconst suderman/nerd-font-ranges
+  '((#xe000 . #xf8ff) (#xf0001 . #xf1af0))
+  "Nerd Fonts 3.4.0 PUA coverage, checked against Symbols Nerd Font Mono.
+Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
+
+(defun suderman/set-nerd-font-fallbacks (&optional frame)
+  "Teach graphical FRAME where Nerd Font private-use icons live."
+  (let ((family (or (plist-get suderman/system-style :icon-font)
+                    suderman/nerd-symbol-font)))
+    (when (and (display-graphic-p frame)
+               (find-font (font-spec :family family) frame))
+      (dolist (range suderman/nerd-font-ranges)
+        (set-fontset-font t range (font-spec :family family) frame 'prepend)))))
+
+(defun suderman/apply-system-fonts (&optional frame)
+  "Apply shared typography to graphical FRAME when its fonts are installed."
+  (when (display-graphic-p frame)
+    (let ((mono (plist-get suderman/system-style :mono-font))
+          (variable (plist-get suderman/system-style :variable-font))
+          (size (plist-get suderman/system-style :font-size)))
+      (when (and mono size (find-font (font-spec :family mono) frame))
+        (set-face-attribute 'default frame :font
+                            (font-spec :family mono :size
+                                       (* (float size)
+                                          (if (eq system-type 'android)
+                                              suderman/android-font-scale
+                                            1.0))))
+        (set-face-attribute 'fixed-pitch frame :family mono :height 1.0)
+        ;; Android does not discover a fallback for glyphs missing from Literata.
+        (when (eq system-type 'android)
+          (set-fontset-font t nil (font-spec :family mono) frame 'append)))
+      (when (and variable (find-font (font-spec :family variable) frame))
+        (set-face-attribute 'variable-pitch frame :family variable
+                            :height suderman/variable-font-scale)))
+    (suderman/set-nerd-font-fallbacks frame)))
+
+(defun suderman/refresh-system-fonts (&optional _theme)
+  "Apply shared typography after themes have set their face defaults."
+  (dolist (frame (frame-list))
+    (suderman/apply-system-fonts frame)))
+
+;; Nix desktops retain Stylix's generated theme.  Other machines use the same
+;; Base16 face engine with the exported palette, not a copied set of face rules.
+(use-package base16-theme
+  :if (plist-get suderman/system-style :palette)
+  :demand t)
+
+(deftheme suderman-system "Shared system Base16 palette.")
+
+(defun suderman/apply-system-palette ()
+  "Use the shared palette where Stylix's generated theme is unavailable."
+  (when (and (plist-get suderman/system-style :palette)
+             (not (locate-library "base16-stylix-theme"))
+             (require 'base16-theme nil t))
+    (base16-theme-define 'suderman-system
+                        (plist-get suderman/system-style :palette))
+    (mapc #'disable-theme custom-enabled-themes)
+    (enable-theme 'suderman-system)))
 
 (defun suderman/apply-gui-appearance (&optional frame)
   "Apply GUI background opacity to FRAME."
@@ -383,7 +453,13 @@
       (setq anchor segment)))
   (doom-modeline-mode 1))
 
-(suderman/set-nerd-font-fallbacks)
+(add-hook 'enable-theme-functions #'suderman/refresh-system-fonts t)
+(add-hook 'after-init-hook #'suderman/apply-system-palette t)
+(add-hook 'after-init-hook #'suderman/refresh-system-fonts t)
+(add-hook 'after-make-frame-functions #'suderman/apply-system-fonts)
+(when after-init-time
+  (suderman/apply-system-palette))
+(suderman/refresh-system-fonts)
 (suderman/apply-gui-appearance)
 (add-hook 'after-make-frame-functions #'suderman/apply-selection-faces)
 (add-hook 'after-make-frame-functions #'suderman/apply-tty-menu-faces)

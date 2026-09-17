@@ -209,9 +209,63 @@ configuration setup. Fix the reported network or host-tool problem and rerun
 text labels instead of icon glyphs. Android scans =$HOME/fonts= at process
 startup, so restart an already-running Emacs after a standalone setup retry.
 
-Android uses a 17 point default font while desktop frames remain at 11 points.
-The default face carries that size into ordinary buffers, modelines, and
-minibuffers.
+*** Shared appearance
+
+NixOS/Stylix selects Ioskeley Mono for fixed text and Literata for prose. The
+=kit= Home Manager activation writes a regular, atomic, content-stable
+=~/org/.generated/emacs/style.el=. Syncthing carries it to other machines.
+Only =kit= enables =programs.emacs.exportStyle= to avoid competing writers.
+
+The file sets =suderman/system-style= to a plist with =:mono-font=,
+=:variable-font=, =:icon-font=, =:font-size= in points, and a =:palette= Base16
+plist. Emacs owns the face mapping. Desktop keeps Stylix's Base16 theme;
+Android uses the same Base16 theme engine with the exported colors. If the
+file is absent, existing appearance defaults remain available without a warning.
+Restart or reload the configuration after the file changes.
+
+Org uses built-in variable pitch for prose and headings, with buffer-local
+fixed-pitch overrides for code, tables, metadata, timestamps, TODO states,
+tags, and indentation. TODO and link colors remain theme-owned. Heading tags
+use the theme's secondary text color, including on completed headings, and
+stay unaligned. Inactive timestamps also use secondary text; active timestamps
+keep the theme's date color. These colors apply in headings and body text.
+Checkboxes use the theme's type accent. Adjust =suderman/variable-font-scale=
+for prose size, initially =1.12=.
+Desktop uses Stylix's terminal point size, currently 12. Android multiplies
+that by =suderman/android-font-scale=, initially =17/12=, to preserve its
+17-point baseline. Pinch and frame scaling remain available.
+
+Nerd Font fallback covers BMP private use and =F0001–F1AF0=, checked against
+Symbols Nerd Font Mono 3.4.0. It does not claim ordinary arrows, mathematics,
+box drawing, or the third private-use block. On Android, Ioskeley is the final
+fallback for glyphs missing from Literata, including heading bullets and box
+drawing characters.
+
+*** Install the shared fonts on Android
+
+The APK scans =~/fonts/= at process startup. The separate helper below uses
+font packages already selected by the NixOS flake and never installs an APK,
+changes the Termux terminal font, or overwrites an existing font. It refuses
+existing files with different hashes. Old JetBrains fonts may remain installed.
+
+Run on the NixOS host with SSH access to =gem=:
+
+#+begin_src sh
+fonts=$(nix build --impure --no-link --print-out-paths --expr '
+  let f = builtins.getFlake "/etc/nixos";
+      p = f.nixosConfigurations.kit.pkgs;
+      fonts = f.nixosConfigurations.kit.config.stylix.fonts;
+  in p.symlinkJoin {
+    name = "emacs-android-fonts";
+    paths = [ fonts.monospace.package fonts.serif.package p.nerd-fonts.symbols-only ];
+  }')
+./android/install-fonts.sh "$fonts"
+#+end_src
+
+The host needs =ssh=, =rsync=, and =sha256sum=. =EMACS_ANDROID_HOST= overrides
+=gem=. Inspect the target first, run the helper, then save work and restart
+native Emacs. The older guided APK installer still provides JetBrains and
+Symbols as bootstrap fallbacks; this helper adds the shared typography.
 
 The bottom toolbar supplies Escape, Tab, Ctrl, and Meta. Volume Down applies
 Ctrl to the next key, and Volume Up applies Meta. Press Volume Down then Volume

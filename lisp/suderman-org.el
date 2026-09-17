@@ -6,10 +6,15 @@
 ;;; Code:
 
 (require 'use-package)
+(require 'cl-lib)
+(require 'face-remap)
 
 (defvar org-done-keywords)
 (defvar org-not-done-keywords)
 (defvar org-archive-subtree-save-file-p)
+(defvar org-tag-line-re)
+(defvar org-highlight-links)
+(defvar org-font-lock-extra-keywords)
 
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
@@ -27,8 +32,8 @@
 (declare-function org-todo "org" (&optional arg))
 (declare-function org-mouse-todo-menu "org-mouse" (state))
 
-(defun suderman/org-apply-heading-faces ()
-  "Give Org headings a subtle descending size hierarchy."
+(defun suderman/org-apply-heading-faces (&optional _theme)
+  "Scale Org headings and give tags a separate neutral color."
   (dolist (face-height '((org-level-1 . 1.35)
                          (org-level-2 . 1.22)
                          (org-level-3 . 1.14)
@@ -37,9 +42,77 @@
                          (org-level-6 . 1.02)
                          (org-level-7 . 1.0)
                          (org-level-8 . 1.0)))
-    (set-face-attribute (car face-height) nil :height (cdr face-height))))
+    (set-face-attribute (car face-height) nil :height (cdr face-height)))
+  (set-face-attribute 'org-tag nil :foreground 'unspecified
+                      :inherit 'font-lock-doc-face)
+  (set-face-attribute 'org-checkbox nil :foreground 'unspecified
+                      :inherit '(font-lock-type-face bold)))
 
 (add-hook 'org-mode-hook #'suderman/org-apply-heading-faces)
+(add-hook 'enable-theme-functions #'suderman/org-apply-heading-faces)
+
+(defun suderman/org-enable-tag-face ()
+  "Keep heading tags distinct even when a completed heading gets its own face."
+  (font-lock-add-keywords
+   nil `((,org-tag-line-re (1 'font-lock-doc-face prepend))) t))
+
+(add-hook 'org-mode-hook #'suderman/org-enable-tag-face)
+
+(defun suderman/org-enable-date-faces ()
+  "Keep timestamps distinct from headings and mute inactive timestamps."
+  ;; Keep Org's matcher, after heading states but before code and comments.
+  (setq org-font-lock-extra-keywords
+        (cl-loop for rule in (assq-delete-all 'org-activate-dates
+                                             org-font-lock-extra-keywords)
+                 when (and (memq 'date org-highlight-links)
+                           (eq (car-safe rule) 'org-font-lock-add-priority-faces))
+                 collect '(org-activate-dates
+                           (0 (if (eq (char-after (match-beginning 0)) ?\[)
+                                  '(font-lock-doc-face org-date)
+                                'org-date)
+                              prepend))
+                 collect rule)))
+
+(add-hook 'org-font-lock-set-keywords-hook #'suderman/org-enable-date-faces)
+
+(defvar suderman/system-style)
+(defvar suderman/variable-font-scale)
+(defvar-local suderman/org-fixed-pitch-cookies nil)
+
+(defun suderman/org-enable-mixed-pitch ()
+  "Use proportional prose with fixed-width structural text in GUI Org buffers."
+  (when (and (display-graphic-p)
+             (plist-get suderman/system-style :variable-font)
+             (find-font (font-spec :family
+                                  (plist-get suderman/system-style :variable-font))))
+    (variable-pitch-mode 1)
+    (mapc #'face-remap-remove-relative suderman/org-fixed-pitch-cookies)
+    ;; Base16 gives block delimiters their own faces instead of org-meta-line.
+    ;; Cancel the prose scale so structural text keeps the default font size.
+    ;; Tags are not column-aligned here.  Links and TODO colors stay theme-owned.
+    (setq suderman/org-fixed-pitch-cookies
+          (mapcar (lambda (face)
+                    (face-remap-add-relative
+                     face 'fixed-pitch
+                     :height (/ 1.0 suderman/variable-font-scale)))
+                  '(org-block org-block-begin-line
+                    org-code org-verbatim org-table org-meta-line
+                    org-special-keyword org-document-info-keyword
+                    org-property-value org-drawer org-checkbox org-date
+                    org-todo org-done org-tag org-indent)))))
+
+(defun suderman/org-refresh-mixed-pitch (&optional frame)
+  "Enable mixed typography in existing Org buffers when GUI FRAME is created."
+  (when (display-graphic-p frame)
+    (with-selected-frame (or frame (selected-frame))
+      (dolist (buffer (buffer-list))
+        (with-current-buffer buffer
+          (when (derived-mode-p 'org-mode)
+            (suderman/org-enable-mixed-pitch)))))))
+
+(add-hook 'org-mode-hook #'suderman/org-enable-mixed-pitch)
+(add-hook 'after-make-frame-functions #'suderman/org-refresh-mixed-pitch)
+(suderman/org-refresh-mixed-pitch)
 
 (defun suderman/org-auto-save-interval ()
   "Return the platform's visited-file auto-save interval."
