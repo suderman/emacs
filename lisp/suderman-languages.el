@@ -13,8 +13,11 @@
   :custom
   (treesit-auto-install nil)
   :config
+  ;; Keep mappings static.  The global mode rebuilds every remap at each mode
+  ;; probe; opening 53 Agenda files triggered it 159 times and blocked Android
+  ;; for 25-30 seconds.
   (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode 1))
+  (global-treesit-auto-mode -1))
 
 (use-package web-mode
   :mode ("\\.twig\\'" . web-mode))
