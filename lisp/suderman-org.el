@@ -76,71 +76,78 @@
 
 (add-hook 'org-font-lock-set-keywords-hook #'suderman/org-enable-date-faces)
 
-(defface suderman/org-properties-block
+(defface suderman/org-drawer-block
   '((t (:extend t)))
-  "Background for property drawers."
+  "Source-block background for property and logbook drawers."
   :group 'org-faces)
 
-(defface suderman/org-logbook-block
-  '((t (:extend t)))
-  "Background for logbook drawers."
+(defface suderman/org-drawer-label
+  '((t (:inherit org-block-begin-line :extend nil)))
+  "Muted compact face for property and logbook drawer labels."
   :group 'org-faces)
 
-(defface suderman/org-properties-label
-  '((t (:inherit org-drawer :weight bold)))
-  "Boundary labels for property drawers."
-  :group 'org-faces)
+;; Clean up the former theme-derived drawer faces after a hot reload.
+(remove-hook 'org-mode-hook 'suderman/org-apply-drawer-faces)
+(remove-hook 'enable-theme-functions 'suderman/org-apply-drawer-faces)
 
-(defface suderman/org-logbook-label
-  '((t (:inherit org-drawer :weight bold)))
-  "Boundary labels for logbook drawers."
-  :group 'org-faces)
+(defun suderman/org-apply-block-face-geometry ()
+  "Keep folded block openers compact and expanded block endings full-width."
+  (when (facep 'org-block-begin-line)
+    (set-face-extend 'org-block-begin-line nil)
+    (set-face-extend 'org-block-end-line t)))
 
-(declare-function suderman/theme-blend "suderman-appearance" (face alpha))
+(add-hook 'org-mode-hook #'suderman/org-apply-block-face-geometry)
+(suderman/org-apply-block-face-geometry)
 
-(defun suderman/org-apply-drawer-faces (&optional _theme)
-  "Derive distinct drawer colors from the active theme."
-  (dolist (drawer '((suderman/org-properties-block suderman/org-properties-label
-                    font-lock-keyword-face)
-                   (suderman/org-logbook-block suderman/org-logbook-label
-                    font-lock-function-name-face)))
-    (when-let* ((background (suderman/theme-blend (nth 2 drawer) 0.12)))
-      (set-face-attribute (car drawer) nil :background background)
-      (set-face-attribute (cadr drawer) nil
-                          :foreground (face-foreground (nth 2 drawer) nil t)))))
-
-(add-hook 'org-mode-hook #'suderman/org-apply-drawer-faces)
-(add-hook 'enable-theme-functions #'suderman/org-apply-drawer-faces)
+(defun suderman/org-fontify-source-block-openers (limit)
+  "Extend expanded source-block openers, but not folded ones, to LIMIT."
+  (let ((case-fold-search t))
+    (catch 'found
+      (while (re-search-forward
+              "^[ \t]*#\\+begin_src\\(?:[ \t].*\\)?$" limit t)
+        (let* ((begin (match-beginning 0))
+               (element (save-excursion (goto-char begin) (org-element-at-point))))
+          (when (and (eq (org-element-type element) 'src-block)
+                     (= begin (org-element-property :post-affiliated element)))
+            (let ((newline (line-end-position)))
+              (when (< newline (point-max))
+                ;; Folding hides the extending newline and leaves the compact
+                ;; `org-block-begin-line' face visible.
+                (add-face-text-property newline (1+ newline) 'org-block t))
+              (goto-char (min (1+ newline) (point-max)))
+              (throw 'found t)))))
+      nil)))
 
 (defun suderman/org-fontify-drawer-blocks (limit)
-  "Add contained backgrounds to real PROPERTIES and LOGBOOK drawers to LIMIT."
+  "Style real PROPERTIES and LOGBOOK drawers like source blocks to LIMIT."
   (let ((case-fold-search t))
     (catch 'found
       (while (re-search-forward "^[ \t]*:\\(PROPERTIES\\|LOGBOOK\\):[ \t]*$" limit t)
         (let* ((begin (match-beginning 0))
-               (properties (string-equal (upcase (match-string 1)) "PROPERTIES"))
                (element (save-excursion (goto-char begin) (org-element-at-point))))
           ;; Let Org reject drawer-like text inside source/example blocks.
           (when (and (memq (org-element-type element) '(property-drawer drawer))
                      (= begin (org-element-property :post-affiliated element)))
-            (let ((end (save-excursion
-                         (re-search-forward "^[ \t]*:END:[ \t]*$"
-                                            (org-element-property :end element) t)
-                         ;; Include the delimiter even without a final newline.
-                         (forward-line 1)
-                         (point)))
-                  (body (if properties 'suderman/org-properties-block
-                          'suderman/org-logbook-block))
-                  (label (if properties 'suderman/org-properties-label
-                           'suderman/org-logbook-label)))
-              (add-face-text-property begin end body)
-              ;; Keep links, dates, property values, and prose typography intact.
-              (save-excursion
-                (goto-char begin)
-                (add-face-text-property begin (line-end-position) label)
-                (goto-char (1- end))
-                (add-face-text-property (line-beginning-position)
-                                        (line-end-position) label))
+            (let* ((end-bounds
+                    (save-excursion
+                      (re-search-forward "^[ \t]*:END:[ \t]*$"
+                                         (org-element-property :end element) t)
+                      (let ((end-begin (match-beginning 0)))
+                        ;; Include the delimiter even without a final newline.
+                        (forward-line 1)
+                        (cons end-begin (point)))))
+                   (end-begin (car end-bounds))
+                   (end (cdr end-bounds))
+                   (body-begin (save-excursion
+                                 (goto-char begin)
+                                 (line-end-position))))
+              ;; Folding hides the extending newline, leaving only the compact
+              ;; label.  Expanded drawers show the full-width body underneath.
+              (add-face-text-property body-begin end
+                                      'suderman/org-drawer-block)
+              (add-face-text-property begin body-begin
+                                      'suderman/org-drawer-label)
+              (add-face-text-property end-begin end 'org-block-end-line)
               (put-text-property begin end 'font-lock-multiline t)
               (goto-char end)
               (throw 'found t)))))
@@ -158,13 +165,28 @@
         (setq font-lock-beg begin)
         t))))
 
+(defconst suderman/org-block-font-lock-keywords
+  '((suderman/org-fontify-source-block-openers)
+    (suderman/org-fontify-drawer-blocks)))
+
 (defun suderman/org-enable-drawer-blocks ()
-  "Append drawer backgrounds after Org's semantic fontification."
-  (font-lock-add-keywords nil '((suderman/org-fontify-drawer-blocks)) t)
+  "Append collapsible block backgrounds after Org's fontification."
+  (font-lock-remove-keywords nil suderman/org-block-font-lock-keywords)
+  (font-lock-add-keywords nil suderman/org-block-font-lock-keywords t)
   (add-hook 'font-lock-extend-region-functions
             #'suderman/org-extend-drawer-region nil t))
 
 (add-hook 'org-mode-hook #'suderman/org-enable-drawer-blocks)
+
+(defun suderman/org-refresh-drawer-blocks ()
+  "Install current block styling and refontify existing Org buffers."
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (derived-mode-p 'org-mode)
+        (suderman/org-enable-drawer-blocks)
+        (font-lock-flush)))))
+
+(suderman/org-refresh-drawer-blocks)
 
 (defvar suderman/system-style)
 (defvar suderman/variable-font-scale)
@@ -186,7 +208,7 @@
                     (face-remap-add-relative
                      face 'fixed-pitch
                      :height (/ 1.0 suderman/variable-font-scale)))
-                  '(org-block org-block-begin-line
+                  '(org-block org-block-begin-line suderman/org-drawer-label
                     org-code org-verbatim org-table org-meta-line
                     org-special-keyword org-document-info-keyword
                     org-property-value org-drawer org-checkbox org-date
@@ -480,6 +502,7 @@ Batch calls do not prompt.  Save changed files before returning."
         org-insert-heading-respect-content t
         org-log-done 'time
         org-log-into-drawer t
+        org-fontify-whole-block-delimiter-line nil
         org-startup-indented t
         org-startup-folded 'nofold
         org-hide-drawer-startup t

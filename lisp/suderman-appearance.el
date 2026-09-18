@@ -175,6 +175,7 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
      ;; Outline 4 otherwise inherits comments, making it identical to Org tags.
      (outline-4 :foreground base0D)
      (org-block-begin-line :foreground base04 :background base01)
+     (suderman/org-drawer-block :background base01)
      (mode-line-inactive :foreground base04 :background base01 :box nil)
      (window-divider :foreground base02)
      (window-divider-first-pixel :foreground base02)
@@ -184,7 +185,12 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
      (org-time-grid :foreground base04)
      (org-agenda-current-time :foreground base0D :weight bold)
      (org-agenda-date-today :foreground base0D :weight bold)
-     (org-agenda-date-weekend :foreground base0D :weight normal))))
+     (org-agenda-date-weekend :foreground base0D :weight normal)))
+  ;; Org normally extends both delimiter faces together.  Keep folded openers
+  ;; compact while expanded block endings retain their full-width background.
+  (when (facep 'org-block-begin-line)
+    (set-face-extend 'org-block-begin-line nil)
+    (set-face-extend 'org-block-end-line t)))
 
 (defun suderman/apply-system-palette (&optional appearance)
   "Follow toolkit APPEARANCE using the synced Stylix palette pair.
