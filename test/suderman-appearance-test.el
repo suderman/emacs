@@ -270,8 +270,8 @@
         (should (equal custom-enabled-themes original-themes))))))
 
 (ert-deftest suderman/shared-fonts-are-gui-only-and-keep-point-sizes ()
-  (let ((suderman/system-style '(:mono-font "Mono" :variable-font "Prose"
-                                :font-size 12.0))
+  (let ((suderman/system-style '(:mono-font "Mono" :fallback-font "Fallback"
+                                :variable-font "Prose" :font-size 12.0))
         (system-type 'gnu/linux)
         calls fontsets)
     (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) t))
@@ -293,9 +293,9 @@
         (suderman/apply-system-fonts)
         (should (= (font-get (plist-get (caddr (assq 'default calls)) :font) :size)
                    17.0))
-        (should (= (length fontsets) 1))
-        (should (equal (car fontsets)
-                       (list t nil (font-spec :family "Mono") nil 'append))))
+        (should (equal (nreverse fontsets)
+                       (list (list t nil (font-spec :family "Mono") nil 'append)
+                             (list t nil (font-spec :family "Fallback") nil 'append)))))
       (setq calls nil fontsets nil)
       (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) nil)))
         (suderman/apply-system-fonts)

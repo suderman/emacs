@@ -22,14 +22,14 @@ exec "$FONT_TEST_RSYNC" "${args[@]}"
 SH
 chmod +x "$work/bin/ssh" "$work/bin/rsync"
 export PATH="$work/bin:$PATH"
-for name in IoskeleyMono-Regular Literata-Regular SymbolsNerdFontMono-Regular; do
+for name in CommitMono-400-Regular IoskeleyMono-Regular Literata-Regular SymbolsNerdFontMono-Regular; do
   printf '%s\n' "$name" > "$work/bundle/share/fonts/$name.ttf"
 done
 printf 'preserve\n' > "$FONT_TEST_DEST/Existing.ttf"
 bash "$helper" "$work/bundle" > "$work/install.log"
-before=$(stat -c '%i:%Y' "$FONT_TEST_DEST/IoskeleyMono-Regular.ttf")
+before=$(stat -c '%i:%Y' "$FONT_TEST_DEST/CommitMono-400-Regular.ttf")
 bash "$helper" "$work/bundle" > "$work/repeat.log"
-test "$before" = "$(stat -c '%i:%Y' "$FONT_TEST_DEST/IoskeleyMono-Regular.ttf")"
+test "$before" = "$(stat -c '%i:%Y' "$FONT_TEST_DEST/CommitMono-400-Regular.ttf")"
 test "$(cat "$FONT_TEST_DEST/Existing.ttf")" = preserve
 # A conflict must stop the whole copy, including new files earlier in the list.
 printf 'new\n' > "$work/bundle/share/fonts/IoskeleyMono-Bold.ttf"

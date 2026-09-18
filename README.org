@@ -211,7 +211,7 @@ startup, so restart an already-running Emacs after a standalone setup retry.
 
 *** Shared appearance
 
-NixOS/Stylix selects Ioskeley Mono for fixed text and Literata for prose. The
+NixOS/Stylix selects CommitMono for fixed text and Literata for prose. The
 =kit= Home Manager activation writes a regular, atomic, content-stable
 =~/org/.generated/emacs/style.el=. Syncthing carries it to other machines.
 Only =kit= enables =programs.emacs.exportStyle= to avoid competing writers.
@@ -259,9 +259,10 @@ links, and timestamps keep their usual fonts and colors.
 
 Nerd Font fallback covers BMP private use and =F0001–F1AF0=, checked against
 Symbols Nerd Font Mono 3.4.0. It does not claim ordinary arrows, mathematics,
-box drawing, or the third private-use block. On Android, Ioskeley is the final
-fallback for glyphs missing from Literata, including heading bullets and box
-drawing characters.
+box drawing, or the third private-use block. On Android, CommitMono is the first
+fallback for glyphs missing from Literata. Ioskeley Mono remains the final
+ordinary-glyph fallback during this trial so characters absent from CommitMono,
+such as the plain heart, do not disappear.
 
 *** Install the shared fonts on Android
 
@@ -279,7 +280,7 @@ fonts=$(nix build --impure --no-link --print-out-paths --expr '
       fonts = f.nixosConfigurations.kit.config.stylix.fonts;
   in p.symlinkJoin {
     name = "emacs-android-fonts";
-    paths = [ fonts.monospace.package fonts.serif.package p.nerd-fonts.symbols-only ];
+    paths = [ fonts.monospace.package p.ioskeley-mono.normal fonts.serif.package p.nerd-fonts.symbols-only ];
   }')
 ./android/install-fonts.sh "$fonts"
 #+end_src

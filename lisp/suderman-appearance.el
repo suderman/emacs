@@ -128,6 +128,7 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
   "Apply shared typography to graphical FRAME when its fonts are installed."
   (when (display-graphic-p frame)
     (let ((mono (plist-get suderman/system-style :mono-font))
+          (fallback (plist-get suderman/system-style :fallback-font))
           (variable (plist-get suderman/system-style :variable-font))
           (size (plist-get suderman/system-style :font-size)))
       (when (and mono size (find-font (font-spec :family mono) frame))
@@ -138,9 +139,11 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
                                               suderman/android-font-scale
                                             1.0))))
         (set-face-attribute 'fixed-pitch frame :family mono :height 1.0)
-        ;; Android does not discover a fallback for glyphs missing from Literata.
+        ;; Android does not discover fallbacks for glyphs missing from Literata.
         (when (eq system-type 'android)
-          (set-fontset-font t nil (font-spec :family mono) frame 'append)))
+          (set-fontset-font t nil (font-spec :family mono) frame 'append)
+          (when (and fallback (find-font (font-spec :family fallback) frame))
+            (set-fontset-font t nil (font-spec :family fallback) frame 'append))))
       (when (and variable (find-font (font-spec :family variable) frame))
         (set-face-attribute 'variable-pitch frame :family variable
                             :height suderman/variable-font-scale)))

@@ -16,7 +16,7 @@ while IFS= read -r -d '' font; do
   name="$(basename "$font")"
   # Use normal static families, not alternate optical sizes or variable twins.
   case "$name" in
-    IoskeleyMono-*.ttf|Literata-*.ttf|SymbolsNerdFontMono-Regular.ttf) ;;
+    CommitMono-*.ttf|IoskeleyMono-*.ttf|Literata-*.ttf|SymbolsNerdFontMono-Regular.ttf) ;;
     *) continue ;;
   esac
   [[ $name == *'['* ]] && continue

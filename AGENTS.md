@@ -47,8 +47,9 @@ Do not hardcode a replacement palette in this repo. Stylix theme changes must
 continue to affect Emacs. When a derived color is needed, calculate it from
 active semantic faces as `lisp/suderman-appearance.el` does for selections.
 
-Shared GUI typography uses `Ioskeley Mono`, `Literata`, and `Symbols Nerd Font
-Mono`. Nix installs them; `android/install-fonts.sh` copies a built font bundle
+Shared GUI typography uses `CommitMono`, `Literata`, and `Symbols Nerd Font
+Mono`, with Ioskeley Mono retained as Android's ordinary-glyph fallback. Nix
+installs them; `android/install-fonts.sh` copies a built font bundle
 to the APK's `~/fonts/` without overwriting existing files. Keep Nerd Font
 fallback limited to its PUA ranges, not the entire symbol charset.
 
