@@ -96,22 +96,22 @@ Crossing the anchor reverses the selection naturally."
      ;; Active line is below anchor.
      ((> target-beg anchor-beg)
       (thread-first
-          (meow--make-selection
-           '(expand . line) anchor-beg target-end)
+        (meow--make-selection
+         '(expand . line) anchor-beg target-end)
         (meow--select t)))
 
      ;; Active line is above anchor.
      ((< target-beg anchor-beg)
       (thread-first
-          (meow--make-selection
-           '(expand . line) anchor-end target-beg)
+        (meow--make-selection
+         '(expand . line) anchor-end target-beg)
         (meow--select t)))
 
      ;; Back on the anchor line.
      (t
       (thread-first
-          (meow--make-selection
-           '(expand . line) anchor-beg anchor-end)
+        (meow--make-selection
+         '(expand . line) anchor-beg anchor-end)
         (meow--select t))))))
 
 (defun suderman/meow-next (arg)
@@ -136,7 +136,7 @@ Crossing the anchor reverses the selection naturally."
                     (mark)
                   (point))))
     (thread-first
-        (meow--make-selection '(expand . char) anchor pos)
+      (meow--make-selection '(expand . char) anchor pos)
       (meow--select t))))
 
 (defun suderman/meow--adopt-surround-selection (&rest _)
@@ -167,8 +167,8 @@ Crossing the anchor reverses the selection naturally."
              ((>= target end) (cons beg target))
              (t (cons old-mark old-point)))))
       (thread-first
-          (meow--make-selection '(expand . char)
-                                (car selection) (cdr selection))
+        (meow--make-selection '(expand . char)
+                              (car selection) (cdr selection))
         (meow--select t)))))
 
 (defun suderman/meow--select-thing (thing n)
@@ -338,7 +338,7 @@ Search backward when BACKWARD is non-nil, otherwise search forward."
       (meow--cancel-selection)
       (rectangle-mark-mode -1))
     (thread-first
-        (meow--make-selection '(expand . char) (point-min) (point-max))
+      (meow--make-selection '(expand . char) (point-min) (point-max))
       (meow--select t)))))
 
 (defun suderman/meow-visual ()
@@ -374,9 +374,9 @@ Keep every result as a char selection so motion commands can fine-tune it."
                 (line-beginning-position)))
          (end (if selection
                   selection-end
-                  (save-excursion
-                    (goto-char selection-end)
-                    (line-beginning-position 2))))
+                (save-excursion
+                  (goto-char selection-end)
+                  (line-beginning-position 2))))
          (cursor (copy-marker (point) t)))
     (unwind-protect
         (progn
@@ -532,7 +532,7 @@ An active selection is replaced without modifying the kill ring."
       (when (and (> end beg) (eq (char-before end) ?\n))
         (setq end (1- end)))
       (thread-first
-          (meow--make-selection '(expand . line) beg end)
+        (meow--make-selection '(expand . line) beg end)
         (meow--select t backward)))))
 
 (defun suderman/move-up ()
@@ -676,7 +676,7 @@ An active selection is replaced without modifying the kill ring."
           (cdr entry)))
 
   (meow-define-keys
-    'beacon
+      'beacon
     '("SPC" . suderman/meow-keypad-once))
   
   (meow-motion-define-key
@@ -702,14 +702,14 @@ An active selection is replaced without modifying the kill ring."
    '("1" . meow-expand-1)
    '("-" . negative-argument)
    '("=" . suderman/format-buffer)
-   '(";" . meow-reverse)
+   '("'" . meow-reverse)
    '(":" . execute-extended-command)
    '("#" . meow-goto-line)
    '("$" . suderman/meow-smart-end-of-line)
    '("%" . evilmi-jump-items-native)
    '("^" . suderman/meow-smart-beginning-of-line)
-    '("(" . meow-left-expand)
-    '(")" . meow-right-expand)
+   '("(" . meow-left-expand)
+   '(")" . meow-right-expand)
    '("," . suderman/ibuffer-toggle)
    '("." . suderman/dirvish)
    '("[" . meow-inner-of-thing)
@@ -773,7 +773,7 @@ An active selection is replaced without modifying the kill ring."
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
    '("Z" . suderman/meow-buffer-end)
-   '("'" . suderman/meow-repeat)
+   '(";" . suderman/meow-repeat)
    '("/" . meow-visit)
    '("<escape>" . suderman/meow-escape)))
 
