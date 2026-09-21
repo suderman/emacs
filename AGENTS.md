@@ -14,6 +14,22 @@ packages are taking shape deliberately.
 Prefer a small repair that preserves this direction. Broad rewrites need a
 clear reason and explicit approval.
 
+## Human editability and tests
+
+This is a personal configuration, not a public library. Jon must be able to
+change a variable, keybinding, hook, face, package option, or other preference
+in one obvious place without knowing a test architecture or asking an agent.
+Prefer direct, idiomatic Elisp over wrappers or indirection added for testing.
+Interactive evaluation and Git are normal parts of the safety model.
+
+Tests protect complicated behavior, real regressions, and risky external work.
+They do not freeze configuration choices. Do not add a test because a module
+changed, create one test file per module, or assert literal preferences such as
+keys, fonts, hooks, faces, package options, or enabled modes. Add a focused test
+when custom logic has meaningful branches, a bug is worth preventing, or code
+modifies or deploys external state. Small intentional configuration changes
+should usually require only the source edit.
+
 ## The NixOS half of the setup
 
 This repository is only the Emacs half of the system. The matching NixOS flake
@@ -334,11 +350,13 @@ callbacks can leave `current-buffer` somewhere surprising.
 
 ## Verification
 
-There is no standalone test suite yet. Leave a focused runnable check for new
-branching behavior, then run the checks that match the change.
+Use the smallest checks that match the change. Add a focused automated test
+only for nontrivial behavior, a meaningful regression, or risky external work.
+Ordinary preference edits do not need a new or updated test.
 
 At minimum:
 
+- Run the safety suite with `./test/run.sh`.
 - Load the full config with `emacs --batch -l init.el`.
 - Byte-compile every changed module, sending `.elc` output to `/tmp/opencode`
   rather than the repository.

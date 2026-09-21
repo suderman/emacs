@@ -366,12 +366,6 @@ retries."
     (global-display-line-numbers-mode 1)
     (suderman/disable-line-numbers-in-special-buffers)))
 
-(defun suderman/initialize-line-modes ()
-  "Set line highlighting and numbers to their platform defaults."
-  (let ((enabled (if (eq system-type 'android) -1 1)))
-    (global-hl-line-mode enabled)
-    (global-display-line-numbers-mode enabled)))
-
 (defun suderman/disable-line-numbers-in-meow-cheatsheet (&rest _)
   "Disable line numbers in Meow's read-only cheatsheet."
   (display-line-numbers-mode -1))
@@ -387,7 +381,9 @@ retries."
 (setq-default hl-line-range-function #'suderman/hl-line-range)
 (add-hook 'special-mode-hook #'suderman/disable-line-numbers-in-special-mode)
 (add-hook 'image-mode-hook #'suderman/disable-line-numbers-in-special-mode)
-(suderman/initialize-line-modes)
+(let ((enabled (if (eq system-type 'android) -1 1)))
+  (global-hl-line-mode enabled)
+  (global-display-line-numbers-mode enabled))
 (suderman/disable-line-numbers-in-special-buffers)
 (with-eval-after-load 'meow-cheatsheet
   (advice-add 'meow-cheatsheet :after
@@ -396,13 +392,9 @@ retries."
   (advice-add 'meow-describe-keymap :around
               #'suderman/meow-describe-keymap-without-line-numbers))
 
-(defun suderman/initialize-fill-column-indicator ()
-  "Set the global column guide to the platform default."
-  (global-display-fill-column-indicator-mode
-   (if (eq system-type 'android) -1 1)))
-
 (setq-default display-fill-column-indicator-column 100)
-(suderman/initialize-fill-column-indicator)
+(global-display-fill-column-indicator-mode
+ (if (eq system-type 'android) -1 1))
 
 (use-package indent-bars
   :if (not (eq system-type 'android))

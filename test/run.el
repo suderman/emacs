@@ -1,7 +1,8 @@
-;;; run.el --- Run all Suderman ERT checks -*- lexical-binding: t; -*-
+;;; run.el --- Run Suderman's focused ERT checks -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Run with: emacs --batch -l init.el -l test/run.el
+;; Run ERT only with: emacs --batch -l init.el -l test/run.el
+;; Run the complete safety suite with: ./test/run.sh
 
 ;;; Code:
 

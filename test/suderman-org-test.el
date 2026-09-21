@@ -1,72 +1,18 @@
-;;; suderman-org-test.el --- Focused Org workflow checks -*- lexical-binding: t; -*-
+;;; suderman-org-test.el --- Org workflow and export checks -*- lexical-binding: t; -*-
 
-;; Run with:
-;; emacs --batch -l init.el -l test/suderman-org-test.el -f ert-run-tests-batch-and-exit
+;;; Commentary:
+;; Tests for custom behavior with enough moving parts to merit a safety net.
+
+;;; Code:
 
 (require 'ert)
+(require 'json)
 (require 'org-agenda)
 (require 'org-archive)
-(require 'suderman-keys)
 (require 'suderman-org)
+(require 'suderman-org-klwp)
 
-(ert-deftest suderman/org-uses-phone-friendly-workflow-files ()
-  (should auto-save-visited-mode)
-  (should (= auto-save-visited-interval 3))
-  (should (eq auto-save-visited-predicate
-              #'suderman/org-auto-save-visited-p))
-  (should (equal org-M-RET-may-split-line '((default . nil))))
-  (should org-insert-heading-respect-content)
-  (should (eq org-log-done 'time))
-  (should org-log-into-drawer)
-  (should org-startup-indented)
-  (should org-startup-with-link-previews)
-  (let ((directory (expand-file-name "~/org")))
-    (should (equal org-directory directory))
-    (should (equal org-attach-id-dir
-                   (expand-file-name ".attach/" directory)))
-    (should org-attach-use-inheritance)
-    (should (equal org-id-locations-file
-                   (expand-file-name "org-id-locations" suderman/state-dir)))
-    (should (eq org-id-link-to-org-use-id
-                'create-if-interactive-and-no-custom-id))
-    (should
-     (equal org-agenda-files
-            (append
-             (mapcar (lambda (file) (expand-file-name file directory))
-                     '("inbox.org" "todo.org" "routines.org"))
-             (suderman/org--direct-org-files
-              (expand-file-name "calendar" directory))
-             (suderman/org-context-files))))
-    (should-not (member (expand-file-name "projects" directory)
-                        org-agenda-files))
-    (should (equal org-todo-keywords
-                   '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))))
-    (should (equal org-default-notes-file
-                   (expand-file-name "inbox.org" directory)))
-    (should (equal org-capture-templates
-                    `(("t" "Task" entry (file ,org-default-notes-file)
-                       "* TODO %?\n  %U\n  %a")
-                      ("n" "Note" entry (file ,org-default-notes-file)
-                       "* %?\n  %U\n  %a")
-                      ("i" "Idea" entry (file ,org-default-notes-file)
-                       "* %?\n  %U\n  %a"))))
-    (should (equal org-refile-targets
-                   '((suderman/org-refile-files :maxlevel . 3))))
-    (should (eq org-refile-use-outline-path 'file))
-    (should-not org-outline-path-complete-in-steps)
-    (should (eq org-refile-allow-creating-parent-nodes 'confirm))
-    (should (equal org-archive-location "archive.org::"))
-    (should-not org-archive-file-header-format)
-    (should org-agenda-skip-scheduled-if-done)
-    (should org-agenda-skip-deadline-if-done)
-    (should
-     (equal (assoc "d" org-agenda-custom-commands)
-            '("d" "Dashboard"
-              ((agenda "" ((org-agenda-span 7)))
-               (todo "PROG" ((org-agenda-overriding-header "In progress")))
-               (todo "EVAL" ((org-agenda-overriding-header "In review")))
-               (todo "HOLD" ((org-agenda-overriding-header "On hold")))
-               (todo "TODO" ((org-agenda-overriding-header "Todo")))))))))
+;; Agenda discovery
 
 (ert-deftest suderman/org-discovers-work-agenda-files-by-convention ()
   (let* ((work (make-temp-file "suderman-org-work-" t))
@@ -167,79 +113,8 @@
           (should-not (suderman/org--direct-org-files archive-directory)))
       (delete-directory directory t))))
 
-(ert-deftest suderman/org-archives-into-a-sibling-file-with-context ()
-  (let* ((directory (make-temp-file "suderman-org-archive-" t))
-         (source (expand-file-name "cnrl.org" directory))
-         (archive (expand-file-name "archive.org" directory))
-         source-buffer archive-buffer)
-    (unwind-protect
-        (progn
-          (with-temp-file source
-            (insert "#+CATEGORY: cnrl\n"
-                    "* Client work\n"
-                    "** Analytics\n"
-                    "*** DONE Fix GA4 cross-domain tracking\n"))
-          (setq source-buffer (find-file-noselect source))
-          (with-current-buffer source-buffer
-            (goto-char (point-min))
-            (search-forward "Fix GA4")
-            (org-back-to-heading)
-            (org-archive-subtree))
-          (should (file-exists-p archive))
-          (setq archive-buffer (find-file-noselect archive))
-          (with-current-buffer archive-buffer
-            (goto-char (point-min))
-            (should (search-forward "Fix GA4 cross-domain tracking" nil t))
-            (org-back-to-heading)
-            (should (= (org-outline-level) 1))
-            (should (org-entry-get nil "ARCHIVE_TIME"))
-            (should (equal (org-entry-get nil "ARCHIVE_FILE") source))
-            (should (equal (org-entry-get nil "ARCHIVE_OLPATH")
-                           "Client work/Analytics"))
-            (should (equal (org-entry-get nil "ARCHIVE_CATEGORY") "cnrl"))
-            (should (equal (org-entry-get nil "ARCHIVE_TODO") "DONE"))))
-      (when (buffer-live-p source-buffer)
-        (kill-buffer source-buffer))
-      (when (buffer-live-p archive-buffer)
-        (kill-buffer archive-buffer))
-      (delete-directory directory t))))
 
-(ert-deftest suderman/org-archives-agenda-items-into-the-source-sibling ()
-  (let* ((directory (make-temp-file "suderman-org-agenda-archive-" t))
-         (source (expand-file-name "client.org" directory))
-         (archive (expand-file-name "archive.org" directory))
-         (agenda-buffer (generate-new-buffer " *suderman-archive-agenda*"))
-         source-buffer archive-buffer marker)
-    (unwind-protect
-        (progn
-          (with-temp-file source
-            (insert "#+CATEGORY: client\n* DONE Archive from Agenda\n"))
-          (setq source-buffer (find-file-noselect source))
-          (with-current-buffer source-buffer
-            (goto-char (point-min))
-            (search-forward "Archive from Agenda")
-            (org-back-to-heading)
-            (setq marker (point-marker)))
-          (with-current-buffer agenda-buffer
-            (org-agenda-mode)
-            (let ((inhibit-read-only t))
-              (insert "Archive from Agenda\n")
-              (add-text-properties (point-min) (point-max)
-                                   `(org-marker ,marker)))
-            (goto-char (point-min))
-            (org-agenda-archive))
-          (setq archive-buffer (find-file-noselect archive))
-          (with-current-buffer archive-buffer
-            (goto-char (point-min))
-            (should (search-forward "Archive from Agenda" nil t))
-            (org-back-to-heading)
-            (should (= (org-outline-level) 1))))
-      (when marker
-        (set-marker marker nil))
-      (dolist (buffer (list source-buffer archive-buffer agenda-buffer))
-        (when (buffer-live-p buffer)
-          (kill-buffer buffer)))
-      (delete-directory directory t))))
+;; Archiving and synced files
 
 (ert-deftest suderman/org-bulk-archive-saves-done-trees-in-their-own-archives ()
   (let* ((directory (make-temp-file "suderman-org-bulk-" t))
@@ -316,12 +191,6 @@
           (kill-buffer buffer)))
       (delete-directory directory t))))
 
-(ert-deftest suderman/org-auto-save-interval-is-longer-on-android ()
-  (let ((system-type 'gnu/linux))
-    (should (= (suderman/org-auto-save-interval) 3)))
-  (let ((system-type 'android))
-    (should (= (suderman/org-auto-save-interval) 10))))
-
 (ert-deftest suderman/org-auto-saves-only-safe-files-under-org-directory ()
   (let* ((org-directory (make-temp-file "suderman-org-" t))
          (inside (expand-file-name "todo.org" org-directory))
@@ -378,54 +247,8 @@
       (delete-file outside)
       (kill-buffer agenda-buffer))))
 
-(ert-deftest suderman/org-prefix-enters-through-meow-keypad ()
-  (should (eq (lookup-key suderman/meow-leader-map (kbd "o"))
-              suderman/leader-org-map))
-  (should (eq (lookup-key suderman/leader-org-map (kbd "g"))
-              #'suderman/org-heading))
-  (should (eq (lookup-key suderman/leader-org-map (kbd "n"))
-              #'org-toggle-narrow-to-subtree))
-  (should (eq (lookup-key suderman/leader-org-map (kbd "o"))
-              #'suderman/org-dashboard))
-  (should (eq (lookup-key suderman/leader-org-map (kbd "B"))
-              #'suderman/org-archive-done))
-  (let (called)
-    (cl-letf (((symbol-function 'org-agenda)
-               (lambda ()
-                 (interactive)
-                 (setq called t))))
-      (with-temp-buffer
-        (text-mode)
-        (meow-normal-mode 1)
-        (execute-kbd-macro (kbd "SPC o a"))
-        (should called)))))
 
-(ert-deftest suderman/org-agenda-keeps-buffer-and-file-shortcuts ()
-  (should (eq (lookup-key org-agenda-mode-map (kbd ","))
-              #'suderman/ibuffer-toggle))
-  (should (eq (lookup-key org-agenda-mode-map (kbd "."))
-              #'suderman/org-agenda-dirvish))
-  (should (eq (lookup-key org-agenda-mode-map (kbd "C-c ,"))
-              #'org-agenda-priority))
-  (should (eq (lookup-key org-agenda-mode-map (kbd "C-c ."))
-              #'org-agenda-goto-today))
-  (let (called)
-    (cl-letf (((symbol-function 'org-agenda-goto-today)
-               (lambda () (interactive) (setq called 'today)))
-              ((symbol-function 'org-agenda-priority)
-               (lambda () (interactive) (setq called 'priority))))
-      (with-temp-buffer
-        (org-agenda-mode)
-        (let ((window (selected-window))
-              (previous (window-buffer)))
-          (unwind-protect
-              (progn
-                (set-window-buffer window (current-buffer))
-                (execute-kbd-macro (kbd "SPC c ."))
-                (should (eq called 'today))
-                (execute-kbd-macro (kbd "SPC c ,"))
-                (should (eq called 'priority)))
-            (set-window-buffer window previous)))))))
+;; Context-sensitive commands
 
 (ert-deftest suderman/org-agenda-dirvish-uses-selected-entry-file ()
   (let* ((source (generate-new-buffer " *agenda-source*"))
@@ -454,14 +277,6 @@
       (set-marker marker nil)
       (kill-buffer source)
       (kill-buffer agenda))))
-
-(ert-deftest suderman/org-dashboard-opens-the-direct-custom-view ()
-  (let (received)
-    (cl-letf (((symbol-function 'org-agenda)
-               (lambda (arg keys &optional _restriction)
-                 (setq received (list arg keys)))))
-      (call-interactively #'suderman/org-dashboard))
-    (should (equal received '(nil "d")))))
 
 (ert-deftest suderman/org-item-commands-follow-buffer-context ()
   (dolist (binding '(("A" . suderman/org-archive)
@@ -559,60 +374,8 @@
           (call-interactively #'suderman/org-schedule))))
     (should (equal received '(4)))))
 
-(ert-deftest suderman/org-indent-toggle-is-under-toggles ()
-  (should (eq (lookup-key suderman/leader-toggle-map (kbd "o"))
-              #'org-indent-mode)))
 
-(ert-deftest suderman/org-buffers-indent-and-scale-headings ()
-  (require 'org)
-  (with-temp-buffer
-    (org-mode)
-    (should (bound-and-true-p org-indent-mode))
-    (should (= (face-attribute 'org-level-1 :height nil) 1.35))
-    (should (= (face-attribute 'org-level-2 :height nil) 1.22))
-    (should (eq (face-attribute 'org-tag :inherit) 'font-lock-doc-face))
-    (should (eq (face-attribute 'org-tag :foreground) 'unspecified))
-    (org-indent-mode -1)
-    (should-not (bound-and-true-p org-indent-mode))))
-
-(ert-deftest suderman/org-tags-keep-neutral-color-on-completed-headings ()
-  (with-temp-buffer
-    (insert "* TODO Heading :work:\n** DONE Finished :complete:\n")
-    (org-mode)
-    (font-lock-ensure)
-    (dolist (tag '(":work:" ":complete:"))
-      (goto-char (point-min))
-      (search-forward tag)
-      (let ((faces (get-text-property (1- (point)) 'face)))
-        (should (eq (car faces) 'font-lock-doc-face))
-        (should (= (cl-count 'org-tag faces) 1))))))
-
-(ert-deftest suderman/org-dates-keep-colors-in-headings-and-body ()
-  (with-temp-buffer
-    (insert "* TODO Heading [2026-06-01] <2026-06-01>\n"
-            "** DONE Finished [2026-06-01] <2026-06-01>\n"
-            "[2026-06-01] <2026-06-01>\n"
-            "[2026-06-01]--[2026-06-02]\n"
-            "<2026-06-01>--<2026-06-02>\n"
-            "- [ ] Empty\n- [-] Partial\n- [X] Checked\n")
-    (org-mode)
-    (let ((keywords (copy-tree org-font-lock-extra-keywords)))
-      (suderman/org-enable-date-faces)
-      (should (equal keywords org-font-lock-extra-keywords)))
-    (font-lock-ensure)
-    (goto-char (point-min))
-    (while (re-search-forward "\\([<[]\\)2026-06-0[12]" nil t)
-      (let ((faces (get-text-property (match-beginning 0) 'face))
-            (inactive (equal (match-string 1) "[")))
-        (should (eq (car faces) (if inactive 'font-lock-doc-face 'org-date)))
-        (should (= (cl-count 'org-date faces) 1))
-        (should (get-text-property (match-beginning 0) 'keymap))))
-    (dolist (text '("[ ]" "[-]" "[X]"))
-      (goto-char (point-min))
-      (search-forward text)
-      (should (memq 'org-checkbox (get-text-property (1- (point)) 'face)))))
-  (should (equal (face-attribute 'org-checkbox :inherit)
-                 '(font-lock-type-face bold))))
+;; Font-lock regressions
 
 (ert-deftest suderman/org-dates-respect-protected-text ()
   (let ((org-display-custom-times t)
@@ -743,22 +506,6 @@
         (should-not (memq 'suderman/org-drawer-block
                           (ensure-list (get-text-property (1- (point)) 'face))))))))
 
-(ert-deftest suderman/org-collapsed-source-block-openers-are-compact ()
-  (with-temp-buffer
-    (insert "#+begin_src text\ncontent\n#+end_src\n")
-    (org-mode)
-    (should-not (face-attribute 'org-block-begin-line :extend))
-    (should (eq t (face-attribute 'org-block-end-line :extend)))
-    (font-lock-ensure)
-    (goto-char (point-min))
-    (search-forward "#+begin_src text")
-    (should-not (memq 'org-block
-                      (ensure-list (get-text-property (1- (point)) 'face))))
-    (should (memq 'org-block
-                  (ensure-list (get-text-property (point) 'face))))
-    (org-fold-hide-block-toggle t)
-    (should (org-invisible-p (point)))))
-
 (ert-deftest suderman/org-drawer-blocks-refresh-existing-buffers ()
   (with-temp-buffer
     (insert "#+begin_src text\ncontent\n#+end_src\n"
@@ -790,116 +537,8 @@
       (suderman/org-refresh-drawer-blocks)
       (should (equal font-lock-keywords keywords)))))
 
-(ert-deftest suderman/org-drawer-colors-follow-source-blocks ()
-  (skip-unless (display-graphic-p))
-  (let ((background (face-background 'suderman/org-drawer-block nil t)))
-    (should (equal background (face-background 'org-block nil t)))
-    (should-not (equal background (face-background 'default nil t)))
-    (should (equal (face-foreground 'suderman/org-drawer-label nil t)
-                   (face-foreground 'org-block-begin-line nil t)))
-    (should (eq t (face-attribute 'suderman/org-drawer-block :extend)))
-    (should-not (face-attribute 'suderman/org-drawer-label :extend))))
 
-(ert-deftest suderman/org-mixed-pitch-is-local-and-idempotent ()
-  (let ((suderman/system-style '(:variable-font "Prose"))
-        (todo-color (face-foreground 'org-todo))
-        (link-color (face-foreground 'org-link)))
-    (with-temp-buffer
-      (org-mode)
-      (should-not buffer-face-mode)
-      (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) t))
-                ((symbol-function 'find-font) (lambda (&rest _) t)))
-        (suderman/org-enable-mixed-pitch)
-        (let ((remapping (copy-tree face-remapping-alist)))
-          (suderman/org-enable-mixed-pitch)
-          (should (equal face-remapping-alist remapping)))
-        (should (eq buffer-face-mode-face 'variable-pitch))
-        (dolist (face '(org-block suderman/org-drawer-label org-code
-                       org-verbatim org-table org-meta-line org-property-value
-                       org-drawer org-checkbox org-date
-                       org-todo org-done org-tag org-indent))
-          (should (memq 'fixed-pitch (cadr (assq face face-remapping-alist)))))
-        (should-not (assq 'org-link face-remapping-alist))
-        (should (equal (face-foreground 'org-todo) todo-color))
-        (should (equal (face-foreground 'org-link) link-color))))))
-
-(ert-deftest suderman/org-graphical-typography ()
-  (skip-unless (and (display-graphic-p) suderman/system-style))
-  (let (base-size)
-    (dolist (face '(org-level-1 org-level-2 org-level-3 org-level-4
-                    org-level-5 org-level-6 org-level-7 org-level-8
-                    org-headline-done org-todo org-done))
-      (should-not (equal (face-foreground 'org-tag nil t)
-                         (face-foreground face nil t))))
-    (should-not (equal (face-foreground 'org-checkbox nil t)
-                       (face-foreground 'org-date nil t)))
-    (should-not (equal (face-foreground 'org-checkbox nil t)
-                       (face-foreground 'org-todo nil t)))
-    (should-not (equal (face-foreground 'org-checkbox nil t)
-                       (face-foreground 'org-done nil t)))
-    (save-window-excursion
-      (with-temp-buffer
-	(switch-to-buffer (current-buffer))
-	(insert "* TODO Heading :tag:\n:PROPERTIES:\n:CUSTOM_ID: example\n:END:\nProse ~inline~ =verbatim= src_emacs-lisp{(+ 1 2)}\n** Child\n** DONE Finished :complete:\n#+begin_src emacs-lisp\n(message \"code\")\n#+end_src\n| iii | 12 |\n| WWW | 34 |\n- [ ] item\n  - nested\n<2026-09-17 Thu>\nUnicode: → ∑ ┌ ♥\n")
-	(goto-char (point-min))
-	(redisplay t)
-	(setq base-size (font-get (font-at 3 (selected-window)) :size))
-	(org-mode)
-	(org-fold-show-all)
-	(font-lock-ensure)
-	(goto-char (point-min))
-	(redisplay t)
-	(dolist (text '("inline" "verbatim" "(+ 1" "begin_src" "message" "end_src"
-			"CUSTOM_ID" "example" "iii" "WWW" "[ ]" "2026-09-17"))
-          (goto-char (point-min))
-          (search-forward text)
-          (let ((font (font-at (- (point) (length text)) (selected-window))))
-            (should (equal (symbol-name (font-get font :family))
-                           (plist-get suderman/system-style :mono-font)))
-            (should (= (font-get font :size)
-                       base-size))))
-	(dolist (text '("TODO" "DONE" ":tag:" ":complete:"))
-          (goto-char (point-min))
-          (search-forward text)
-          (should (equal (symbol-name
-                          (font-get (font-at (- (point) (length text))
-                                             (selected-window)) :family))
-			 (plist-get suderman/system-style :mono-font))))
-	(dolist (text '("Heading" "Child" "Prose"))
-          (goto-char (point-min))
-          (search-forward text)
-          (should (equal (symbol-name
-                          (font-get (font-at (- (point) (length text))
-                                             (selected-window)) :family))
-			 (plist-get suderman/system-style :variable-font))))
-	(dolist (text '("→" "∑" "┌" "♥"))
-          (goto-char (point-min))
-          (search-forward text)
-          (let ((font (font-at (1- (point)) (selected-window))))
-            (should font)
-            (should-not (equal (symbol-name (font-get font :family))
-                               (plist-get suderman/system-style :icon-font)))))
-	(let (columns)
-          (dolist (text '("iii" "WWW"))
-            (goto-char (point-min))
-            (search-forward text)
-            (search-forward "|")
-            ;; The phone keyboard can leave the table below the visible window.
-            (set-window-start (selected-window) (line-beginning-position))
-            (redisplay t)
-            (push (car (posn-x-y (posn-at-point (1- (point))))) columns))
-          (should (= (car columns) (cadr columns))))))))
-
-(ert-deftest suderman/org-superstar-prettifies-org-buffers ()
-  (with-temp-buffer
-    (insert "- item\n")
-    (org-mode)
-    (font-lock-ensure)
-    (should (bound-and-true-p org-superstar-mode))
-    (goto-char (point-min))
-    (let ((bullet (get-text-property (point) 'display)))
-      (should (stringp bullet))
-      (should-not (equal bullet "-")))))
+;; Mouse behavior
 
 (ert-deftest suderman/org-mouse-cycles-todo-on-left-click ()
   (let ((org-todo-keywords '((sequence "TODO" "NEXT" "|" "DONE"))))
@@ -939,6 +578,220 @@
         (should (aref clear 2))
         (eval (aref clear 1))
         (should-not (org-get-todo-state))))))
+
+
+;; KLWP agenda export
+
+(ert-deftest suderman/org-klwp-counts-unique-dated-items-and-overdue-headings ()
+  (let* ((directory (make-temp-file "org-klwp-fixture-" t))
+         (file (expand-file-name "agenda.org" directory))
+         (org-agenda-files (list file)))
+    (unwind-protect
+        (progn
+          (with-temp-file file
+            (insert "* TODO Late\nSCHEDULED: <2026-09-17 Thu>\n"
+                    "* TODO Both overdue dates\n"
+                    "SCHEDULED: <2026-09-17 Thu> DEADLINE: <2026-09-16 Wed>\n"
+                    "* HOLD Paused\nSCHEDULED: <2026-09-17 Thu>\n"
+                    "* DONE Finished\nSCHEDULED: <2026-09-17 Thu>\n"
+                    "* TODO Today\nSCHEDULED: <2026-09-18 Fri>\n"
+                    "* Event today\n<2026-09-18 Fri 12:00-13:30>\n"
+                    "* Event tomorrow\n<2026-09-19 Sat 16:00-17:00>\n"
+                    "* TODO Duplicated date\n"
+                    "SCHEDULED: <2026-09-19 Sat>\n<2026-09-19 Sat>\n"
+                    "* TODO Due in fourteen days\nDEADLINE: <2026-10-02 Fri>\n"
+                    "* TODO Too far away\nSCHEDULED: <2026-10-03 Sat>\n"))
+          (let ((today (calendar-absolute-from-gregorian '(9 18 2026))))
+            (cl-letf (((symbol-function 'org-today) (lambda () today)))
+              (let* ((tomorrow (suderman/org-klwp--day-entries
+                                (1+ today) (list file)))
+                     (snapshot (suderman/org-klwp-snapshot '(9 18 2026) 1400))
+                     (current (suderman/org-klwp-snapshot '(9 18 2026) 1230))
+                     (counts (alist-get 'counts snapshot)))
+                (should (= 2 (alist-get 'overdue counts)))
+                (should (= 2 (alist-get 'today counts)))
+                (should (= 3 (alist-get 'next14 counts)))
+                (should (= 2 (length tomorrow)))
+                (should (equal "Event tomorrow"
+                               (alist-get 'title (alist-get 'next snapshot))))
+                (should (equal "Sat, Sep 19"
+                               (alist-get 'when (alist-get 'next snapshot))))
+                (should (equal "16:00"
+                               (alist-get 'start (alist-get 'next snapshot))))
+                (should (equal "17:00"
+                               (alist-get 'end (alist-get 'next snapshot))))
+                (should (equal "16:00 – 17:00"
+                               (alist-get 'time (alist-get 'next snapshot))))
+                (should (equal "Event today"
+                               (alist-get 'title (alist-get 'next current))))
+                (should (equal "Today"
+                               (alist-get 'when (alist-get 'next current))))
+                (should (equal "12:00 – 13:30"
+                               (alist-get 'time (alist-get 'next current))))
+                (should (string-prefix-p "2026-09-18T13:30:00"
+                                         (alist-get 'refresh current)))))))
+      (when-let* ((buffer (find-buffer-visiting file))) (kill-buffer buffer))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-klwp-expands-repeating-timestamps ()
+  (let* ((directory (make-temp-file "org-klwp-repeat-" t))
+         (file (expand-file-name "agenda.org" directory))
+         (org-agenda-files (list file)))
+    (unwind-protect
+        (progn
+          (with-temp-file file
+            (insert "* Daily appointment\n<2026-09-18 Fri 08:00-09:00 +1d>\n"))
+          (let* ((snapshot (suderman/org-klwp-snapshot '(9 18 2026) 1200))
+                 (next (alist-get 'next snapshot))
+                 (counts (alist-get 'counts snapshot)))
+            (should (= 1 (alist-get 'today counts)))
+            (should (= 14 (alist-get 'next14 counts)))
+            (should (equal "Daily appointment" (alist-get 'title next)))
+            (should (equal "Sat, Sep 19" (alist-get 'when next)))))
+      (when-let* ((buffer (find-buffer-visiting file))) (kill-buffer buffer))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-klwp-keeps-later-occurrence-on-the-same-heading ()
+  (let* ((directory (make-temp-file "org-klwp-occurrences-" t))
+         (file (expand-file-name "agenda.org" directory))
+         (org-agenda-files (list file)))
+    (unwind-protect
+        (progn
+          (with-temp-file file
+            (insert "* Two appointments\n"
+                    "<2026-09-18 Fri 09:00-10:00>\n"
+                    "<2026-09-18 Fri 17:00-18:00>\n"))
+          (let* ((snapshot (suderman/org-klwp-snapshot '(9 18 2026) 1200))
+                 (next (alist-get 'next snapshot)))
+            (should (= 1 (alist-get 'today (alist-get 'counts snapshot))))
+            (should (equal "Two appointments" (alist-get 'title next)))
+            (should (equal "17:00 – 18:00" (alist-get 'time next)))))
+      (when-let* ((buffer (find-buffer-visiting file))) (kill-buffer buffer))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-klwp-broadcasts-snapshot-with-freshness-last ()
+  (let ((system-type 'android)
+        calls)
+    (cl-letf (((symbol-function 'call-process)
+               (lambda (_program _infile _destination _display &rest args)
+                 (push (cons (nth 8 args) (nth 11 args)) calls)
+                 0)))
+      (suderman/org-klwp--broadcast-snapshot
+       '((generated . "2026-09-19T07:00:00-06:00")
+         (refresh . "2026-09-20T00:00:00-06:00")
+         (next . nil)
+         (counts . ((overdue . 2) (today . 0) (next14 . 19))))))
+    (setq calls (nreverse calls))
+    (should (equal '("title" "when" "ntime" "overdue" "today" "next14"
+                     "generated")
+                   (mapcar #'car calls)))
+    (should (equal '("null" "null" "null" "2" "0" "19"
+                     "2026-09-19T07:00:00-06:00")
+                   (mapcar #'cdr calls)))))
+
+(ert-deftest suderman/org-klwp-export-preserves-snapshot-on-failure ()
+  (let* ((directory (make-temp-file "org-klwp-output-" t))
+         (file (expand-file-name "org-agenda.json" directory)))
+    (unwind-protect
+        (progn
+          (with-temp-file file (insert "old snapshot\n"))
+          (cl-letf (((symbol-function 'suderman/org-klwp-snapshot)
+                     (lambda (&rest _) (error "Agenda unavailable"))))
+            (should-error (suderman/org-export-klwp-agenda file)))
+          (should (equal "old snapshot\n"
+                         (with-temp-buffer
+                           (insert-file-contents file)
+                           (buffer-string))))
+          (should (= 1 (length (directory-files directory nil "^[^.].*")))))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-klwp-export-writes-valid-json ()
+  (let* ((directory (make-temp-file "org-klwp-output-" t))
+         (file (expand-file-name "org-agenda.json" directory)))
+    (unwind-protect
+        (progn
+          (cl-letf (((symbol-function 'suderman/org-klwp-snapshot)
+                     (lambda (&rest _)
+                       '((generated . "2026-09-18T12:00:00-06:00")
+                         (next . nil)
+                         (counts . ((overdue . 0) (today . 0) (next14 . 0)))))))
+            (should (equal file (suderman/org-export-klwp-agenda file))))
+          (let ((data (json-read-file file)))
+            (should (equal "2026-09-18T12:00:00-06:00"
+                           (alist-get 'generated data)))
+            (should (equal 0 (alist-get 'today (alist-get 'counts data))))
+            (should-not (alist-get 'next data))))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-klwp-reloads-externally-changed-unmodified-files ()
+  (let* ((directory (make-temp-file "org-klwp-sync-" t))
+         (file (expand-file-name "agenda.org" directory))
+         (org-agenda-files (list file)))
+    (unwind-protect
+        (progn
+          (with-temp-file file
+            (insert "* Old event\n<2026-09-18 Fri>\n"))
+          (let ((buffer (find-file-noselect file)))
+            (with-temp-file file
+              (insert "* New event\n<2026-09-18 Fri>\n"))
+            (set-file-times file (time-add (current-time) 5))
+            (should (equal "New event"
+                           (alist-get 'title
+                                      (alist-get 'next
+                                                 (suderman/org-klwp-snapshot
+                                                  '(9 18 2026))))))
+            (with-current-buffer buffer
+              (should (search-forward "New event" nil t)))))
+      (when-let* ((buffer (find-buffer-visiting file))) (kill-buffer buffer))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-klwp-refreshes-only-when-state-changes ()
+  (let* ((directory (make-temp-file "org-klwp-state-" t))
+         (suderman/org-klwp-file (expand-file-name "agenda.json" directory))
+         (suderman/org-klwp--last-state nil)
+         (state '("2026-09-18" ("agenda.org" 1 20)))
+         (exports 0))
+    (unwind-protect
+        (cl-letf (((symbol-function 'suderman/org-klwp--state)
+                   (lambda () state))
+                  ((symbol-function 'suderman/org-export-klwp-agenda)
+                   (lambda (&rest _)
+                     (cl-incf exports)
+                     (with-temp-file suderman/org-klwp-file (insert "{}")))))
+          (suderman/org-klwp--refresh-if-needed)
+          (suderman/org-klwp--refresh-if-needed)
+          (should (= exports 1))
+          (setq suderman/org-klwp--next-refresh (time-subtract (current-time) 1))
+          (suderman/org-klwp--refresh-if-needed)
+          (should (= exports 2))
+          (setq suderman/org-klwp--next-refresh (time-add (current-time) 3600)
+                state '("2026-09-19" ("agenda.org" 1 20)))
+          (suderman/org-klwp--refresh-if-needed)
+          (should (= exports 3))
+          (setq state '("2026-09-19" ("agenda.org" 2 20)))
+          (suderman/org-klwp--refresh-if-needed)
+          (should (= exports 4)))
+      (delete-directory directory t))))
+
+(ert-deftest suderman/org-klwp-debounces-only-saved-agenda-files ()
+  (let* ((directory (make-temp-file "org-klwp-save-" t))
+         (inside (expand-file-name "todo.org" directory))
+         (outside (expand-file-name "other.org" directory))
+         (org-agenda-files (list inside))
+         (suderman/org-klwp--refresh-timer nil)
+         calls)
+    (unwind-protect
+        (progn
+          (cl-letf (((symbol-function 'run-at-time)
+                     (lambda (&rest args) (push args calls) nil)))
+            (dolist (file (list inside outside))
+              (with-temp-buffer
+                (setq buffer-file-name file)
+                (org-mode)
+                (suderman/org-klwp--queue-refresh)))
+            (should (= 1 (length calls)))
+            (should (equal 5 (caar calls)))))
+      (delete-directory directory t))))
 
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here

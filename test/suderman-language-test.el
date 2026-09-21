@@ -1,7 +1,9 @@
-;;; suderman-nix-test.el --- Focused Nix checks -*- lexical-binding: t; -*-
+;;; suderman-language-test.el --- Embedded-language checks -*- lexical-binding: t; -*-
 
-;; Run with:
-;; emacs --batch -l init.el -l test/suderman-nix-test.el -f ert-run-tests-batch-and-exit
+;;; Commentary:
+;; Tests for custom behavior with enough moving parts to merit a safety net.
+
+;;; Code:
 
 (require 'ert)
 (require 'suderman-nix)
@@ -18,6 +20,8 @@
   (search-forward text)
   (get-text-property (- (point) (length text)) 'face))
 
+;; Embedded Nix strings
+
 (ert-deftest suderman/nix-comments-select-embedded-languages ()
   (with-temp-buffer
     (let ((delimiter (make-string 2 39)))
@@ -26,7 +30,7 @@
         "{ config, lib, ... }:\n{\n  setting = lib.mkIf config.enabled true;\n  elisp =\n    # elisp\n    %s\n      (defun hello ()\n        (unless (locate-library \"hello\")\n          (error \"missing\")))\n    %s;\n  bash =\n    # sh\n    %s\n      echo \"$HOME\"\n    %s;\n  python =\n    # python\n    %s\n      def hello():\n          return True\n    %s;\n  lua =\n    # lua\n    %s\n      util.exec(\"ALT_R\", \"${toggle}\", { ignore_mods = true })\n      util.exec(\"ALT_R\", \"${toggle}\", { release = true })\n    %s;\n  html =\n    # html\n    %s\n      <main>Hello</main>\n    %s;\n  unknown =\n    # ruby\n    %s\n      puts \"hello\"\n    %s;\n  plain = %splain string%s;\n}\n"
         delimiter delimiter delimiter delimiter delimiter delimiter
         delimiter delimiter delimiter delimiter delimiter delimiter
-        delimiter delimiter delimiter delimiter)))
+        delimiter delimiter)))
     (nix-ts-mode)
     (should (eq (suderman/test-nix-language-at "defun") 'elisp))
     (should (eq (suderman/test-nix-language-at "echo") 'bash))
@@ -102,5 +106,5 @@
     (should (eq (suderman/test-nix-face-at "plain string")
                 'font-lock-string-face))))
 
-(provide 'suderman-nix-test)
-;;; suderman-nix-test.el ends here
+(provide 'suderman-language-test)
+;;; suderman-language-test.el ends here

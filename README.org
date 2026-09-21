@@ -56,6 +56,33 @@ package.
 The flake exposes =x86_64-linux= and =aarch64-linux= packages. I use and test
 the x86_64 build.
 
+* Tinker with it
+
+Normal changes belong in the relevant file under =lisp/=. Package declarations
+live in =suderman-packages.el= or the module that configures the package, visual
+choices in =suderman-appearance.el=, global and leader keys in
+=suderman-keys.el=, and Meow's normal-state map in =suderman-meow.el=. The
+[[*Repository map][repository map]] lists the rest.
+
+For a small experiment, put point after a form and use =C-x C-e=, or run =M-x
+eval-defun= inside a function. =M-x eval-buffer= evaluates a whole module. Use
+=F5= when several modules or keymaps need to be reloaded together. Restart Emacs
+for =early-init.el=, package initialization, native modules, daemon settings, or
+process-level state. Restarting is also the easy fix for stale live keymaps.
+
+Run the safety net from the repository root:
+
+#+begin_src sh
+./test/run.sh
+#+end_src
+
+It loads the full configuration, runs focused checks for custom algorithms and
+past regressions, and exercises the Android setup scripts without touching a
+phone. Tests are expected for tricky parsing, file and window operations,
+cross-platform code, and deployment paths. Fonts, keys, hooks, faces, package
+options, and other intentional preferences normally do not need tests. Git is
+the fallback when an experiment does not work.
+
 * Android
 
 The same checkout also runs in native graphical GNU Emacs on Android. The APK
@@ -652,7 +679,7 @@ Dirvish.
 | =lisp/suderman-keys.el=         | Global, Meta, and =SPC= leader bindings          |
 | =lisp/suderman-formatting.el=   | Project and buffer formatting commands           |
 | =lisp/suderman-reload.el=       | Safe modular hot reload                          |
-| =test/=                         | Focused ERT regression tests                     |
+| =test/=                         | Small behavioral and deployment safety suite     |
 | [[file:AGENTS.md][AGENTS.md]]                   | Maintenance decisions and verification rules     |
 
 The source wins when this file falls behind. This reference only covers the

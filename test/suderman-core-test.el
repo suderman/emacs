@@ -1,63 +1,218 @@
-;;; suderman-appearance-test.el --- Focused appearance checks -*- lexical-binding: t; -*-
+;;; suderman-core-test.el --- Core behavior checks -*- lexical-binding: t; -*-
 
-;; Run with:
-;; emacs --batch -l init.el -l test/suderman-appearance-test.el -f ert-run-tests-batch-and-exit
+;;; Commentary:
+;; Tests for custom behavior with enough moving parts to merit a safety net.
+
+;;; Code:
 
 (require 'cl-lib)
 (require 'ert)
 (require 'suderman-appearance)
+(require 'suderman-defaults)
+(require 'suderman-formatting)
+(require 'suderman-packages)
+(require 'suderman-org)
+(require 'suderman-reload)
+(require 'suderman-windows)
 
-(ert-deftest suderman/android-uses-a-larger-default-font ()
+;; Large-file behavior
+
+(ert-deftest suderman/so-long-keeps-long-code-writable-and-cheap-to-display ()
+  (with-temp-buffer
+    (insert (make-string (1+ so-long-threshold) ?x) "\n")
+    (setq buffer-file-name "/tmp/suderman-so-long.el")
+    (let ((so-long-invisible-buffer-function nil))
+      (set-auto-mode))
+    (should so-long-minor-mode)
+    (should (derived-mode-p 'emacs-lisp-mode))
+    (should-not buffer-read-only)
+    (should-not visual-line-mode)
+    (should-not display-fill-column-indicator-mode)
+    (should-not (bound-and-true-p indent-bars-mode)))
+  (with-temp-buffer
+    (insert "(message \"short\")\n")
+    (setq buffer-file-name "/tmp/suderman-short.el")
+    (let ((so-long-invisible-buffer-function nil))
+      (set-auto-mode))
+    (should-not (bound-and-true-p so-long-minor-mode))
+    (should (derived-mode-p 'emacs-lisp-mode))))
+
+
+;; Formatting
+
+(ert-deftest suderman/treefmt-uses-the-source-buffer-environment ()
+  (let* ((directory (make-temp-file "suderman-treefmt-" t))
+         (source-file (expand-file-name "sample.nix" directory))
+         (source (generate-new-buffer " *suderman-treefmt-source*"))
+         (scratch (generate-new-buffer " *suderman-treefmt-scratch*"))
+         captured callback-called)
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "treefmt.nix" directory))
+          (with-current-buffer source
+            (setq buffer-file-name source-file)
+            (setq-local exec-path '("/source/bin"))
+            (setq-local process-environment '("SOURCE_ENV=1")))
+          (with-current-buffer scratch
+            (insert "{ value = true; }\n"))
+          (cl-letf (((symbol-function 'process-file)
+                     (lambda (&rest _)
+                       (setq captured
+                             (list exec-path process-environment
+                                   default-directory))
+                       0)))
+            (suderman/formatting-treefmt
+             :buffer source
+             :scratch scratch
+             :callback (lambda (&optional error)
+                         (should-not error)
+                         (setq callback-called t))))
+          (should callback-called)
+          (should (equal captured
+                         (list '("/source/bin") '("SOURCE_ENV=1")
+                               (file-name-as-directory directory)))))
+      (kill-buffer source)
+      (kill-buffer scratch)
+      (delete-directory directory t))))
+
+
+;; Android package bootstrap
+
+(ert-deftest suderman/android-package-keyring-is-materialized-for-gpg ()
   (let ((system-type 'android)
-        (custom-enabled-themes nil)
-        attributes)
-    (should (equal (suderman/default-font-size) 17.0))
-    (cl-letf (((symbol-function 'suderman/nerd-fonts-available-p)
-               (lambda (&optional _) nil))
-              ((symbol-function 'set-face-attribute)
-               (lambda (face frame &rest values)
-                 (setq attributes (append (list face frame) values)))))
-      (suderman/apply-default-font)
-      (should (equal attributes '(default nil :height 170)))))
-  (let ((system-type 'gnu/linux))
-    (should (equal (suderman/default-font-size) 11))))
+        imported-file
+        imported-content)
+    (cl-letf (((symbol-function 'copy-file)
+               (lambda (source destination &rest _)
+                 (should (equal source "/assets/etc/package-keyring.gpg"))
+                 (with-temp-file destination
+                   (set-buffer-multibyte nil)
+                   (insert "keyring")))))
+      (suderman/package-import-keyring-from-android-assets
+       (lambda (file)
+         (setq imported-file file)
+         (should-not (string-prefix-p "/assets/" file))
+         (setq imported-content
+               (with-temp-buffer
+                 (insert-file-contents-literally file)
+                 (buffer-string))))
+       "/assets/etc/package-keyring.gpg"))
+    (should (equal imported-content "keyring"))
+    (should-not (file-exists-p imported-file))))
 
-(ert-deftest suderman/android-nerd-font-size-is-in-points ()
+(ert-deftest suderman/physical-package-keyring-passes-through-unchanged ()
   (let ((system-type 'android)
-        (custom-enabled-themes nil)
-        font-size)
-    (cl-letf (((symbol-function 'suderman/nerd-fonts-available-p)
-               (lambda (&optional _) t))
-              ((symbol-function 'font-spec)
-               (lambda (&rest properties)
-                 (setq font-size (plist-get properties :size))
-                 'font))
-                ((symbol-function 'find-font) (lambda (&rest _) t))
-                ((symbol-function 'set-face-attribute) #'ignore))
-      (suderman/apply-default-font)
-      ;; `font-spec' treats integers as pixels and floats as points.
-      (should (equal font-size 17.0)))))
+        imported-file)
+    (suderman/package-import-keyring-from-android-assets
+     (lambda (file) (setq imported-file file))
+     "/tmp/package-keyring.gpg")
+    (should (equal imported-file "/tmp/package-keyring.gpg"))))
 
-(ert-deftest suderman/android-icons-need-symbols-not-a-patched-text-font ()
-  (let ((system-type 'android))
-    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) t))
-              ((symbol-function 'find-font)
-               (lambda (spec &optional _frame)
-                 (equal (format "%s" (font-get spec :family)) suderman/font-family))))
-      (should-not (suderman/nerd-fonts-available-p)))
-    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) t))
-              ((symbol-function 'find-font)
-               (lambda (spec &optional _frame)
-                 (equal (format "%s" (font-get spec :family)) suderman/nerd-symbol-font))))
-      (should (suderman/nerd-fonts-available-p)))))
 
-(ert-deftest suderman/mode-line-navigation-segments-follow-platform ()
-  (let ((system-type 'android))
-    (should (equal (suderman/mode-line-navigation-segments)
-                   '(suderman-dashboard))))
-  (let ((system-type 'gnu/linux))
-    (should (equal (suderman/mode-line-navigation-segments)
-                   '(suderman-dashboard suderman-dirvish suderman-ibuffer)))))
+;; Hot reload
+
+(ert-deftest suderman/reload-reads-source-when-emacs-loaded-init-elc ()
+  (let ((user-init-file "/tmp/emacs/init.elc"))
+    (should (equal (suderman/reload--user-init-file)
+                   "/tmp/emacs/init.el"))))
+
+(ert-deftest suderman/reload-loads-keys-after-command-modules ()
+  (let ((modules (suderman/reload--config-modules)))
+    (should (eq (car (last modules)) 'suderman-keys))
+    (should (< (seq-position modules 'suderman-formatting)
+               (seq-position modules 'suderman-keys)))
+    (should-not (memq 'suderman-reload modules))))
+
+(ert-deftest suderman/org-unload-removes-theme-callback ()
+  (let ((enable-theme-functions '(suderman/org-apply-heading-faces
+                                  other-theme-callback)))
+    (should-not (suderman-org-unload-function))
+    (should (equal enable-theme-functions '(other-theme-callback)))))
+
+
+;; Window layouts
+
+(ert-deftest suderman/zoom-window-toggle-restores-side-windows ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let* ((left (selected-window))
+           (right (split-window-right))
+           (side (display-buffer-in-side-window
+                  (get-buffer-create " *zoom-window-side-test*")
+                  '((side . left)))))
+      (select-window left)
+      (suderman/zoom-window-toggle)
+      (should (one-window-p))
+      (suderman/zoom-window-toggle)
+      (should (memq left (window-list)))
+      (should (memq right (window-list)))
+      (should (memq side (window-list))))))
+
+(ert-deftest suderman/resize-window-moves-trailing-edge-in-nested-layout ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let* ((left (selected-window))
+           (middle (split-window-right))
+           (right (with-selected-window middle (split-window-right)))
+           (left-width (window-total-width left))
+           (middle-width (window-total-width middle))
+           (right-width (window-total-width right)))
+      (select-window left)
+      (suderman/resize-window-left)
+      (should (= (window-total-width left) (- left-width 5)))
+      (should (= (window-total-width middle) (+ middle-width 5)))
+      (should (= (window-total-width right) right-width))
+      (balance-windows)
+      (select-window middle)
+      (setq left-width (window-total-width left)
+            middle-width (window-total-width middle)
+            right-width (window-total-width right))
+      (suderman/resize-window-left)
+      (should (= (window-total-width left) left-width))
+      (should (= (window-total-width middle) (- middle-width 5)))
+      (should (= (window-total-width right) (+ right-width 5)))
+      (balance-windows)
+      (select-window right)
+      (setq left-width (window-total-width left)
+            middle-width (window-total-width middle)
+            right-width (window-total-width right))
+      (suderman/resize-window-left)
+      (should (= (window-total-width left) left-width))
+      (should (= (window-total-width middle) (- middle-width 5)))
+      (should (= (window-total-width right) (+ right-width 5))))
+    (delete-other-windows)
+    (let* ((top (selected-window))
+           (middle (split-window-below))
+           (bottom (with-selected-window middle (split-window-below)))
+           (top-height (window-total-height top))
+           (middle-height (window-total-height middle))
+           (bottom-height (window-total-height bottom)))
+      (select-window top)
+      (suderman/resize-window-up)
+      (should (= (window-total-height top) (- top-height 3)))
+      (should (= (window-total-height middle) (+ middle-height 3)))
+      (should (= (window-total-height bottom) bottom-height))
+      (balance-windows)
+      (select-window middle)
+      (setq top-height (window-total-height top)
+            middle-height (window-total-height middle)
+            bottom-height (window-total-height bottom))
+      (suderman/resize-window-up)
+      (should (= (window-total-height top) top-height))
+      (should (= (window-total-height middle) (- middle-height 3)))
+      (should (= (window-total-height bottom) (+ bottom-height 3)))
+      (balance-windows)
+      (select-window bottom)
+      (setq top-height (window-total-height top)
+            middle-height (window-total-height middle)
+            bottom-height (window-total-height bottom))
+      (suderman/resize-window-up)
+      (should (= (window-total-height top) top-height))
+      (should (= (window-total-height middle) (- middle-height 3)))
+      (should (= (window-total-height bottom) (+ bottom-height 3))))))
+
+
+;; Shared appearance
 
 (ert-deftest suderman/base16-gnus-faces-avoid-emacs-31-inheritance-cycles ()
   (let (faces transformed)
@@ -85,62 +240,6 @@
           (should (eq (plist-get (cdr face) :inherit) base-inherit)))))
     (should (equal (assq 'default transformed)
                    '(default :foreground base05)))))
-
-(ert-deftest suderman/selection-faces-wait-for-a-graphical-frame ()
-  (let ((frames nil)
-        (original-region (face-background 'region nil t)))
-    (cl-letf (((symbol-function 'filtered-frame-list)
-               (lambda (_predicate) frames))
-              ((symbol-function 'suderman/theme-blend)
-               (lambda (face _alpha)
-                 (if (eq face 'font-lock-function-name-face)
-                     "#112233"
-                   "#445566"))))
-      (suderman/apply-selection-faces)
-      (should (equal (face-background 'region nil t) original-region))
-
-      (setq frames (list (selected-frame)))
-      (suderman/apply-selection-faces)
-      (should (equal (face-background 'region nil t) "#112233"))
-      (should (equal (face-background 'secondary-selection nil t) "#445566")))))
-
-(ert-deftest suderman/tty-menu-faces-follow-semantic-theme-faces ()
-  (let ((frame (selected-frame))
-        calls)
-    (cl-letf (((symbol-function 'frame-list) (lambda () (list frame)))
-              ((symbol-function 'display-graphic-p) (lambda (_) nil))
-              ((symbol-function 'face-foreground)
-               (lambda (face &rest _)
-                 (pcase face
-                   ('default "foreground")
-                   ('shadow "disabled"))))
-              ((symbol-function 'face-background)
-               (lambda (face &rest _)
-                 (pcase face
-                   ('highlight "background")
-                   ('region "selected"))))
-              ((symbol-function 'set-face-attribute)
-               (lambda (face target &rest attributes)
-                 (push (append (list face target) attributes) calls))))
-      (suderman/apply-tty-menu-faces)
-      (should (member `(menu ,frame
-                            :foreground "foreground"
-                            :background "background"
-                            :inverse-video nil)
-                      calls))
-      (should (member `(tty-menu-enabled-face ,frame
-                                             :foreground "foreground"
-                                             :background "background")
-                      calls))
-      (should (member `(tty-menu-disabled-face ,frame
-                                              :foreground "disabled"
-                                              :background "background")
-                      calls))
-      (should (member `(tty-menu-selected-face ,frame
-                                              :foreground "foreground"
-                                              :background "selected"
-                                              :inverse-video nil)
-                      calls)))))
 
 (ert-deftest suderman/line-number-toggle-preserves-special-buffer-exclusions ()
   (let ((original-state global-display-line-numbers-mode)
@@ -176,37 +275,6 @@
       (kill-buffer text-buffer)
       (kill-buffer special-buffer)
       (kill-buffer image-buffer))))
-
-(ert-deftest suderman/android-column-guide-defaults-off ()
-  (dolist (case '((gnu/linux 1) (android -1)))
-    (let ((system-type (car case))
-          received)
-      (cl-letf (((symbol-function 'global-display-fill-column-indicator-mode)
-                 (lambda (argument) (setq received argument))))
-        (suderman/initialize-fill-column-indicator)
-        (should (= received (cadr case)))))))
-
-(ert-deftest suderman/android-line-modes-default-off ()
-  (dolist (case '((gnu/linux 1) (android -1)))
-    (let ((system-type (car case))
-          calls)
-      (cl-letf (((symbol-function 'global-hl-line-mode)
-                 (lambda (argument) (push (list 'hl-line argument) calls)))
-                ((symbol-function 'global-display-line-numbers-mode)
-                 (lambda (argument)
-                   (push (list 'line-numbers argument) calls))))
-        (suderman/initialize-line-modes)
-        (should (equal (nreverse calls)
-                       `((hl-line ,(cadr case))
-                         (line-numbers ,(cadr case)))))))))
-
-(ert-deftest suderman/dirvish-preview-keeps-line-numbers-disabled ()
-  (with-temp-buffer
-    (display-line-numbers-mode 1)
-    (suderman/dirvish-preview-disable-line-numbers)
-    (should-not display-line-numbers-mode)
-    (display-line-numbers-mode 1)
-    (should-not display-line-numbers-mode)))
 
 (ert-deftest suderman/shared-style-is-optional-and-reloadable ()
   (let ((directory (make-temp-file "emacs-style-" t))
@@ -307,14 +375,5 @@
           (should-not calls)
           (should-not fontsets))))))
 
-(ert-deftest suderman/nerd-fontsets-touch-only-supported-pua ()
-  (let (ranges)
-    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) t))
-              ((symbol-function 'find-font) (lambda (&rest _) t))
-              ((symbol-function 'set-fontset-font)
-               (lambda (_fontset range &rest _) (push range ranges))))
-      (suderman/set-nerd-font-fallbacks)
-      (should (equal (nreverse ranges) '((#xe000 . #xf8ff) (#xf0001 . #xf1af0)))))))
-
-(provide 'suderman-appearance-test)
-;;; suderman-appearance-test.el ends here
+(provide 'suderman-core-test)
+;;; suderman-core-test.el ends here

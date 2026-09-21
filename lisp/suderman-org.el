@@ -52,6 +52,12 @@
 (add-hook 'org-mode-hook #'suderman/org-apply-heading-faces)
 (add-hook 'enable-theme-functions #'suderman/org-apply-heading-faces)
 
+(defun suderman-org-unload-function ()
+  "Remove theme callbacks before `suderman-org' functions are unloaded."
+  ;; `unload-feature' does not recognize `enable-theme-functions' as a hook.
+  (remove-hook 'enable-theme-functions #'suderman/org-apply-heading-faces)
+  nil)
+
 (defun suderman/org-enable-tag-face ()
   "Keep heading tags distinct even when a completed heading gets its own face."
   (font-lock-add-keywords
@@ -226,10 +232,6 @@
 (add-hook 'org-mode-hook #'suderman/org-enable-mixed-pitch)
 (add-hook 'after-make-frame-functions #'suderman/org-refresh-mixed-pitch)
 (suderman/org-refresh-mixed-pitch)
-
-(defun suderman/org-auto-save-interval ()
-  "Return the platform's visited-file auto-save interval."
-  (if (eq system-type 'android) 10 3))
 
 (defun suderman/org-auto-save-visited-p ()
   "Return non-nil when the current Org file is safe to save automatically."
@@ -496,7 +498,7 @@ Batch calls do not prompt.  Save changed files before returning."
 (use-package org
   :ensure nil
   :init
-  (setq auto-save-visited-interval (suderman/org-auto-save-interval)
+  (setq auto-save-visited-interval (if (eq system-type 'android) 10 3)
         auto-save-visited-predicate #'suderman/org-auto-save-visited-p
         org-M-RET-may-split-line '((default . nil))
         org-insert-heading-respect-content t
