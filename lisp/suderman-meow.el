@@ -189,6 +189,20 @@ Crossing the anchor reverses the selection naturally."
   (interactive "p")
   (suderman/meow--select-thing meow-word-thing (- n)))
 
+(defun suderman/meow-next-word-start (n)
+  "Move to the start of the next N words, extending an active selection."
+  (interactive "p")
+  (suderman/meow--move-to
+   (save-excursion
+     (if (> n 0)
+         (dotimes (_ n)
+           (skip-syntax-forward "w")
+           (skip-syntax-forward "^w"))
+       (dotimes (_ (- n))
+         (skip-syntax-backward "^w")
+         (skip-syntax-backward "w")))
+     (point))))
+
 (defun suderman/meow-next-symbol (n)
   "Move forward N symbols, extending an active selection."
   (interactive "p")
@@ -568,7 +582,7 @@ An active selection is replaced without modifying the kill ring."
   "Copy the active selection, or the current buffer's file path."
   (interactive)
   (if (use-region-p)
-      (meow-save)
+      (save-excursion (meow-save))
     (if-let* ((file buffer-file-name))
         (let ((select-enable-clipboard meow-use-clipboard))
           (kill-new file))
@@ -668,6 +682,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/dirvish-side-toggle . "sidebar")
                    (surround-insert . "surround")
                    (suderman/meow-next-word . "word fwd")
+                   (suderman/meow-next-word-start . "word start")
                    (suderman/meow-next-symbol . "sym fwd")
                    (suderman/meow-kill . "cut")
                    (suderman/meow-kill-line . "cut line")
@@ -721,6 +736,7 @@ An active selection is replaced without modifying the kill ring."
    '("~" . ignore)
    '("\\ \\" . suderman/alternate-buffer)
    '("\\ J" . suderman/meow-join-line)
+   '("C-j" . suderman/meow-join-line)
    '("a" . meow-append)
    '("A" . suderman/meow-insert-at-end-of-line)
    '("b" . suderman/meow-back-word)
@@ -765,7 +781,7 @@ An active selection is replaced without modifying the kill ring."
    '("U" . meow-undo-in-selection)
    '("v" . suderman/meow-paste)
    '("V" . meow-page-down)
-   '("w" . ignore)
+   '("w" . suderman/meow-next-word-start)
    '("W" . ignore)
    '("x" . suderman/meow-kill)
    '("X" . suderman/meow-kill-line)
