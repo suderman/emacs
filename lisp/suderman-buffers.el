@@ -8,6 +8,7 @@
 (require 'use-package)
 (require 'ibuffer)
 (require 'suderman-appearance)
+(require 'suderman-projects)
 (require 'suderman-windows)
 
 (declare-function suderman/dashboard "suderman-dashboard")
@@ -158,7 +159,9 @@
   :demand t
   :init
   (setq ibuffer-project-root-functions
-        '((ibuffer-project-project-root . ""))
+        '(((lambda (dir)
+              (let ((root (ibuffer-project-project-root dir)))
+                (and root (abbreviate-file-name root)))) . ""))
         ibuffer-project-use-cache nil)
   :config
   (add-hook 'ibuffer-hook #'suderman/ibuffer-setup)
@@ -175,7 +178,20 @@
     (:name "Filename"
            :props ('font-lock-face 'nerd-icons-ibuffer-file-face)
            :header-mouse-map ibuffer-project-file-relative-header-map)
-    (ibuffer-make-column-project-file-relative buffer mark)))
+    (let* ((file (buffer-local-value 'buffer-file-name buffer))
+           (project (and file (project-current nil (file-name-directory file)))))
+      (if (suderman/project-p project)
+          (let ((source (suderman/project--directory
+                         suderman/project-source-root project))
+                (data (suderman/project--directory
+                       suderman/project-data-root project)))
+            (cond
+             ((string-prefix-p source file)
+              (concat "src/" (file-relative-name file source)))
+             ((string-prefix-p data file)
+              (concat "data/" (file-relative-name file data)))
+             (t (ibuffer-make-column-project-file-relative buffer mark))))
+        (ibuffer-make-column-project-file-relative buffer mark)))))
 
 (provide 'suderman-buffers)
 ;;; suderman-buffers.el ends here
