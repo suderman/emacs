@@ -46,7 +46,8 @@
           (delete-dups
            (append ghostel-keymap-exceptions
                    '("M-h" "M-j" "M-k" "M-l"
-                     "M-H" "M-J" "M-K" "M-L"))))
+                     "M-H" "M-J" "M-K" "M-L"
+                     "M-t" "M-u" "M-i" "M-w"))))
 
   ;; These keys are Meow-state bindings elsewhere, so semi-char mode needs
   ;; local commands after exempting them from terminal forwarding.
@@ -54,10 +55,14 @@
                      ("M-j" . edger-down)
                      ("M-k" . edger-up)
                      ("M-l" . edger-right)
-                     ("M-H" . suderman/resize-window-left)
-                     ("M-J" . suderman/resize-window-down)
-                     ("M-K" . suderman/resize-window-up)
-                     ("M-L" . suderman/resize-window-right)))
+                     ("M-H" . edger-resize-left)
+                     ("M-J" . edger-resize-down)
+                     ("M-K" . edger-resize-up)
+                     ("M-L" . edger-resize-right)
+                     ("M-t" . edger-tab)
+                     ("M-u" . edger-horizontal)
+                     ("M-i" . edger-vertical)
+                     ("M-w" . edger-close)))
     (keymap-set ghostel-semi-char-mode-map (car binding) (cdr binding)))
 
   (dolist (command '(ghostel-copy-mode

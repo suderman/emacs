@@ -147,13 +147,14 @@
   (keymap-set ibuffer-mode-map "M-j" #'edger-down)
   (keymap-set ibuffer-mode-map "M-k" #'edger-up)
   (keymap-set ibuffer-mode-map "M-l" #'edger-right)
-  (keymap-set ibuffer-mode-map "M-H" #'suderman/resize-window-left)
-  (keymap-set ibuffer-mode-map "M-J" #'suderman/resize-window-down)
-  (keymap-set ibuffer-mode-map "M-K" #'suderman/resize-window-up)
-  (keymap-set ibuffer-mode-map "M-L" #'suderman/resize-window-right)
-  (keymap-set ibuffer-mode-map "M-u" #'suderman/split-window-below-and-focus)
-  (keymap-set ibuffer-mode-map "M-i" #'suderman/split-window-right-and-focus)
-  (keymap-set ibuffer-mode-map "M-w" #'suderman/delete-window-or-tab))
+  (keymap-set ibuffer-mode-map "M-H" #'edger-resize-left)
+  (keymap-set ibuffer-mode-map "M-J" #'edger-resize-down)
+  (keymap-set ibuffer-mode-map "M-K" #'edger-resize-up)
+  (keymap-set ibuffer-mode-map "M-L" #'edger-resize-right)
+  (keymap-set ibuffer-mode-map "M-t" #'edger-tab)
+  (keymap-set ibuffer-mode-map "M-u" #'edger-horizontal)
+  (keymap-set ibuffer-mode-map "M-i" #'edger-vertical)
+  (keymap-set ibuffer-mode-map "M-w" #'edger-close))
 
 (use-package ibuffer-project
   :after ibuffer
