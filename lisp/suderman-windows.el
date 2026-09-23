@@ -11,6 +11,12 @@
 (require 'use-package)
 (require 'windmove)
 
+(use-package edger
+  :vc (:url "https://github.com/suderman/edger" :lisp-dir "emacs" :rev :newest)
+  :ensure nil
+  :if t
+  :demand t)
+
 (setq windmove-allow-all-windows t)
 
 (use-package scroll-on-jump
@@ -52,48 +58,6 @@
       ;; `delete-other-windows' preserves side windows after zoom saves the layout.
       (dolist (window (delq (selected-window) (window-list)))
         (delete-window window)))))
-
-(defun suderman/window-navigate (direction)
-  "Move in DIRECTION, crossing into Herdr at a terminal window edge."
-  (let* ((frame (selected-frame))
-         (pane (and (not (display-graphic-p frame))
-                    (or (frame-parameter frame 'suderman/herdr-pane-id)
-                        (unless (daemonp) (getenv "HERDR_PANE_ID")))))
-         (neighbor (and pane (windmove-find-other-window direction))))
-    (if (and pane (or (not neighbor)
-                      (and (window-minibuffer-p neighbor)
-                           (not (active-minibuffer-window)))))
-        (let* ((socket (or (frame-parameter frame 'suderman/herdr-socket-path)
-                           (unless (daemonp) (getenv "HERDR_SOCKET_PATH"))))
-               (process-environment
-                (if socket
-                    (cons (concat "HERDR_SOCKET_PATH=" socket) process-environment)
-                  process-environment)))
-          (unless (zerop (call-process "herdr" nil nil nil
-                                       "pane" "focus" "--direction"
-                                       (symbol-name direction) "--pane" pane))
-            (user-error "No window or Herdr pane %s" direction)))
-      (windmove-do-window-select direction nil nil this-command))))
-
-(defun suderman/window-left ()
-  "Move focus left, including across a Herdr pane boundary."
-  (interactive)
-  (suderman/window-navigate 'left))
-
-(defun suderman/window-down ()
-  "Move focus down, including across a Herdr pane boundary."
-  (interactive)
-  (suderman/window-navigate 'down))
-
-(defun suderman/window-up ()
-  "Move focus up, including across a Herdr pane boundary."
-  (interactive)
-  (suderman/window-navigate 'up))
-
-(defun suderman/window-right ()
-  "Move focus right, including across a Herdr pane boundary."
-  (interactive)
-  (suderman/window-navigate 'right))
 
 (defun suderman/delete-window-or-tab ()
   "Delete the selected window, or close its tab when it is the only window."

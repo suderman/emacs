@@ -50,10 +50,10 @@
 
   ;; These keys are Meow-state bindings elsewhere, so semi-char mode needs
   ;; local commands after exempting them from terminal forwarding.
-  (dolist (binding '(("M-h" . suderman/window-left)
-                     ("M-j" . windmove-down)
-                     ("M-k" . windmove-up)
-                     ("M-l" . windmove-right)
+  (dolist (binding '(("M-h" . edger-left)
+                     ("M-j" . edger-down)
+                     ("M-k" . edger-up)
+                     ("M-l" . edger-right)
                      ("M-H" . suderman/resize-window-left)
                      ("M-J" . suderman/resize-window-down)
                      ("M-K" . suderman/resize-window-up)

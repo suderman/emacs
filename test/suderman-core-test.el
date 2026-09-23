@@ -132,52 +132,6 @@
 
 ;; Window layouts
 
-(ert-deftest suderman/window-navigate-crosses-herdr-only-at-edge ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let* ((left (selected-window))
-           (right (split-window-right))
-           (frame (selected-frame))
-           calls)
-      (unwind-protect
-          (progn
-            (set-frame-parameter frame 'suderman/herdr-pane-id "w1:p2")
-            (set-frame-parameter frame 'suderman/herdr-socket-path "/tmp/herdr.sock")
-            (cl-letf (((symbol-function 'call-process)
-                       (lambda (&rest args)
-                         (push (list args (getenv "HERDR_SOCKET_PATH")) calls)
-                         0)))
-              (suderman/window-right)
-              (should (eq (selected-window) right))
-              (should-not calls)
-              (dolist (entry '((suderman/window-right . "right")
-                               (suderman/window-down . "down")
-                               (suderman/window-up . "up")))
-                (funcall (car entry))
-                (should (equal (car calls)
-                               (list (list "herdr" nil nil nil
-                                           "pane" "focus" "--direction"
-                                           (cdr entry) "--pane" "w1:p2")
-                                     "/tmp/herdr.sock"))))
-              (suderman/window-left)
-              (should (eq (selected-window) left))
-              (should (= (length calls) 3))))
-        (set-frame-parameter frame 'suderman/herdr-pane-id nil)
-        (set-frame-parameter frame 'suderman/herdr-socket-path nil)))))
-
-(ert-deftest suderman/window-navigate-keeps-graphical-frames-in-emacs ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let ((frame (selected-frame)))
-      (unwind-protect
-          (progn
-            (set-frame-parameter frame 'suderman/herdr-pane-id "w1:p2")
-            (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t))
-                      ((symbol-function 'call-process)
-                       (lambda (&rest _) (ert-fail "Herdr called in GUI"))))
-              (should-error (suderman/window-left))))
-        (set-frame-parameter frame 'suderman/herdr-pane-id nil)))))
-
 (ert-deftest suderman/zoom-window-toggle-restores-side-windows ()
   (save-window-excursion
     (delete-other-windows)
