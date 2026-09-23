@@ -139,6 +139,7 @@
   (keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open)
   (keymap-set ibuffer-mode-map "<right>" #'suderman/ibuffer-open)
   (keymap-set ibuffer-mode-map "m" #'suderman/ibuffer-toggle-mark)
+  (keymap-set ibuffer-mode-map "d" #'ibuffer-do-delete)
   (keymap-set ibuffer-mode-map "M" #'suderman/ibuffer-mark-all)
   (keymap-set ibuffer-mode-map "u" #'suderman/ibuffer-unmark)
   (keymap-set ibuffer-mode-map "U" #'ibuffer-unmark-all-marks)
