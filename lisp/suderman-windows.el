@@ -100,7 +100,10 @@
          (backward (if horizontal 'left 'above)))
     (if (window-in-direction forward window)
         (adjust-window-trailing-edge window delta horizontal)
-      (if-let* ((neighbor (window-in-direction backward window)))
+      (if-let* ((neighbor (or (window-in-direction backward window)
+                             (let ((side (window-in-direction backward window t)))
+                               (and side (window-parameter side 'window-side)
+                                    side)))))
           (adjust-window-trailing-edge neighbor delta horizontal)
         (user-error "No neighboring window")))))
 

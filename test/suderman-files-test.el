@@ -542,11 +542,11 @@
     (delete-other-windows)
     (let* ((root (selected-window))
            (parent (split-window root nil 'left))
+           (session (make-dirvish :root-window root))
            navigation)
       (set-window-parameter parent 'no-other-window t)
       (select-window parent)
-      (cl-letf (((symbol-function 'dirvish-curr) (lambda () 'session))
-                ((symbol-function 'dv-root-window) (lambda (_) root))
+      (cl-letf (((symbol-function 'dirvish-curr) (lambda () session))
                 ((symbol-function 'dirvish--find-entry)
                  (lambda (find entry) (setq navigation (list find entry)))))
         (suderman/dirvish-parent-navigate "/tmp/next/")
@@ -566,6 +566,106 @@
                    (setq opened path)
                    (select-window sidebar))))
         (suderman/dirvish-side-toggle "/tmp/")
+        (should (equal opened "/tmp/"))
+        (should (eq (selected-window) editor))))))
+
+(ert-deftest suderman/dirvish-sidebar-shows-terminal-vc-state ()
+  (with-temp-buffer
+    (let* ((file "/tmp/dirvish-vc-test.txt")
+           (dirvish--dir-data (make-hash-table :test #'equal))
+           (key (secure-hash 'md5 file)))
+      (insert "dirvish-vc-test.txt")
+      (puthash key '(:vc-state edited) dirvish--dir-data)
+      (let* ((ov (cdr (dirvish-attribute-suderman-vc-state-rd
+                       (point-min) (point-max) "dirvish-vc-test.txt" file
+                       nil '(file . nil) (point-min) (point-max) nil 35)))
+             (marker (overlay-get ov 'before-string)))
+        (should (string-match-p "M" marker))
+        (should (eq (get-text-property 0 'face marker)
+                    'dirvish-vc-edited-state)))
+      (puthash key '(:vc-state up-to-date) dirvish--dir-data)
+      (let ((ov (cdr (dirvish-attribute-suderman-vc-state-rd
+                      (point-min) (point-max) "dirvish-vc-test.txt" file
+                      nil '(file . nil) (point-min) (point-max) nil 35))))
+        (should (equal (overlay-get ov 'before-string) " ")))
+      (puthash key '(:vc-state unregistered) dirvish--dir-data)
+      (let ((ov (cdr (dirvish-attribute-suderman-vc-state-rd
+                      (point-min) (point-max) "dirvish-vc-test.txt" file
+                      nil '(file . nil) (point-min) (point-max) nil 35))))
+        (should (equal (overlay-get ov 'before-string) "?"))))))
+
+(ert-deftest suderman/dirvish-period-focuses-resizable-sidebar ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let ((editor (selected-window))
+          (directory (make-temp-file "suderman-sidebar-" t)))
+      (unwind-protect
+          (progn
+            (suderman/dirvish-side-toggle directory)
+            (let* ((sidebar (dirvish-side--session-visible-p))
+                   (session (with-current-buffer (window-buffer sidebar)
+                              (dirvish-curr))))
+              (should (eq editor (selected-window)))
+              (should (eq (dv-type session) 'side))
+              (should-not (dv-size-fixed session))
+              (with-selected-window sidebar
+                (dirvish--build-layout session))
+              (should-not (with-current-buffer (window-buffer sidebar)
+                            window-size-fixed))
+              (let ((width (window-width sidebar)))
+                (with-selected-window sidebar (enlarge-window-horizontally 5))
+                (should (> (window-width sidebar) width)))
+              (suderman/dirvish)
+              (should (eq (selected-window) sidebar))
+              (should (eq (dirvish-side--session-visible-p) sidebar))
+              (suderman/dirvish)
+              (should-not (dirvish-side--session-visible-p))))
+        (when-let* ((sidebar (dirvish-side--session-visible-p)))
+          (with-selected-window sidebar (dirvish-quit)))
+        (delete-directory directory t)))))
+
+(ert-deftest suderman/dirvish-sidebar-resizes-from-editor ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let ((editor (selected-window))
+          (directory (make-temp-file "suderman-sidebar-resize-" t)))
+      (unwind-protect
+          (progn
+            (suderman/dirvish-side-toggle directory)
+            (let* ((sidebar (dirvish-side--session-visible-p))
+                   (width (window-width sidebar)))
+              (should-not (window-in-direction 'left editor))
+              (should (eq (window-in-direction 'left editor t) sidebar))
+              (suderman/resize-window-right)
+              (should (= (window-width sidebar) (+ width 5)))
+              (suderman/resize-window-left)
+              (should (= (window-width sidebar) width))
+              (should (eq (selected-window) editor))))
+        (when-let* ((sidebar (dirvish-side--session-visible-p)))
+          (with-selected-window sidebar (dirvish-quit)))
+        (delete-directory directory t)))))
+
+(ert-deftest suderman/resize-window-excludes-non-side-special-windows ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let* ((special (selected-window))
+           (editor (split-window-right)))
+      (set-window-parameter special 'no-other-window t)
+      (select-window editor)
+      (should-error (suderman/resize-window-right) :type 'user-error))))
+
+(ert-deftest suderman/dirvish-explicit-path-ignores-visible-sidebar ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let ((editor (selected-window))
+          (sidebar (split-window-right))
+          opened)
+      (cl-letf (((symbol-function 'dirvish-curr) #'ignore)
+                ((symbol-function 'dirvish-side--session-visible-p)
+                 (lambda () sidebar))
+                ((symbol-function 'dirvish)
+                 (lambda (directory) (setq opened directory))))
+        (suderman/dirvish "/tmp/")
         (should (equal opened "/tmp/"))
         (should (eq (selected-window) editor))))))
 
@@ -591,6 +691,7 @@
     (let* ((root (selected-window))
            (misc (split-window-right))
            (misc-buffer (generate-new-buffer " *dirvish-misc-test*"))
+           (session (make-dirvish :root-window root))
            called-window)
       (unwind-protect
           (progn
@@ -598,8 +699,7 @@
             (select-window misc)
             (with-current-buffer misc-buffer
               (dirvish-misc-mode)
-              (cl-letf (((symbol-function 'dirvish-curr) (lambda () 'session))
-                        ((symbol-function 'dv-root-window) (lambda (_) root)))
+              (cl-letf (((symbol-function 'dirvish-curr) (lambda () session)))
                 (suderman/dirvish-find-entry-at-root
                  (lambda (_find _entry)
                    (setq called-window (selected-window)))
@@ -613,6 +713,7 @@
     (delete-other-windows)
     (let* ((root (selected-window))
            (parent (split-window-right))
+           (session (make-dirvish :root-window root))
            (file "/tmp/example.txt")
            navigation selected)
       (select-window parent)
@@ -620,8 +721,7 @@
                 ((symbol-function 'posn-window) (lambda (_) parent))
                 ((symbol-function 'posn-point) (lambda (_) 1))
                 ((symbol-function 'dired-get-filename) (lambda (&rest _) file))
-                ((symbol-function 'dirvish-curr) (lambda () 'session))
-                ((symbol-function 'dv-root-window) (lambda (_) root))
+                ((symbol-function 'dirvish-curr) (lambda () session))
                 ((symbol-function 'file-directory-p) #'ignore)
                 ((symbol-function 'dirvish--find-entry)
                  (lambda (find entry) (setq navigation (list find entry))))

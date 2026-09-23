@@ -7,6 +7,7 @@
 
 (require 'dired)
 (require 'dired-x)
+(require 'dirvish)
 (require 'seq)
 (require 'use-package)
 (require 'suderman-appearance)
@@ -22,6 +23,7 @@
 (defvar dirvish-path-separators)
 (defvar dirvish-yank-sources)
 (defvar dirvish-side-attributes)
+(defvar dirvish-vc-state-face-alist)
 (defvar dirvish-side-mode-line-format)
 (defvar dirvish-subtree--state-icons)
 (defvar global-hl-line-mode)
@@ -85,28 +87,35 @@
     (dirvish-quit)))
 
 (defun suderman/dirvish (&optional path)
-  "Toggle Dirvish for PATH, selecting it when it is a file."
+  "Toggle Dirvish for PATH, selecting it when it is a file.
+With no PATH, select a visible sidebar in this frame instead of opening Dirvish."
   (interactive)
-  (if (and (fboundp 'dirvish-curr) (dirvish-curr))
-      (dirvish-quit)
-    (let* ((target (expand-file-name (or path buffer-file-name
-                                         default-directory)))
-           (directory (if (file-directory-p target)
-                          target
-                        (file-name-directory target))))
-      (dirvish directory)
-      (when-let* ((session
-                   (seq-some
-                    (lambda (window)
-                      (with-current-buffer (window-buffer window)
-                        (when-let* ((session (dirvish-curr)))
-                          (and (eq (dv-type session) 'default) session))))
-                    (window-list)))
-                   ((dv-curr-layout session)))
-        (with-selected-window (dv-root-window session)
-          (dirvish-layout-toggle)))
-      (unless (file-directory-p target)
-        (dired-goto-file target)))))
+  (let ((sidebar (and (null path) (dirvish-side--session-visible-p))))
+    (cond
+     ((and (fboundp 'dirvish-curr) (dirvish-curr))
+      (dirvish-quit))
+     (sidebar
+      (suderman/dirvish-side-make-resizable sidebar)
+      (select-window sidebar))
+     (t
+      (let* ((target (expand-file-name (or path buffer-file-name
+                                           default-directory)))
+             (directory (if (file-directory-p target)
+                            target
+                          (file-name-directory target))))
+        (dirvish directory)
+        (when-let* ((session
+                     (seq-some
+                      (lambda (window)
+                        (with-current-buffer (window-buffer window)
+                          (when-let* ((session (dirvish-curr)))
+                            (and (eq (dv-type session) 'default) session))))
+                      (window-list)))
+                     ((dv-curr-layout session)))
+          (with-selected-window (dv-root-window session)
+            (dirvish-layout-toggle)))
+        (unless (file-directory-p target)
+          (dired-goto-file target)))))))
 
 (defun suderman/dirvish-ibuffer ()
   "Open IBuffer from Dirvish without replacing a visible sidebar."
@@ -140,6 +149,14 @@
                            (define-key map [mode-line mouse-1] command)
                            map)))
 
+(defun suderman/dirvish-side-make-resizable (window)
+  "Allow ordinary resizing of the Dirvish sidebar WINDOW."
+  (with-current-buffer (window-buffer window)
+    ;; Dirvish reapplies the session's fixed width when rebuilding its layout.
+    (when-let* ((session (dirvish-curr)))
+      (setf (dv-size-fixed session) nil))
+    (setq-local window-size-fixed nil)))
+
 (defun suderman/dirvish-side-toggle (&optional path)
   "Toggle the Dirvish sidebar for PATH without stealing editor focus."
   (interactive)
@@ -156,6 +173,8 @@
      (t
       (let ((editor (selected-window)))
         (dirvish-side path)
+        (when-let* ((sidebar (dirvish-side--session-visible-p)))
+          (suderman/dirvish-side-make-resizable sidebar))
         (when (window-live-p editor)
           (select-window editor)))))))
 
@@ -708,13 +727,31 @@
         dirvish-peek-key '(:debounce 0.2 any)
         dirvish-quick-access-entries (suderman/dirvish-quick-access-entries)
         dirvish-side-attributes
-        (append '(vc-state subtree-state)
+        (append '(vc-state suderman-vc-state subtree-state)
                 (when (suderman/nerd-fonts-available-p) '(nerd-icons))
                 '(collapse))
         dirvish-side-mode-line-format
         '(:left (path) :right (index))
         dirvish-use-mode-line 'global)
   :config
+  (require 'dirvish-vc)
+  (dirvish-define-attribute suderman-vc-state
+    "Show version-control state as text in a terminal sidebar."
+    :when (and (eq (dv-type (dirvish-curr)) 'side)
+               (not (dirvish-prop :gui))
+               (symbolp (dirvish-prop :vc-backend)))
+    (let* ((state (dirvish-attribute-cache f-name :vc-state))
+           (mark (alist-get state '((edited . "M") (added . "A")
+                                    (removed . "D") (missing . "D")
+                                    (needs-merge . "!") (conflict . "!")
+                                    (unlocked-changes . "M")
+                                    (needs-update . "U")
+                                    (unregistered . "?"))))
+           (ov (make-overlay f-beg f-beg)))
+      (overlay-put ov 'before-string
+                   (propertize (or mark " ") 'face
+                               (alist-get state dirvish-vc-state-face-alist)))
+      `(ov . ,ov)))
   (dirvish-define-mode-line suderman-dashboard
     "Clickable Dashboard button."
     (suderman/dirvish-mode-line-button
@@ -739,6 +776,10 @@
   (add-to-list 'dirvish-archive-exts "gz")
   (add-to-list 'dirvish-binary-exts "gz")
   (suderman/dirvish-enable-subtree-mouse)
+  (dolist (frame (frame-list))
+    (with-selected-frame frame
+      (when-let* ((sidebar (dirvish-side--session-visible-p)))
+        (suderman/dirvish-side-make-resizable sidebar))))
   (dirvish-side-follow-mode 1)
   (dirvish-peek-mode 1)
   (add-hook 'dirvish-preview-setup-hook
