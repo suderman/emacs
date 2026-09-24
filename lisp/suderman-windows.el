@@ -15,7 +15,8 @@
   :vc (:url "https://github.com/suderman/edger" :lisp-dir "emacs" :rev :newest)
   :ensure nil
   :if t
-  :demand t)
+  :demand t
+  :config (when (fboundp 'edger-setup) (edger-setup)))
 
 (setq windmove-allow-all-windows t)
 
