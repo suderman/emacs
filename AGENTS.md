@@ -126,7 +126,7 @@ Important parts of the current grammar follow.
 - `.` opens Dirvish for the current file or directory. It uses the full-frame
   layout when no other window is visible and the selected window otherwise.
   Android always starts with one column and opens files in that window.
-- `S` toggles the Dirvish sidebar in Normal and Motion states without moving
+- `B` toggles the Dirvish sidebar in Normal and Motion states without moving
   editor focus when it opens. Inside the sidebar, it hides the tree.
 - Backtick opens the Dashboard in Normal and Motion states, IBuffer, and
   Dirvish. Double quote and `~` are intentionally inert in Normal; Motion lets
@@ -223,7 +223,7 @@ is no broad hidden-buffer blacklist.
 - `j` and `k` move by row.
 - `l` visits the selected buffer or toggles a group heading.
 - `h` and `,` close IBuffer and restore the previous window.
-- `S` toggles a contextual Dirvish sidebar without leaving IBuffer.
+- `B` toggles a contextual Dirvish sidebar without leaving IBuffer.
 - `.` opens Dirvish for the selected buffer or project heading.
 - `m` toggles the current buffer mark without moving. `M` marks every visible
   buffer and `t` inverts the marks, so `M t` clears them all.
@@ -240,8 +240,8 @@ handles focused file management. `dirvish-side` supplies the persistent project
 tree, and `dirvish-subtree` expands directories in either view. Side follow mode
 tracks the selected file and project and expands parent subtrees.
 
-`S` and `SPC t d` toggle the sidebar without moving editor focus. From inside
-the sidebar, `S` hides it. In IBuffer, `S` derives context from the selected
+`B` and `SPC t d` toggle the sidebar without moving editor focus. From inside
+the sidebar, `B` hides it. In IBuffer, `B` derives context from the selected
 buffer or project heading and leaves IBuffer selected. Comma from the sidebar
 opens IBuffer in the most recently used editor window without removing the
 sidebar. Do not open a sidebar over the full-frame layout; close that layout
