@@ -7,6 +7,13 @@
 ;;; Code:
 
 (require 'package)
+(require 'package-vc)
+
+(defun suderman/package-upgrade-all ()
+  "Upgrade all archive and VC packages without confirmation."
+  (interactive)
+  (package-upgrade-all nil)
+  (package-vc-upgrade-all))
 
 (defun suderman/package-import-keyring-from-android-assets
     (function &optional file)
