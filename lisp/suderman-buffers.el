@@ -151,7 +151,6 @@
   (keymap-set ibuffer-mode-map "M-J" #'edger-resize-down)
   (keymap-set ibuffer-mode-map "M-K" #'edger-resize-up)
   (keymap-set ibuffer-mode-map "M-L" #'edger-resize-right)
-  (keymap-set ibuffer-mode-map "M-t" #'edger-tab)
   (keymap-set ibuffer-mode-map "M-u" #'edger-horizontal)
   (keymap-set ibuffer-mode-map "M-i" #'edger-vertical)
   (keymap-set ibuffer-mode-map "M-w" #'edger-close))

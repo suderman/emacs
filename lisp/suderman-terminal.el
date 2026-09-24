@@ -47,7 +47,7 @@
            (append ghostel-keymap-exceptions
                    '("M-h" "M-j" "M-k" "M-l"
                      "M-H" "M-J" "M-K" "M-L"
-                     "M-t" "M-u" "M-i" "M-w"))))
+                     "M-u" "M-i" "M-w"))))
 
   ;; These keys are Meow-state bindings elsewhere, so semi-char mode needs
   ;; local commands after exempting them from terminal forwarding.
@@ -59,7 +59,6 @@
                      ("M-J" . edger-resize-down)
                      ("M-K" . edger-resize-up)
                      ("M-L" . edger-resize-right)
-                     ("M-t" . edger-tab)
                      ("M-u" . edger-horizontal)
                      ("M-i" . edger-vertical)
                      ("M-w" . edger-close)))

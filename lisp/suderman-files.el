@@ -850,7 +850,6 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     (keymap-set map "M-J" #'edger-resize-down)
     (keymap-set map "M-K" #'edger-resize-up)
     (keymap-set map "M-L" #'edger-resize-right)
-    (keymap-set map "M-t" #'edger-tab)
     (keymap-set map "M-u" #'edger-horizontal)
     (keymap-set map "M-i" #'edger-vertical)
     (keymap-set map "M-w" #'edger-close)

@@ -62,7 +62,6 @@
   (keymap-set magit-mode-map "M-J" #'edger-resize-down)
   (keymap-set magit-mode-map "M-K" #'edger-resize-up)
   (keymap-set magit-mode-map "M-L" #'edger-resize-right)
-  (keymap-set magit-mode-map "M-t" #'edger-tab)
   (keymap-set magit-mode-map "M-u" #'edger-horizontal)
   (keymap-set magit-mode-map "M-i" #'edger-vertical)
   (keymap-set magit-mode-map "M-w" #'edger-close)
