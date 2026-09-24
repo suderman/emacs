@@ -1,7 +1,7 @@
-;;; suderman-dashboard.el --- Minimal startup dashboard -*- lexical-binding: t; -*-
+;;; suderman-dashboard.el --- On-demand dashboard -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Dashboard startup, common destinations, and spatial navigation live here.
+;; Dashboard destinations and spatial navigation live here.
 
 ;;; Code:
 
@@ -99,11 +99,6 @@
   (suderman/dashboard-disable-meow)
   (suderman/dashboard-move 'first))
 
-(defun suderman/dashboard-initial-buffer-choice ()
-  "Return Dashboard when startup has no pending command-line arguments."
-  (unless command-line-args-left
-    #'dashboard-open))
-
 (defun suderman/dashboard ()
   "Open Dashboard, replacing an active full-frame Dirvish layout."
   (interactive)
@@ -179,7 +174,8 @@
         dashboard-navigator-buttons
         (list (suderman/dashboard-destinations)))
   :config
-  (setq initial-buffer-choice (suderman/dashboard-initial-buffer-choice))
+  (when (eq initial-buffer-choice #'dashboard-open)
+    (setq initial-buffer-choice nil))
   (add-hook 'dashboard-mode-hook #'suderman/dashboard-setup)
   (dolist (key '("h" "j" "k" "l"))
     (keymap-set dashboard-mode-map key #'suderman/dashboard-move))

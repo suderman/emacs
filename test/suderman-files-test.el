@@ -15,13 +15,6 @@
 
 ;; Dashboard behavior
 
-(ert-deftest suderman/dashboard-is-only-the-bare-startup-buffer ()
-  (let (command-line-args-left)
-    (should (eq (suderman/dashboard-initial-buffer-choice)
-                #'dashboard-open)))
-  (let ((command-line-args-left '("COMMIT_EDITMSG")))
-    (should-not (suderman/dashboard-initial-buffer-choice))))
-
 (ert-deftest suderman/dashboard-closes-full-frame-dirvish-first ()
   (let ((session (make-dirvish :curr-layout t :root-window (selected-window)))
         calls)
