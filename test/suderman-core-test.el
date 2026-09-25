@@ -9,6 +9,7 @@
 (require 'ert)
 (require 'suderman-appearance)
 (require 'suderman-buffers)
+(require 'suderman-clipboard)
 (require 'suderman-defaults)
 (require 'suderman-formatting)
 (require 'suderman-packages)
@@ -144,6 +145,49 @@
                 (should (eq (car (project-current nil dir)) 'vc))))))
       (mapc #'kill-buffer buffers)
       (delete-directory home t))))
+
+;; Clipboard selection
+
+(ert-deftest suderman/terminal-copy-routes-to-local-or-remote-clipboard ()
+  (let (selection copied output osc52 graphical ssh wayland)
+    (setq wayland t)
+    (cl-letf (((symbol-function 'gui-select-text)
+               (lambda (text) (setq selection text)))
+              ((symbol-function 'display-graphic-p)
+               (lambda (&rest _) graphical))
+              ((symbol-function 'terminal-parameter)
+               (lambda (&rest _) osc52))
+              ((symbol-function 'getenv)
+               (lambda (name &rest _)
+                 (pcase name
+                   ("WAYLAND_DISPLAY" wayland)
+                   ("SSH_CONNECTION" ssh))))
+              ((symbol-function 'executable-find) (lambda (&rest _) "wl-copy"))
+              ((symbol-function 'call-process-region)
+               (lambda (beg end &rest _)
+                 (setq copied (buffer-substring-no-properties beg end))
+                 0))
+              ((symbol-function 'send-string-to-terminal)
+               (lambda (text &rest _) (setq output text))))
+      (suderman/select-text "CSV,α\n")
+      (should (equal selection copied))
+      (should-not output)
+      (setq copied nil ssh t)
+      (suderman/select-text "remote,α\n")
+      (should-not copied)
+      (should (equal output (concat "\e]52;c;"
+                                    (base64-encode-string
+                                     (encode-coding-string "remote,α\n" 'utf-8-unix) t)
+                                    "\a")))
+      (setq output nil ssh nil wayland nil)
+      (suderman/select-text "remote in Herdr")
+      (should (equal output "\e]52;c;cmVtb3RlIGluIEhlcmRy\a"))
+      (setq output nil osc52 t)
+      (suderman/select-text "native")
+      (should-not output)
+      (setq osc52 nil graphical t)
+      (suderman/select-text "graphical")
+      (should-not output))))
 
 ;; Large-file behavior
 

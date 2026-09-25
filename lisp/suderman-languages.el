@@ -25,6 +25,10 @@
 (use-package php-mode
   :mode "\\.php\\'")
 
+(use-package csv-mode
+  :mode "\\.csv\\'"
+  :hook (csv-mode . (lambda () (visual-line-mode -1))))
+
 (add-to-list 'auto-mode-alist '("\\.zsh\\'" . sh-mode))
 
 (provide 'suderman-languages)

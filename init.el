@@ -19,6 +19,7 @@
 (require 'suderman-paths)
 (require 'suderman-packages)
 (require 'suderman-defaults)
+(require 'suderman-clipboard)
 (require 'suderman-appearance)
 (require 'suderman-windows)
 
