@@ -224,6 +224,33 @@
       (should (equal events
                      '((touchscreen-end (1 . position) nil)))))))
 
+(ert-deftest suderman/android-touch-word-selection-extends-with-meow-motion ()
+  (let ((system-type 'android)
+        (touch-screen-word-select t)
+        (transient-mark-mode t))
+    (save-window-excursion
+      (dolist (reverse '(nil t))
+        (dolist (key '("h" "j" "k" "l"))
+          (with-temp-buffer
+            (set-window-buffer (selected-window) (current-buffer))
+            (insert "alpha beta\ngamma delta\nomega zeta\n")
+            (setq-local meow-normal-mode t)
+            (cl-letf (((symbol-function 'beep) #'ignore))
+              (touch-screen-hold
+               (list 'touchscreen-hold
+                     (list (selected-window) 15 '(0 . 0)))))
+            (should (equal (cons (region-beginning) (region-end))
+                           '(12 . 17)))
+            (should (equal (meow--selection-type) '(expand . char)))
+            (when reverse
+              (exchange-point-and-mark))
+            (let ((anchor (mark))
+                  (start (point)))
+              (execute-kbd-macro (kbd key))
+              (should (region-active-p))
+              (should (= (mark) anchor))
+              (should-not (= (point) start)))))))))
+
 (ert-deftest suderman/android-pinch-scales-the-default-face-continuously ()
   (let ((global-text-scale-adjust-limits '(100 . 300))
         heights)

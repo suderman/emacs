@@ -145,6 +145,13 @@ Crossing the anchor reverses the selection naturally."
              (region-active-p))
     (suderman/meow--select-to (point))))
 
+(defun suderman/meow--adopt-touch-selection (&rest _)
+  "Keep Android touch selections expandable with Meow movement."
+  (when (and (eq system-type 'android)
+             (bound-and-true-p meow-normal-mode)
+             (region-active-p))
+    (suderman/meow--select-to (point))))
+
 (defun suderman/meow--move-to (pos)
   "Move to POS, extending the active selection when present."
   (if (region-active-p)
@@ -875,6 +882,8 @@ An active selection is replaced without modifying the kill ring."
                      meow-bounds-of-thing))
     (advice-remove command #'suderman/meow--adopt-surround-selection)
     (advice-add command :after #'suderman/meow--adopt-surround-selection))
+  (advice-remove 'touch-screen-hold #'suderman/meow--adopt-touch-selection)
+  (advice-add 'touch-screen-hold :after #'suderman/meow--adopt-touch-selection)
   (advice-remove 'meow--short-command-name
                  #'suderman/meow--cheatsheet-command-name)
   (advice-add 'meow--short-command-name :around
