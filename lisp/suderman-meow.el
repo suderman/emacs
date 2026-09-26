@@ -601,24 +601,28 @@ An active selection is replaced without modifying the kill ring."
         (line-beginning-position 2)))
 
 (defun suderman/meow-delete-line ()
-  "Delete the entire current line without adding it to the kill ring."
+  "Delete the selection or current line without adding it to the kill ring."
   (interactive)
-  (suderman/meow--cancel-active-selection)
-  (pcase-let ((`(,beg . ,end) (suderman/meow--line-bounds)))
-    (delete-region beg end)
-    (goto-char beg)
-    (back-to-indentation)))
+  (if (use-region-p)
+      (suderman/meow-delete)
+    (suderman/meow--cancel-active-selection)
+    (pcase-let ((`(,beg . ,end) (suderman/meow--line-bounds)))
+      (delete-region beg end)
+      (goto-char beg)
+      (back-to-indentation))))
 
 (defun suderman/meow-kill-line ()
-  "Kill the entire current line, adding it to the kill ring and clipboard."
+  "Cut the selection or current line, then enter insert state."
   (interactive)
-  (suderman/meow--cancel-active-selection)
-  (pcase-let ((`(,beg . ,end) (suderman/meow--line-bounds)))
-    (let ((select-enable-clipboard meow-use-clipboard))
-      (kill-region beg end))
-    (goto-char beg)
-    (back-to-indentation)
-    (suderman/meow-insert)))
+  (if (use-region-p)
+      (suderman/meow-kill)
+    (suderman/meow--cancel-active-selection)
+    (pcase-let ((`(,beg . ,end) (suderman/meow--line-bounds)))
+      (let ((select-enable-clipboard meow-use-clipboard))
+        (kill-region beg end))
+      (goto-char beg)
+      (back-to-indentation)
+      (suderman/meow-insert))))
 
 ;;;; Keymaps and mode activation
 
@@ -709,7 +713,8 @@ An active selection is replaced without modifying the kill ring."
    '("j" . meow-next)
    '("k" . meow-prev)
    '("l" . meow-right)
-   '("B" . suderman/dirvish-side-toggle)
+   '("B" . suderman/meow-back-symbol)
+   '(">" . suderman/dirvish-side-toggle)
    '("`" . suderman/dashboard)
    '("<escape>" . suderman/meow-escape))
   
@@ -736,6 +741,7 @@ An active selection is replaced without modifying the kill ring."
    '(")" . meow-right-expand)
    '("," . suderman/ibuffer-toggle)
    '("." . suderman/dirvish)
+   '(">" . suderman/dirvish-side-toggle)
    '("[" . meow-inner-of-thing)
    '("]" . meow-bounds-of-thing)
    '("{" . meow-beginning-of-thing)
@@ -749,7 +755,7 @@ An active selection is replaced without modifying the kill ring."
    '("a" . meow-append)
    '("A" . suderman/meow-insert-at-end-of-line)
    '("b" . suderman/meow-back-word)
-   '("B" . suderman/dirvish-side-toggle)
+   '("B" . suderman/meow-back-symbol)
    '("c" . suderman/meow-save)
    '("C" . meow-page-up)
    '("d" . suderman/meow-delete)

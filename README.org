@@ -377,18 +377,18 @@ Which-Key shows each leader prefix while I type it.
 | =a / e=     | Move to smart beginning / end of line           |
 | =A / Z=     | Move to beginning / end of buffer               |
 | =b / f=     | Move backward / forward by word                 |
-| =B / F=     | Move backward / forward by symbol               |
+| =B=         | Move backward by symbol                         |
 | =#=         | Go to line                                      |
 | =%=         | Jump to matching delimiter or item              |
 | =C / V=     | Page up / down                                  |
 | =, / .=     | Open project-grouped IBuffer / Dirvish          |
 | =`=         | Open the Dashboard                               |
-| =S=         | Toggle the Dirvish sidebar without moving focus  |
+| =>=         | Toggle the Dirvish sidebar without moving focus  |
 | =q / Q=     | Quit the view / kill the current buffer         |
 
 Movement expands an active Meow selection.
 
-=S= has the same visibility-only behavior in Meow Motion. Inside the sidebar it
+=>= has the same visibility-only behavior in Meow Motion. Inside the sidebar it
 closes the sidebar; in IBuffer it uses the selected buffer or project.
 
 *** Selection and editing
@@ -541,7 +541,7 @@ leaving editor focus alone. Meow stays off in both views so their own maps win.
 | =j / k=   | Move by row                                                  |
 | =l=       | Visit the selected buffer, or toggle a group heading         |
 | =h / ,=   | Close IBuffer and restore the previous window               |
-| =S=       | Toggle a contextual file sidebar without leaving IBuffer     |
+| =>=       | Toggle a contextual file sidebar without leaving IBuffer     |
 | =m=       | Toggle the current mark without moving                       |
 | =M=       | Mark every visible buffer                                    |
 | =t=       | Invert marks; =M t= clears all marks                         |
@@ -559,7 +559,7 @@ have their own group; other non-project buffers remain in the default group.
 | =j / k=    | Move to the next / previous entry              |
 | =h / l=    | Move to the parent / open the selected entry   |
 | =TAB=      | Expand or collapse a directory subtree         |
-| =S / q=    | Close the sidebar                              |
+| => / q=    | Close the sidebar                              |
 | =.=        | Close the sidebar                              |
 | =,=        | Open IBuffer without closing the sidebar       |
 | =i=        | Toggle dotfiles                                |
@@ -567,7 +567,7 @@ have their own group; other non-project buffers remain in the default group.
 | =?=        | Show the effective bindings                    |
 
 The sidebar follows the active file and project and expands its parent
-directories. =S= from an editor toggles visibility without stealing focus. =S=
+directories. =>= from an editor toggles visibility without stealing focus. =>=
 from IBuffer uses the selected buffer or project heading as context.
 
 ** Dirvish and Image mode
@@ -577,7 +577,7 @@ from IBuffer uses the selected buffer or project heading as context.
 | Dirvish | =h / j / k / l=       | Parent / next / previous / open             |
 | Dirvish | =f=                   | Toggle full-frame layout                    |
 | Dirvish | =TAB=                 | Toggle directory subtree                   |
-| Dirvish | =S=                   | Toggle file sidebar                        |
+| Dirvish | =>=                   | Toggle file sidebar                        |
 | Dirvish | =H / L=               | Directory history backward / forward        |
 | Dirvish | =N / E / R=           | Narrow / file groups / rsync               |
 | Dirvish | =m / M / t=           | Toggle mark / mark all / invert marks       |

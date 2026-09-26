@@ -397,6 +397,35 @@
   (with-temp-buffer
     (should-error (suderman/meow-save) :type 'user-error)))
 
+(ert-deftest suderman/meow-uppercase-delete-and-cut-use-active-selection ()
+  (let ((transient-mark-mode t)
+        (meow-use-clipboard nil)
+        (interprogram-cut-function nil))
+    (save-window-excursion
+      (dolist (case '(("d" "D" nil) ("x" "X" "alpha")))
+        (dolist (key (list (car case) (cadr case)))
+          (let ((kill-ring nil)
+                (kill-ring-yank-pointer nil))
+            (with-temp-buffer
+              (set-window-buffer (selected-window) (current-buffer))
+              (insert "alpha beta\nnext\n")
+              (goto-char 3)
+              (setq-local meow-normal-mode t)
+              (execute-kbd-macro (kbd (concat "m " key)))
+              (should (equal (buffer-string) " beta\nnext\n"))
+              (should (equal (car kill-ring) (caddr case))))))
+        (let ((kill-ring nil)
+              (kill-ring-yank-pointer nil))
+          (with-temp-buffer
+            (set-window-buffer (selected-window) (current-buffer))
+            (insert "alpha beta\nnext\n")
+            (goto-char 3)
+            (setq-local meow-normal-mode t)
+            (execute-kbd-macro (kbd (cadr case)))
+            (should (equal (buffer-string) "next\n"))
+            (should (equal (car kill-ring)
+                           (and (caddr case) "alpha beta\n")))))))))
+
 (ert-deftest suderman/meow-copy-line-keeps-point-on-selected-line ()
   (let ((transient-mark-mode t)
         (meow-use-clipboard nil)
