@@ -34,7 +34,6 @@
 (require 'suderman-dashboard)
 (require 'suderman-markdown)
 (require 'suderman-org)
-(require 'suderman-org-klwp)
 (require 'suderman-languages)
 (require 'suderman-nix)
 (require 'suderman-git)
