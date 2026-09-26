@@ -43,7 +43,7 @@
 (defvar suderman/leader-window-map nil
   "SPC w window command keymap.")
 (defvar suderman/leader-quit-map nil
-  "SPC q quit/reload command keymap.")
+  "SPC q quit and configuration command keymap.")
 
 (setq suderman/leader-buffer-map (make-sparse-keymap)
       suderman/leader-file-map (make-sparse-keymap)
@@ -155,8 +155,11 @@
 (keymap-set suderman/leader-window-map "o" #'delete-other-windows)
 (keymap-set suderman/leader-window-map "w" #'edger-close)
 
-;; Quit/reload
+;; Quit and configuration
+(keymap-set suderman/leader-quit-map "p" #'suderman/pull-config)
+(keymap-set suderman/leader-quit-map "q" #'kill-emacs)
 (keymap-set suderman/leader-quit-map "r" #'suderman/reload-config)
+(keymap-set suderman/leader-quit-map "u" #'suderman/package-upgrade-all)
 
 (setq tab-bar-close-last-tab-choice 'delete-frame)
 
@@ -243,7 +246,7 @@
   "b" (cons "buffers" suderman/leader-buffer-map)
   "f" (cons "files" suderman/leader-file-map)
   "o" (cons "org" suderman/leader-org-map)
-  "q" (cons "quit/reload" suderman/leader-quit-map)
+  "q" (cons "quit/config" suderman/leader-quit-map)
   "s" (cons "search" suderman/leader-search-map)
   "t" (cons "toggles" suderman/leader-toggle-map)
   "w" (cons "windows" suderman/leader-window-map))

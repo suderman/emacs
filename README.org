@@ -443,7 +443,7 @@ fit the same grammar. For example, =SPC 3 f= moves forward three words.
 | =SPC s=   | Search commands                     |
 | =SPC t=   | Toggles                             |
 | =SPC w=   | Window commands                     |
-| =SPC q=   | Quit and reload commands            |
+| =SPC q=   | Quit and configuration commands     |
 
 I use these subcommands most often:
 
@@ -456,7 +456,7 @@ I use these subcommands most often:
 | =SPC s= | =c= clear, =i= Imenu, =l= line                                |
 | =SPC t= | =c= column indicator, =d= Dirvish sidebar, =h= current line, =l= line numbers, =o= Org indentation, =r= read only, =s= spelling, =v= visual lines, =w= whitespace |
 | =SPC w= | =hjkl= focus, =HJKL= resize, =u/i= split, =w= close, =o= keep one, === balance |
-| =SPC q= | =r= reload                                                     |
+| =SPC q= | =p= pull config, =q= quit Emacs, =r= reload config, =u= upgrade packages |
 
 ** Git
 
