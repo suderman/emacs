@@ -546,6 +546,32 @@
         (should (equal navigation '(find-alternate-file "/tmp/next/")))
         (should (eq (selected-window) parent))))))
 
+(ert-deftest suderman/dirvish-peek-follows-consult-async-results ()
+  (let* ((file (make-temp-file "suderman-peek-"))
+         (default-directory (file-name-directory file))
+         (vertico--index -1)
+         (dirvish--props (list (cons :peek-category 'file)
+                               (cons :peek-fetcher
+                                     #'suderman/dirvish-peek-candidate)))
+         (session (make-dirvish :type 'peek))
+         preview)
+    (unwind-protect
+        (cl-letf (((symbol-function 'vertico--candidate)
+                   (lambda () (if (< vertico--index 0) "#suderman"
+                                (file-name-nondirectory file))))
+                  ((symbol-function 'dirvish-curr) (lambda () session))
+                  ((symbol-function 'dirvish--preview-update)
+                   (lambda (_session path) (setq preview path))))
+          (should-not (suderman/dirvish-peek-candidate))
+          (suderman/dirvish-peek-consult-refresh)
+          (should-not preview)
+          (setq vertico--index 0)
+          (should (equal (suderman/dirvish-peek-candidate)
+                         (file-name-nondirectory file)))
+          (suderman/dirvish-peek-consult-refresh)
+          (should (equal preview file)))
+      (delete-file file))))
+
 (ert-deftest suderman/dirvish-sidebar-open-preserves-editor-focus ()
   (save-window-excursion
     (delete-other-windows)

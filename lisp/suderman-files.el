@@ -20,6 +20,9 @@
 (defvar dirvish-preview-setup-hook)
 (defvar dirvish-preview-dispatchers)
 (defvar dirvish-peek-key)
+(defvar dirvish-peek-candidate-fetcher)
+(defvar consult--completion-refresh-hook)
+(defvar vertico--index)
 (defvar dirvish-path-separators)
 (defvar dirvish-yank-sources)
 (defvar dirvish-side-attributes)
@@ -40,6 +43,8 @@
 (declare-function dirvish--find-file-temporarily "dirvish")
 (declare-function dirvish--render-attrs "dirvish")
 (declare-function dirvish--run-with-delay "dirvish")
+(declare-function dirvish--preview-update "dirvish")
+(declare-function vertico--candidate "vertico")
 (declare-function dirvish "dirvish")
 (declare-function dirvish-curr "dirvish")
 (declare-function dirvish-dispatch "dirvish-extras")
@@ -351,6 +356,22 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   "Keep line numbers disabled in the current buffer."
   (when display-line-numbers-mode
     (display-line-numbers-mode -1)))
+
+(defun suderman/dirvish-peek-candidate ()
+  "Return a selected Vertico file, not raw Consult search input."
+  (when (and (boundp 'vertico--index) (>= vertico--index 0))
+    (vertico--candidate)))
+
+(defun suderman/dirvish-peek-consult-refresh ()
+  "Preview Consult file results that arrive after the last keypress."
+  (when-let* ((dv (dirvish-curr))
+              ((eq (dv-type dv) 'peek))
+              ((eq (dirvish-prop :peek-category) 'file))
+              (fetcher (dirvish-prop :peek-fetcher))
+              (candidate (funcall fetcher))
+              (file (expand-file-name candidate)))
+    (dirvish-prop :index file)
+    (dirvish--preview-update dv file)))
 
 (defun suderman/dirvish-preview-disable-line-numbers ()
   "Configure the current Dirvish preview."
@@ -744,6 +765,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
         dirvish-preview-dispatchers
         '(video image gif audio epub archive font pdf)
         dirvish-peek-key '(:debounce 0.2 any)
+        dirvish-peek-candidate-fetcher #'suderman/dirvish-peek-candidate
         dirvish-quick-access-entries (suderman/dirvish-quick-access-entries)
         dirvish-side-attributes
         (append '(suderman-vc-state subtree-state)
@@ -802,6 +824,10 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
         (suderman/dirvish-side-make-resizable sidebar))))
   (dirvish-side-follow-mode 1)
   (dirvish-peek-mode 1)
+  (with-eval-after-load 'consult
+    ;; Consult refreshes async candidates without another minibuffer command.
+    (add-hook 'consult--completion-refresh-hook
+              #'suderman/dirvish-peek-consult-refresh 90))
   (add-hook 'dirvish-preview-setup-hook
             #'suderman/dirvish-preview-disable-line-numbers)
   (advice-remove 'dirvish--create-parent-buffer
