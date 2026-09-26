@@ -25,9 +25,9 @@
   (meow-motion-define-key (cons key command)))
 
 (defvar suderman/leader-buffer-map nil
-  "SPC b buffer command keymap.")
+  "SPC , buffer command keymap.")
 (defvar suderman/leader-file-map nil
-  "SPC f file command keymap.")
+  "SPC . file command keymap.")
 (defvar suderman/leader-git-map nil
   "SPC g Git command keymap.")
 (defvar suderman/leader-git-conflict-map nil
@@ -57,20 +57,20 @@
       suderman/leader-quit-map (make-sparse-keymap))
 
 ;; Buffers
-(keymap-set suderman/leader-buffer-map "b" #'consult-buffer)
-(keymap-set suderman/leader-buffer-map "i" #'ibuffer)
+(keymap-set suderman/leader-buffer-map "/" #'consult-buffer)
+(keymap-set suderman/leader-buffer-map "b" #'ibuffer)
 (keymap-set suderman/leader-buffer-map "k" #'kill-current-buffer)
-(keymap-set suderman/leader-buffer-map "l" #'suderman/alternate-buffer)
+(keymap-set suderman/leader-buffer-map "," #'suderman/alternate-buffer)
 (keymap-set suderman/leader-buffer-map "n" #'next-buffer)
 (keymap-set suderman/leader-buffer-map "p" #'previous-buffer)
 (keymap-set suderman/leader-buffer-map "r" #'suderman/revert-buffer-no-confirm)
 (keymap-set suderman/leader-buffer-map "s" #'save-buffer)
 
 ;; Files
-(keymap-set suderman/leader-file-map "." #'suderman/dirvish)
-(keymap-set suderman/leader-file-map "f" #'consult-fd)
-(keymap-set suderman/leader-file-map "g" #'consult-ripgrep)
-(keymap-set suderman/leader-file-map "r" #'consult-recent-file)
+(keymap-set suderman/leader-file-map "." #'consult-fd)
+(keymap-set suderman/leader-file-map "/" #'consult-ripgrep)
+(keymap-set suderman/leader-file-map "f" #'suderman/dirvish)
+(keymap-set suderman/leader-file-map "," #'consult-recent-file)
 (keymap-set suderman/leader-file-map "s" #'save-buffer)
 (keymap-set suderman/leader-file-map "S" #'write-file)
 
@@ -230,8 +230,8 @@
  '("?" . meow-cheatsheet)
  '("SPC" . execute-extended-command)
  (cons "g" suderman/leader-git-map)
- (cons "b" suderman/leader-buffer-map)
- (cons "f" suderman/leader-file-map)
+ (cons "," suderman/leader-buffer-map)
+ (cons "." suderman/leader-file-map)
  (cons "o" suderman/leader-org-map)
  (cons "q" suderman/leader-quit-map)
  (cons "s" suderman/leader-search-map)
@@ -243,8 +243,8 @@
 (which-key-add-keymap-based-replacements
   suderman/meow-leader-map
   "g" (cons "git" suderman/leader-git-map)
-  "b" (cons "buffers" suderman/leader-buffer-map)
-  "f" (cons "files" suderman/leader-file-map)
+  "," (cons "buffers" suderman/leader-buffer-map)
+  "." (cons "files" suderman/leader-file-map)
   "o" (cons "org" suderman/leader-org-map)
   "q" (cons "quit/config" suderman/leader-quit-map)
   "s" (cons "search" suderman/leader-search-map)

@@ -437,8 +437,8 @@ fit the same grammar. For example, =SPC 3 f= moves forward three words.
 | =SPC ?=   | Meow cheatsheet                     |
 | =SPC SPC= | =M-x=                               |
 | =SPC g=   | Git commands                        |
-| =SPC b=   | Buffer commands                     |
-| =SPC f=   | File commands                       |
+| =SPC ,=   | Buffer commands                     |
+| =SPC .=   | File commands                       |
 | =SPC o=   | Org commands                        |
 | =SPC s=   | Search commands                     |
 | =SPC t=   | Toggles                             |
@@ -449,8 +449,8 @@ I use these subcommands most often:
 
 | Prefix  | Useful keys                                                   |
 |---------+---------------------------------------------------------------|
-| =SPC b= | =b= switch, =k= kill, =l= alternate, =r= revert, =s= save     |
-| =SPC f= | =.= Dirvish, =f= find with consult-fd, =g= ripgrep, =r= recent, =s= save, =S= save as |
+| =SPC ,= | =/= switch, =b= IBuffer, =,= alternate, =k= kill, =n/p= next/previous, =r= revert, =s= save |
+| =SPC .= | =.= find with consult-fd, =/= ripgrep, =f= Dirvish, =,= recent, =s= save, =S= save as |
 | =SPC g= | =g= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts |
 | =SPC o= | =a= agenda, =c= capture, =d/s= deadline/schedule, =g= headings, =i/l= insert/store link, =r= refile, =t/T= TODO item/list, =x= checkbox, =e= export |
 | =SPC s= | =c= clear, =i= Imenu, =l= line                                |
