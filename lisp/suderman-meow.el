@@ -850,6 +850,7 @@ An active selection is replaced without modifying the kill ring."
   :demand t
   :init
   (setq meow-use-clipboard t
+        meow-keypad-ctrl-meta-prefix ?M
         meow-use-cursor-position-hack t
         meow--kbd-undo #'undo-only
         ;; Keep Meow editing commands independent from modal key overrides.
