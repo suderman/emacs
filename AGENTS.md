@@ -151,8 +151,8 @@ Important parts of the current grammar follow.
 - `SPC` is both Meow's keypad and the owned leader map. Its native `h`
   translation starts a `C-h` key sequence. Numeric arguments are useful, for
   example `SPC 3 f`.
-- `SPC .` owns Git commands. Status is `SPC . .`, hunks are under `SPC . h`,
-  and conflict resolution is under `SPC . c`.
+- `SPC g` owns Git commands. Status is `SPC g g`, hunks are under `SPC g h`,
+  and conflict resolution is under `SPC g c`.
 - `SPC o` owns the focused Org agenda, capture, scheduling, linking, and refile
   commands.
 

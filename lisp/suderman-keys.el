@@ -29,11 +29,11 @@
 (defvar suderman/leader-file-map nil
   "SPC f file command keymap.")
 (defvar suderman/leader-git-map nil
-  "SPC . Git command keymap.")
+  "SPC g Git command keymap.")
 (defvar suderman/leader-git-conflict-map nil
-  "SPC . c conflict command keymap.")
+  "SPC g c conflict command keymap.")
 (defvar suderman/leader-git-hunk-map nil
-  "SPC . h hunk command keymap.")
+  "SPC g h hunk command keymap.")
 (defvar suderman/leader-org-map nil
   "SPC o Org command keymap.")
 (defvar suderman/leader-search-map nil
@@ -80,7 +80,7 @@
 (keymap-set suderman/leader-git-map "c" suderman/leader-git-conflict-map)
 (keymap-set suderman/leader-git-map "d" #'magit-diff-buffer-file)
 (keymap-set suderman/leader-git-map "f" #'magit-file-dispatch)
-(keymap-set suderman/leader-git-map "." #'magit-status)
+(keymap-set suderman/leader-git-map "g" #'magit-status)
 (keymap-set suderman/leader-git-map "h" suderman/leader-git-hunk-map)
 (keymap-set suderman/leader-git-map "l" #'magit-log-buffer-file)
 (keymap-set suderman/leader-git-map "m" #'magit-dispatch)
@@ -229,7 +229,7 @@
  '("0" . meow-digit-argument)
  '("?" . meow-cheatsheet)
  '("SPC" . execute-extended-command)
- (cons "." suderman/leader-git-map)
+ (cons "g" suderman/leader-git-map)
  (cons "b" suderman/leader-buffer-map)
  (cons "f" suderman/leader-file-map)
  (cons "o" suderman/leader-org-map)
@@ -242,7 +242,7 @@
 
 (which-key-add-keymap-based-replacements
   suderman/meow-leader-map
-  "." (cons "git" suderman/leader-git-map)
+  "g" (cons "git" suderman/leader-git-map)
   "b" (cons "buffers" suderman/leader-buffer-map)
   "f" (cons "files" suderman/leader-file-map)
   "o" (cons "org" suderman/leader-org-map)

@@ -436,7 +436,7 @@ fit the same grammar. For example, =SPC 3 f= moves forward three words.
 |-----------+-------------------------------------|
 | =SPC ?=   | Meow cheatsheet                     |
 | =SPC SPC= | =M-x=                               |
-| =SPC .=   | Git commands                        |
+| =SPC g=   | Git commands                        |
 | =SPC b=   | Buffer commands                     |
 | =SPC f=   | File commands                       |
 | =SPC o=   | Org commands                        |
@@ -451,7 +451,7 @@ I use these subcommands most often:
 |---------+---------------------------------------------------------------|
 | =SPC b= | =b= switch, =k= kill, =l= alternate, =r= revert, =s= save     |
 | =SPC f= | =.= Dirvish, =f= find with consult-fd, =g= ripgrep, =r= recent, =s= save, =S= save as |
-| =SPC .= | =.= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts |
+| =SPC g= | =g= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts |
 | =SPC o= | =a= agenda, =c= capture, =d/s= deadline/schedule, =g= headings, =i/l= insert/store link, =r= refile, =t/T= TODO item/list, =x= checkbox, =e= export |
 | =SPC s= | =c= clear, =i= Imenu, =l= line                                |
 | =SPC t= | =c= column indicator, =d= Dirvish sidebar, =h= current line, =l= line numbers, =o= Org indentation, =r= read only, =s= spelling, =v= visual lines, =w= whitespace |
@@ -467,38 +467,38 @@ so those native single-letter commands win.
 
 | Key         | Action                                  |
 |-------------+-----------------------------------------|
-| =SPC . .=   | Open Magit status                       |
-| =SPC . m=   | Open Magit dispatch                     |
-| =SPC . f=   | Open current-file dispatch              |
-| =SPC . d=   | Diff the current file                   |
-| =SPC . l=   | Show current-file history               |
-| =SPC . b=   | Show current-line blame                 |
-| =SPC . B=   | Show full-buffer blame                  |
+| =SPC g g=   | Open Magit status                       |
+| =SPC g m=   | Open Magit dispatch                     |
+| =SPC g f=   | Open current-file dispatch              |
+| =SPC g d=   | Diff the current file                   |
+| =SPC g l=   | Show current-file history               |
+| =SPC g b=   | Show current-line blame                 |
+| =SPC g B=   | Show full-buffer blame                  |
 
 diff-hl updates change indicators while editing. Its hunk commands are grouped
-under =SPC . h=.
+under =SPC g h=.
 
 | Key           | Action                         |
 |---------------+--------------------------------|
-| =SPC . h n/p= | Next / previous hunk           |
-| =SPC . h v=   | Preview hunk                   |
-| =SPC . h d=   | Open hunk in a diff            |
-| =SPC . h s=   | Stage hunk                     |
-| =SPC . h r=   | Revert hunk                    |
-| =SPC . h u=   | Unstage the current file       |
+| =SPC g h n/p= | Next / previous hunk           |
+| =SPC g h v=   | Preview hunk                   |
+| =SPC g h d=   | Open hunk in a diff            |
+| =SPC g h s=   | Stage hunk                     |
+| =SPC g h r=   | Revert hunk                    |
+| =SPC g h u=   | Unstage the current file       |
 
 Built-in smerge-mode and Ediff handle conflict markers. Upper and lower are
 used instead of ours and theirs because those meanings reverse during rebase.
 
 | Key           | Action                                  |
 |---------------+-----------------------------------------|
-| =SPC . c n/p= | Next / previous conflict                |
-| =SPC . c u/l= | Keep upper / lower side                 |
-| =SPC . c a=   | Keep all sides                          |
-| =SPC . c b=   | Keep the base revision                  |
-| =SPC . c 0=   | Keep neither side                       |
-| =SPC . c r=   | Refine conflict highlighting            |
-| =SPC . c e=   | Resolve the current conflict with Ediff |
+| =SPC g c n/p= | Next / previous conflict                |
+| =SPC g c u/l= | Keep upper / lower side                 |
+| =SPC g c a=   | Keep all sides                          |
+| =SPC g c b=   | Keep the base revision                  |
+| =SPC g c 0=   | Keep neither side                       |
+| =SPC g c r=   | Refine conflict highlighting            |
+| =SPC g c e=   | Resolve the current conflict with Ediff |
 
 Inside Magit, =j/k= and =n/p= move by section, =^= moves to the parent section,
 =TAB= expands or collapses, =RET= visits, =h= opens the dispatch menu, and =q=
