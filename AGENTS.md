@@ -225,6 +225,7 @@ is no broad hidden-buffer blacklist.
 - `l` visits the selected buffer or toggles a group heading.
 - `h` and `,` close IBuffer and restore the previous window.
 - `>` toggles a contextual Dirvish sidebar without leaving IBuffer.
+- `SPC` invokes Meow's keypad without enabling Meow in IBuffer.
 - `.` opens Dirvish for the selected buffer or project heading.
 - `m` toggles the current buffer mark without moving. `M` marks every visible
   buffer and `t` inverts the marks, so `M t` clears them all.

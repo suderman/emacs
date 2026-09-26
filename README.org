@@ -542,6 +542,7 @@ leaving editor focus alone. Meow stays off in both views so their own maps win.
 | =l=       | Visit the selected buffer, or toggle a group heading         |
 | =h / ,=   | Close IBuffer and restore the previous window               |
 | =>=       | Toggle a contextual file sidebar without leaving IBuffer     |
+| =SPC=     | Open the Meow keypad without enabling Meow                    |
 | =m=       | Toggle the current mark without moving                       |
 | =M=       | Mark every visible buffer                                    |
 | =t=       | Invert marks; =M t= clears all marks                         |

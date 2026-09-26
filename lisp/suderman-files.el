@@ -736,7 +736,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
 (keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open)
 (keymap-unset ibuffer-mode-map "i" t)
 (keymap-unset ibuffer-mode-map "H" t)
-(keymap-unset ibuffer-mode-map "SPC" t)
+(keymap-set ibuffer-mode-map "SPC" #'meow-keypad)
 (keymap-set dired-mode-map "`" #'suderman/dashboard)
 
 (use-package pdf-loader
