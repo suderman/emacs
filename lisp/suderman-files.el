@@ -23,7 +23,6 @@
 (defvar dirvish-path-separators)
 (defvar dirvish-yank-sources)
 (defvar dirvish-side-attributes)
-(defvar dirvish-vc-state-face-alist)
 (defvar dirvish-side-mode-line-format)
 (defvar dirvish-subtree--state-icons)
 (defvar global-hl-line-mode)
@@ -731,7 +730,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   (setq dired-listing-switches
         (if (eq system-type 'android) "-al" "-al --group-directories-first")
         dirvish-attributes
-        (append '(vc-state subtree-state)
+        (append '(vc-state suderman-vc-state subtree-state)
                 (when (suderman/nerd-fonts-available-p) '(nerd-icons))
                 '(collapse file-size))
         dirvish-default-layout '(1 0.125 0.5)
@@ -746,7 +745,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
         dirvish-peek-key '(:debounce 0.2 any)
         dirvish-quick-access-entries (suderman/dirvish-quick-access-entries)
         dirvish-side-attributes
-        (append '(vc-state suderman-vc-state subtree-state)
+        (append '(suderman-vc-state subtree-state)
                 (when (suderman/nerd-fonts-available-p) '(nerd-icons))
                 '(collapse))
         dirvish-side-mode-line-format
@@ -755,22 +754,23 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   :config
   (require 'dirvish-vc)
   (dirvish-define-attribute suderman-vc-state
-    "Show version-control state as text in a terminal sidebar."
-    :when (and (eq (dv-type (dirvish-curr)) 'side)
-               (not (dirvish-prop :gui))
-               (symbolp (dirvish-prop :vc-backend)))
-    (let* ((state (dirvish-attribute-cache f-name :vc-state))
-           (mark (alist-get state '((edited . "M") (added . "A")
-                                    (removed . "D") (missing . "D")
-                                    (needs-merge . "!") (conflict . "!")
-                                    (unlocked-changes . "M")
-                                    (needs-update . "U")
-                                    (unregistered . "?"))))
-           (ov (make-overlay f-beg f-beg)))
-      (overlay-put ov 'before-string
-                   (propertize (or mark " ") 'face
-                               (alist-get state dirvish-vc-state-face-alist)))
-      `(ov . ,ov)))
+    "Color changed filenames in Dirvish."
+    :when (and (dirvish-prop :vc-backend)
+               (not (dirvish-prop :remote)))
+    (when-let* ((state (dirvish-attribute-cache f-name :vc-state))
+                (face (alist-get state '((edited . warning)
+                                         (added . success)
+                                         (removed . error)
+                                         (missing . error)
+                                         (needs-merge . error)
+                                         (conflict . error)
+                                         (unlocked-changes . warning)
+                                         (needs-update . warning)
+                                         (unregistered . font-lock-constant-face)))))
+      (let ((ov (make-overlay f-beg f-end)))
+        (overlay-put ov 'face face)
+        (overlay-put ov 'priority 1)
+        `(ov . ,ov))))
   (dirvish-define-mode-line suderman-dashboard
     "Clickable Dashboard button."
     (suderman/dirvish-mode-line-button

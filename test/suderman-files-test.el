@@ -562,30 +562,33 @@
         (should (equal opened "/tmp/"))
         (should (eq (selected-window) editor))))))
 
-(ert-deftest suderman/dirvish-sidebar-shows-terminal-vc-state ()
+(ert-deftest suderman/dirvish-colors-vc-filenames ()
   (with-temp-buffer
-    (let* ((file "/tmp/dirvish-vc-test.txt")
-           (dirvish--dir-data (make-hash-table :test #'equal))
-           (key (secure-hash 'md5 file)))
-      (insert "dirvish-vc-test.txt")
-      (puthash key '(:vc-state edited) dirvish--dir-data)
-      (let* ((ov (cdr (dirvish-attribute-suderman-vc-state-rd
-                       (point-min) (point-max) "dirvish-vc-test.txt" file
-                       nil '(file . nil) (point-min) (point-max) nil 35)))
-             (marker (overlay-get ov 'before-string)))
-        (should (string-match-p "M" marker))
-        (should (eq (get-text-property 0 'face marker)
-                    'dirvish-vc-edited-state)))
-      (puthash key '(:vc-state up-to-date) dirvish--dir-data)
-      (let ((ov (cdr (dirvish-attribute-suderman-vc-state-rd
-                      (point-min) (point-max) "dirvish-vc-test.txt" file
-                      nil '(file . nil) (point-min) (point-max) nil 35))))
-        (should (equal (overlay-get ov 'before-string) " ")))
-      (puthash key '(:vc-state unregistered) dirvish--dir-data)
-      (let ((ov (cdr (dirvish-attribute-suderman-vc-state-rd
-                      (point-min) (point-max) "dirvish-vc-test.txt" file
-                      nil '(file . nil) (point-min) (point-max) nil 35))))
-        (should (equal (overlay-get ov 'before-string) "?"))))))
+    (let ((dirvish--dir-data (make-hash-table :test #'equal)))
+      (dolist (entry '(("lisp" dir edited warning)
+                       ("suderman-meow.el" file edited warning)
+                       ("added.el" file added success)
+                       ("removed.el" file removed error)
+                       ("new.el" file unregistered font-lock-constant-face)
+                       ("clean.el" file up-to-date nil)))
+        (let* ((name (nth 0 entry))
+               (file (concat "/tmp/" name))
+               (beg (point)))
+          (insert name)
+          (puthash (secure-hash 'md5 file)
+                   (list :vc-state (nth 2 entry)) dirvish--dir-data)
+          (let ((rendered (dirvish-attribute-suderman-vc-state-rd
+                           beg (point) name file nil (cons (nth 1 entry) nil)
+                           beg (point) nil 35)))
+            (if (nth 3 entry)
+                (let ((ov (cdr rendered)))
+                  (should (eq (car rendered) 'ov))
+                  (should (= (overlay-start ov) beg))
+                  (should (= (overlay-end ov) (point)))
+                  (should (eq (overlay-get ov 'face) (nth 3 entry)))
+                  (should-not (overlay-get ov 'before-string)))
+              (should-not rendered)))
+          (insert "\n"))))))
 
 (ert-deftest suderman/dirvish-period-focuses-resizable-sidebar ()
   (save-window-excursion
