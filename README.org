@@ -455,7 +455,7 @@ I use these subcommands most often:
 | =SPC o= | =a= agenda, =c= capture, =d/s= deadline/schedule, =g= headings, =i/l= insert/store link, =r= refile, =t/T= TODO item/list, =x= checkbox, =e= export |
 | =SPC s= | =c= clear, =i= Imenu, =l= line                                |
 | =SPC t= | =c= column indicator, =d= Dirvish sidebar, =h= current line, =l= line numbers, =o= Org indentation, =r= read only, =s= spelling, =v= visual lines, =w= whitespace |
-| =SPC w= | =hjkl= focus, =HJKL= resize, =s/v= split, =o= keep one        |
+| =SPC w= | =hjkl= focus, =HJKL= resize, =u/i= split, =w= close, =o= keep one, === balance |
 | =SPC q= | =r= reload                                                     |
 
 ** Git
