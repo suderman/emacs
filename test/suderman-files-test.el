@@ -646,38 +646,6 @@
           (with-selected-window sidebar (dirvish-quit)))
         (delete-directory directory t)))))
 
-(ert-deftest suderman/dirvish-b-replaces-view-with-focused-sidebar ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let* ((directory (make-temp-file "suderman-dirvish-b-" t))
-           (file (expand-file-name "selected.txt" directory))
-           (editor (get-buffer-create "*dirvish-b-editor*")))
-      (unwind-protect
-          (progn
-            (with-temp-file file (insert "selected"))
-            (dolist (full-frame '(nil t))
-              (switch-to-buffer editor)
-              (suderman/dirvish directory)
-              (let ((session (suderman/dirvish-session)))
-                (when (and full-frame (not (dv-curr-layout session)))
-                  (with-selected-window (dv-root-window session)
-                    (dirvish-layout-toggle)))
-                (select-window (dv-root-window session)))
-              (dired-goto-file file)
-              (should (eq (key-binding (kbd "b")) #'suderman/dirvish-to-side))
-              (call-interactively (key-binding (kbd "b")))
-              (let ((sidebar (dirvish-side--session-visible-p)))
-                (should (eq (selected-window) sidebar))
-                (should (eq (dv-type (dirvish-curr)) 'side))
-                (should (equal (dired-get-file-for-visit) file))
-                (should (get-buffer-window editor))
-                (should-not (dv-size-fixed (dirvish-curr)))
-                (dirvish-quit))))
-        (when-let* ((sidebar (dirvish-side--session-visible-p)))
-          (with-selected-window sidebar (dirvish-quit)))
-        (kill-buffer editor)
-        (delete-directory directory t)))))
-
 (ert-deftest suderman/dirvish-sidebar-resizes-from-editor ()
   (save-window-excursion
     (delete-other-windows)

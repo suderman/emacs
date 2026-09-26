@@ -153,6 +153,17 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
                            (define-key map [mode-line mouse-1] command)
                            map)))
 
+(defun suderman/dirvish-side-hide-truncation ()
+  "Clip sidebar filenames without a terminal truncation indicator."
+  (when-let* ((session (dirvish-curr))
+              ((eq (dv-type session) 'side)))
+    (let ((table (if buffer-display-table
+                     (copy-sequence buffer-display-table)
+                   (make-display-table))))
+      ;; Hide terminal Emacs's $ marker so filenames clip like GUI sidebars.
+      (set-display-table-slot table 'truncation ?\s)
+      (setq-local buffer-display-table table))))
+
 (defun suderman/dirvish-side-make-resizable (window)
   "Allow ordinary resizing of the Dirvish sidebar WINDOW."
   (with-current-buffer (window-buffer window)
@@ -160,22 +171,6 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     (when-let* ((session (dirvish-curr)))
       (setf (dv-size-fixed session) nil))
     (setq-local window-size-fixed nil)))
-
-(defun suderman/dirvish-to-side ()
-  "Replace the current Dirvish view with a focused sidebar."
-  (interactive)
-  (let* ((session (or (dirvish-curr) (user-error "Not a Dirvish buffer")))
-         (file (dired-get-file-for-visit))
-         (directory (file-name-directory file)))
-    (unless (eq (dv-type session) 'side)
-      (if (dv-curr-layout session)
-          (suderman/dirvish-quit-full-frame session)
-        (dirvish-quit))
-      (dirvish-side directory)
-      (unless (equal (expand-file-name default-directory) directory)
-        (dirvish--find-entry 'find-alternate-file directory))
-      (suderman/dirvish-side-make-resizable (selected-window))
-      (dired-goto-file file))))
 
 (defun suderman/dirvish-side-toggle (&optional path)
   "Toggle the Dirvish sidebar for PATH without stealing editor focus."
@@ -207,7 +202,6 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     ("G" . "Open image gallery")
     ("TAB" . "Toggle subtree")
     (">" . "Toggle file sidebar")
-    ("b" . "Move view to file sidebar")
     ("C-c B" . "Byte-compile files")
     ("H" . "History backward")
     ("L" . "History forward")
@@ -813,6 +807,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   (require 'dirvish-yank)
   (require 'dirvish-rsync)
   (require 'dirvish-side)
+  (add-hook 'dirvish-setup-hook #'suderman/dirvish-side-hide-truncation)
   (require 'dirvish-peek)
   (require 'dirvish-subtree)
   (add-to-list 'dirvish-archive-exts "gz")
@@ -866,12 +861,12 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     (keymap-set map "R" #'dirvish-rsync)
     (keymap-unset map "S" t)
     (keymap-set map "B" #'dired-do-byte-compile)
+    (keymap-unset map "b" t)
     (keymap-set map ">" #'suderman/dirvish-side-toggle)
     (keymap-set map "C-c B" #'dired-do-byte-compile)
     (keymap-set map "U" #'dired-unmark-all-marks)
     (keymap-set map "X" #'dired-do-flagged-delete)
     (keymap-set map "a" #'suderman/dired-create-item)
-    (keymap-set map "b" #'suderman/dirvish-to-side)
     (keymap-set map "c" #'suderman/dired-copy-files)
     (keymap-set map "f" #'dirvish-layout-toggle)
     (keymap-set map "h" #'dired-up-directory)
