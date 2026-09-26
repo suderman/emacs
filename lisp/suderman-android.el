@@ -13,7 +13,11 @@
 (defvar pixel-scroll-precision-use-momentum)
 (defvar text-conversion-style)
 (defvar touch-screen-current-tool)
+(defvar touch-screen-enable-hscroll)
+(defvar touch-screen-extend-selection)
+(defvar touch-screen-delay)
 (defvar touch-screen-precision-scroll)
+(defvar touch-screen-word-select)
 
 (declare-function pixel-scroll-accumulate-velocity "pixel-scroll" (delta))
 (declare-function pixel-scroll-start-momentum "pixel-scroll" (event))
@@ -171,10 +175,18 @@ resize can therefore be mistaken for the keyboard."
     (pixel-scroll-start-momentum event)))
 
 (defun suderman/android-setup-touch-scrolling ()
-  "Enable pixel-precise touch scrolling with momentum idempotently."
+  "Configure Android touch input and momentum idempotently."
   (require 'pixel-scroll)
   (require 'touch-screen)
-  (setq touch-screen-precision-scroll t
+  ;; Disable horizontal swipes; horizontal scrolling also defeats visual wrapping.
+  ;; Keep vertical swipes pixel-precise, and let touch adjust either end of a
+  ;; word selection.  Shorten long press and hide drag events in the echo area.
+  (setq touch-screen-enable-hscroll nil
+        touch-screen-precision-scroll t
+        touch-screen-word-select t
+        touch-screen-extend-selection t
+        touch-screen-delay 0.5
+        echo-keystrokes 0
         pixel-scroll-precision-use-momentum t)
   (setq-default make-cursor-line-fully-visible nil)
   (advice-remove 'touch-screen-handle-scroll

@@ -453,14 +453,14 @@
         (insert "alpha beta theta")
         (setq-local meow-normal-mode t)
         (goto-char 3)
-        (execute-kbd-macro (kbd "m f t '"))
+        (execute-kbd-macro (kbd "m f t ;"))
         (should (equal (cons (region-beginning) (region-end)) '(1 . 13)))
 
         (meow--cancel-selection)
         (erase-buffer)
         (insert "token beta gamma")
         (goto-char 14)
-        (execute-kbd-macro (kbd "m F t '"))
+        (execute-kbd-macro (kbd "m F t ;"))
         (should (equal (cons (region-beginning) (region-end)) '(1 . 17)))))))
 
 (ert-deftest suderman/meow-word-start-skips-current-word-and-extends-selection ()
