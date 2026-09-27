@@ -35,6 +35,22 @@
     exec ${pkgs.gnome-epub-thumbnailer}/bin/gnome-epub-thumbnailer \
       -s "$3" "$1" "$2"
   '';
+  # nixpkgs' twig-language-server is a different, older implementation.
+  twiggyLanguageServer = pkgs.stdenvNoCC.mkDerivation {
+    pname = "twiggy-language-server";
+    version = "26.4.1";
+    src = pkgs.fetchurl {
+      url = "https://registry.npmjs.org/twiggy-language-server/-/twiggy-language-server-26.4.1.tgz";
+      hash = "sha256-GlV9NhBLReD6eS6w61WDZ6fv7LvujkcEpCiAEW6zufA=";
+    };
+    nativeBuildInputs = [pkgs.makeWrapper];
+    installPhase = ''
+      mkdir -p $out/lib/twiggy-language-server $out/bin
+      cp -r . $out/lib/twiggy-language-server
+      makeWrapper ${lib.getExe pkgs.nodejs} $out/bin/twiggy-language-server \
+        --add-flags $out/lib/twiggy-language-server/bin/server.js
+    '';
+  };
 
   emacsWithDependencies = pkgs.emacsWithPackagesFromUsePackage {
     package = emacsBase;
@@ -86,7 +102,7 @@
         rust-analyzer
         taplo
         tree-sitter
-        twig-language-server
+        twiggyLanguageServer
         typescript-language-server
         vscode-langservers-extracted
         yaml-language-server
