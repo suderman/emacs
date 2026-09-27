@@ -143,7 +143,8 @@ Important parts of the current grammar follow.
   internal copy backend calls `kill-ring-save` directly instead of replaying
   `M-w`.
 - `X` cuts the current line and enters insert state.
-- `n` and `p` search forward and backward.
+- `/` starts incremental literal search. Return selects the match so `n` and
+  `p` search forward and backward through partial-text matches.
 - `t` and `T` move till a character forward and backward.
 - `y` is redo. `u` is one-way Meow undo. `U` is one-way undo in selection.
 - `C` and `V` page up and down through Meow. Vanilla `C-u`, `C-d`, and `C-v`

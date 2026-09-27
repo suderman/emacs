@@ -519,6 +519,85 @@
         (execute-kbd-macro (kbd "m F t ;"))
         (should (equal (cons (region-beginning) (region-end)) '(1 . 17)))))))
 
+(ert-deftest suderman/meow-slash-search-selects-partial-matches ()
+  (let ((transient-mark-mode t)
+        (regexp-search-ring nil))
+    (save-window-excursion
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (insert "savehist auto-save savehist-file save-place-file")
+        (goto-char (point-min))
+        (setq-local meow-normal-mode t)
+        (execute-kbd-macro (kbd "/ s a v e RET"))
+        (should (equal (buffer-substring-no-properties
+                        (region-beginning) (region-end)) "save"))
+        (should (equal (meow--selection-type) '(expand . char)))
+        (should (equal (car regexp-search-ring) "save"))
+        (should-not (memq #'suderman/meow--finish-isearch
+                          isearch-mode-end-hook))
+        (execute-kbd-macro (kbd "n"))
+        (should (= (region-beginning) 15))
+        (execute-kbd-macro (kbd "p"))
+        (should (= (region-beginning) 1))
+        (execute-kbd-macro (kbd "l"))
+        (should (region-active-p))))))
+
+(ert-deftest suderman/meow-search-count-does-not-wrap-text ()
+  (let ((transient-mark-mode t)
+        (regexp-search-ring nil))
+    (save-window-excursion
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (insert "foo at the end of a long line foo\nfoo")
+        (goto-char (point-min))
+        (setq-local meow-normal-mode t)
+        (execute-kbd-macro (kbd "/ f o o RET"))
+        (should (equal suderman/meow-search-count " [1/3]"))
+        (should (string-match-p "1/3"
+                                (doom-modeline-segment--suderman-meow-search)))
+        (should-not meow--search-indicator-overlay)
+        (should-not (cl-some (lambda (ov)
+                               (or (overlay-get ov 'after-string)
+                                   (overlay-get ov 'display)))
+                             (overlays-at (line-end-position))))
+        (execute-kbd-macro (kbd "n"))
+        (should (equal suderman/meow-search-count " [2/3]"))
+        (meow--remove-search-indicator)
+        (should-not suderman/meow-search-count)))))
+
+(ert-deftest suderman/meow-slash-search-cancel-keeps-prior-target ()
+  (let ((transient-mark-mode t)
+        (regexp-search-ring '("old")))
+    (save-window-excursion
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (insert "old savehist")
+        (goto-char (point-min))
+        (setq-local meow-normal-mode t)
+        (execute-kbd-macro (kbd "/ s a v e C-g"))
+        (should (equal (car regexp-search-ring) "old"))
+        (should-not (memq #'suderman/meow--finish-isearch
+                          isearch-mode-end-hook))
+        (should-not (region-active-p))))))
+
+(ert-deftest suderman/meow-slash-search-keeps-literal-and-failed-searches-separate ()
+  (let ((transient-mark-mode t)
+        (regexp-search-ring '("old")))
+    (save-window-excursion
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (insert "old a.b a-b a.b")
+        (goto-char (point-min))
+        (setq-local meow-normal-mode t)
+        (execute-kbd-macro (kbd "/ a . b RET n"))
+        (should (equal (car regexp-search-ring) "a\\.b"))
+        (should (= (region-beginning) 13))
+        (meow--cancel-selection)
+        (goto-char (point-min))
+        (execute-kbd-macro (kbd "/ z z RET"))
+        (should (equal (car regexp-search-ring) "a\\.b"))
+        (should-not (region-active-p))))))
+
 (ert-deftest suderman/meow-word-start-skips-current-word-and-extends-selection ()
   (let ((transient-mark-mode t)
         (current-prefix-arg nil))

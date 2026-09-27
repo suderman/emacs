@@ -422,7 +422,7 @@ then enters Insert state.
 | =n / p= | Search forward / backward                               |
 | =t / T= | Move till a character forward / backward                |
 | ='=     | Repeat the last till immediately after =t= or =T=       |
-| =/=     | Visit a selected thing                                  |
+| =/=     | Search incrementally; Return selects match for =n/p=   |
 
 Repeat-FU records edits across Insert-state transitions and keeps repeat history
 across buffers.

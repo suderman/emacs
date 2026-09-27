@@ -274,6 +274,40 @@ Crossing the anchor reverses the selection naturally."
    (t
     (repeat-fu-execute n))))
 
+(defun suderman/meow--finish-isearch ()
+  "Make a successful Isearch match available to Meow's search motions."
+  (remove-hook 'isearch-mode-end-hook #'suderman/meow--finish-isearch t)
+  (when (and (not isearch-mode-end-hook-quit)
+             isearch-success
+             (not (string-empty-p isearch-string))
+             isearch-other-end)
+    (meow--push-search (regexp-quote isearch-string))
+    (thread-first
+      (meow--make-selection '(expand . char) isearch-other-end (point))
+      (meow--select t))
+    (meow--highlight-regexp-in-buffer (car regexp-search-ring))))
+
+(defvar-local suderman/meow-search-count nil
+  "Current Meow search match and total for the mode line.")
+
+(defun suderman/meow-show-search-count (_pos idx cnt)
+  "Show Meow search match IDX of CNT outside the buffer text."
+  (setq suderman/meow-search-count (format " [%d/%d]" idx cnt))
+  (force-mode-line-update))
+
+(defun suderman/meow-clear-search-count (&rest _)
+  "Clear the mode-line count when Meow removes its search indicator."
+  (setq suderman/meow-search-count nil)
+  (force-mode-line-update))
+
+(defun suderman/meow-start-search ()
+  "Search incrementally for literal text, then select it for Meow n/p."
+  (interactive)
+  (add-hook 'isearch-mode-end-hook #'suderman/meow--finish-isearch nil t)
+  (let ((case-fold-search nil)
+        (search-default-mode nil))
+    (isearch-forward)))
+
 (defun suderman/meow-search (&optional backward)
   "Search in the requested direction, leaving a character selection.
 Search backward when BACKWARD is non-nil, otherwise search forward."
@@ -678,6 +712,7 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/meow-next . "down")
                    (suderman/meow-outdent . "outdent")
                    (suderman/meow-prev . "up")
+                   (suderman/meow-start-search . "search")
                    (suderman/meow-search . "search +")
                    (suderman/meow-search-backward . "search -")
                    (suderman/meow-join-line . "join line")
@@ -804,7 +839,7 @@ An active selection is replaced without modifying the kill ring."
    '("z" . meow-pop-selection)
    '("Z" . suderman/meow-buffer-end)
    '(";" . suderman/meow-repeat)
-   '("/" . meow-visit)
+   '("/" . suderman/meow-start-search)
    '("<escape>" . suderman/meow-escape)))
 
 (use-package evil-matchit
@@ -883,6 +918,19 @@ An active selection is replaced without modifying the kill ring."
           (term-mode . insert)
           (ghostel-mode . insert)))
   :config
+  (advice-remove 'meow--show-indicator #'suderman/meow-show-search-count)
+  (advice-add 'meow--show-indicator :override
+              #'suderman/meow-show-search-count)
+  (advice-remove 'meow--remove-search-indicator
+                 #'suderman/meow-clear-search-count)
+  (advice-add 'meow--remove-search-indicator :after
+              #'suderman/meow-clear-search-count)
+  (doom-modeline-def-segment suderman-meow-search
+    "Show Meow's search match count without changing buffer layout."
+    (when (bound-and-true-p suderman/meow-search-count)
+      (propertize suderman/meow-search-count 'face 'meow-search-indicator)))
+  (doom-modeline-remove-segment 'suderman-meow-search)
+  (doom-modeline-add-segment 'suderman-meow-search 'matches :after)
   (dolist (command '(meow-beginning-of-thing
                      meow-end-of-thing
                      meow-inner-of-thing
