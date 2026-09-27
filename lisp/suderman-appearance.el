@@ -65,7 +65,7 @@ The producer owns values; this configuration owns their use on faces.")
 ;; https://github.com/tinted-theming/base16-emacs/blob/main/base16-theme.el
 (defun suderman/base16-theme-set-faces-without-gnus-cycles
     (function theme colors faces)
-  "Call FUNCTION for THEME and COLORS with safe Gnus FACES."
+  "Call FUNCTION with safe Gnus FACES and no duplicate Flymake aliases."
   (funcall
    function theme colors
    (mapcar
@@ -82,7 +82,12 @@ The producer owns values; this configuration owns their use on faces.")
             (cons (car face)
                   (plist-put (copy-sequence (cdr face)) :inherit inherit))
           face)))
-    faces)))
+    ;; Flymake aliases its old face names to these same canonical faces.
+    (cl-remove-if
+     (lambda (face)
+       (and (memq (car face) '(flymake-errline flymake-warnline))
+            (assq (get (car face) 'face-alias) faces)))
+     faces))))
 
 (with-eval-after-load 'base16-theme
   ;; Do not trust an SSH client's ANSI palette to match Stylix.  In a
