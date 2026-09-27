@@ -292,7 +292,16 @@ Crossing the anchor reverses the selection naturally."
              isearch-success
              (not (string-empty-p isearch-string))
              isearch-other-end)
-    (meow--push-search (regexp-quote isearch-string))
+    ;; Meow searches with `case-fold-search' nil, so encode lowercase
+    ;; queries as case-insensitive regexps for its n/p and count paths.
+    (meow--push-search
+     (if (string= isearch-string (downcase isearch-string))
+         (mapconcat (lambda (char)
+                      (if (= char (upcase char))
+                          (regexp-quote (char-to-string char))
+                        (regexp-opt-charset (list char (upcase char)))))
+                    isearch-string "")
+       (regexp-quote isearch-string)))
     (thread-first
       (meow--make-selection '(expand . char) isearch-other-end (point))
       (meow--select t))
@@ -314,8 +323,11 @@ Crossing the anchor reverses the selection naturally."
 (defun suderman/meow-start-search ()
   "Search incrementally for literal text, then select it for Meow n/p."
   (interactive)
+  (suderman/meow--cancel-active-selection)
+  (meow--remove-search-indicator)
   (add-hook 'isearch-mode-end-hook #'suderman/meow--finish-isearch nil t)
-  (let ((case-fold-search nil)
+  (let ((case-fold-search t)
+        (search-upper-case t)
         (search-default-mode nil))
     (isearch-forward)))
 

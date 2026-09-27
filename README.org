@@ -424,8 +424,11 @@ then enters Insert state.
 | ='=     | Repeat the last till immediately after =t= or =T=       |
 | =/=     | Search incrementally; Return selects match for =n/p=   |
 
-In Meow Normal state, Return clears an active selection. Press it again to
-run the mode's usual Return command.
+Slash search uses smartcase: =home= matches =Home= and =home=, while =Home=
+only matches =Home=. This applies to subsequent =n/p= matches and the count.
+Starting another slash search clears the previous selection. In Meow Normal
+state, Return clears an active selection. Press it again to run the mode's usual
+Return command.
 
 Repeat-FU records edits across Insert-state transitions and keeps repeat history
 across buffers.
