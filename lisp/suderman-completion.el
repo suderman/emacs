@@ -1,8 +1,7 @@
-;;; suderman-completion.el --- Minibuffer completion stack -*- lexical-binding: t; -*-
+;;; suderman-completion.el --- Minibuffer and in-buffer completion -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Vertico, Orderless, Consult, Marginalia, and Embark stay together because they
-;; are one coherent minibuffer UX.
+;; Vertico handles the minibuffer; Corfu displays mode CAPFs in editing buffers.
 
 ;;; Code:
 
@@ -119,6 +118,54 @@
 
 (use-package embark-consult
   :after (embark consult))
+
+;; Keep TAB's usual indentation, with completion when indentation is done.
+(setq tab-always-indent 'complete
+      text-mode-ispell-word-completion nil)
+
+(use-package corfu
+  :custom
+  (global-corfu-minibuffer nil)
+  (corfu-auto t)
+  (corfu-auto-prefix 2)
+  (corfu-auto-delay 0.15)
+  (corfu-cycle t)
+  (corfu-preselect 'prompt)
+  (corfu-preview-current nil)
+  (corfu-popupinfo-delay '(0.5 . 0.5))
+  :bind (:map corfu-map
+              ("TAB" . corfu-next)
+              ([tab] . corfu-next)
+              ("S-TAB" . corfu-previous)
+              ([backtab] . corfu-previous))
+  :init
+  ;; Emacs 31 child frames float over both GUI and TTY buffers.
+  (global-corfu-mode 1)
+  (corfu-history-mode 1)
+  (corfu-popupinfo-mode 1))
+
+;; Savehist is already enabled in suderman-defaults; retain choices across runs.
+(add-to-list 'savehist-additional-variables 'corfu-history)
+
+(use-package nerd-icons-corfu
+  :after corfu
+  :demand t
+  :config
+  (when (suderman/nerd-fonts-available-p)
+    (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)))
+
+(use-package cape
+  :demand t
+  :config
+  ;; Mode CAPFs (including Eglot and pcomplete) win; no merged LSP candidates.
+  (defalias 'suderman/cape-dabbrev
+    (cape-capf-prefix-length #'cape-dabbrev 3))
+  (add-hook 'completion-at-point-functions #'cape-file t)
+  (add-hook 'completion-at-point-functions #'suderman/cape-dabbrev t))
+
+;; Shell prompts already complete on TAB; avoid unsolicited menus while typing.
+(add-hook 'eshell-mode-hook (lambda () (setq-local corfu-auto nil)))
+(add-hook 'comint-mode-hook (lambda () (setq-local corfu-auto nil)))
 
 (provide 'suderman-completion)
 ;;; suderman-completion.el ends here
