@@ -21,6 +21,7 @@
 
 (declare-function pixel-scroll-accumulate-velocity "pixel-scroll" (delta))
 (declare-function pixel-scroll-start-momentum "pixel-scroll" (event))
+(declare-function server-running-p "server" (&optional name))
 (declare-function set-text-conversion-style "textconv.c"
                   (style &optional keep-selection))
 (declare-function tool-bar-apply-modifiers "tool-bar" (event modifiers))
@@ -275,6 +276,9 @@ THEME is non-nil when refreshing the toolbar after a theme change."
 (suderman/android-setup-tool-bar)
 
 (when (eq system-type 'android)
+  (require 'server)
+  (unless (server-running-p)
+    (server-start))
   (add-to-list 'exec-path suderman/android-termux-bin)
   (setenv "PATH"
           (string-join (delete-dups
