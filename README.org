@@ -424,6 +424,9 @@ then enters Insert state.
 | ='=     | Repeat the last till immediately after =t= or =T=       |
 | =/=     | Search incrementally; Return selects match for =n/p=   |
 
+In Meow Normal state, Return clears an active selection. Press it again to
+run the mode's usual Return command.
+
 Repeat-FU records edits across Insert-state transitions and keeps repeat history
 across buffers.
 

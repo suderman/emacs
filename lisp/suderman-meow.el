@@ -69,6 +69,17 @@
   (when (region-active-p)
     (meow--cancel-selection)))
 
+(defun suderman/meow-return ()
+  "Clear an active selection, otherwise run the mode's Return command."
+  (interactive)
+  (if (region-active-p)
+      (progn
+        (meow--cancel-selection)
+        (meow--remove-search-indicator))
+    (let ((command (let ((meow-normal-mode nil))
+                     (key-binding (this-command-keys-vector)))))
+      (call-interactively command))))
+
 (defun suderman/meow--move-line-selection (n)
   "Move the active end of a line selection by N lines.
 
@@ -823,6 +834,7 @@ An active selection is replaced without modifying the kill ring."
    '("Q" . kill-current-buffer)
    '("r" . suderman/meow-replace-char)
    '("R" . meow-swap-grab)
+   '("RET" . suderman/meow-return)
    (cons "s" surround-keymap)
    '("t" . suderman/meow-till)
    '("T" . suderman/meow-till-backward)

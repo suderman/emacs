@@ -542,6 +542,34 @@
         (execute-kbd-macro (kbd "l"))
         (should (region-active-p))))))
 
+(ert-deftest suderman/meow-return-clears-selection-before-editing ()
+  (let ((transient-mark-mode t)
+        (regexp-search-ring nil))
+    (save-window-excursion
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (emacs-lisp-mode)
+        (insert "alpha beta alpha")
+        (goto-char (point-min))
+        (setq-local meow-normal-mode t)
+        (execute-kbd-macro (kbd "/ a l p h a RET"))
+        (should (region-active-p))
+        (execute-kbd-macro (kbd "RET"))
+        (should-not (region-active-p))
+        (should-not suderman/meow-search-count)
+        (should (equal (buffer-string) "alpha beta alpha"))
+        (execute-kbd-macro (kbd "RET"))
+        (should (equal (buffer-string) "alpha\nbeta alpha"))))
+    (save-window-excursion
+      (with-temp-buffer
+        (set-window-buffer (selected-window) (current-buffer))
+        (org-mode)
+        (insert "paragraph")
+        (goto-char 5)
+        (setq-local meow-normal-mode t)
+        (execute-kbd-macro (kbd "RET"))
+        (should (equal (buffer-string) "para\ngraph"))))))
+
 (ert-deftest suderman/meow-search-count-does-not-wrap-text ()
   (let ((transient-mark-mode t)
         (regexp-search-ring nil))

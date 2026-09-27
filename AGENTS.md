@@ -144,7 +144,9 @@ Important parts of the current grammar follow.
   `M-w`.
 - `X` cuts the current line and enters insert state.
 - `/` starts incremental literal search. Return selects the match so `n` and
-  `p` search forward and backward through partial-text matches.
+  `p` search forward and backward through partial-text matches. In Normal state,
+  Return clears an active selection; a second Return runs the major mode's
+  usual command.
 - `t` and `T` move till a character forward and backward.
 - `y` is redo. `u` is one-way Meow undo. `U` is one-way undo in selection.
 - `C` and `V` page up and down through Meow. Vanilla `C-u`, `C-d`, and `C-v`
