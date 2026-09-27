@@ -47,11 +47,12 @@
   nil)
 
 (defun suderman/meow-escape ()
-  "Exit Meow Insert state, or run the current `C-g' command."
+  "Cancel any selection, then exit Insert state or return to the top level."
   (interactive)
+  (suderman/meow--cancel-active-selection)
   (if (bound-and-true-p meow-insert-mode)
       (meow-insert-exit)
-    (call-interactively (key-binding (kbd "C-g")))))
+    (top-level)))
 
 ;;;; Selection and motion
 
