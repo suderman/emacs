@@ -17,8 +17,8 @@
 (when (boundp 'native-comp-async-report-warnings-errors)
   (setq native-comp-async-report-warnings-errors 'silent))
 
-;; Basic UI cleanup. Keep the menu while getting acquainted.
-(menu-bar-mode 1)
+;; Basic UI cleanup.
+(menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
 
