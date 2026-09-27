@@ -164,6 +164,8 @@
 (setq tab-bar-close-last-tab-choice 'delete-frame)
 
 (global-set-key (kbd "<escape>") #'suderman/meow-escape)
+(global-set-key (kbd "C-<escape>") #'top-level)
+(global-set-key (kbd "C-c C-g") #'top-level)
 (global-set-key (kbd "<f5>") #'suderman/reload-config)
 (global-set-key (kbd "<f6>") #'suderman/pull-config)
 (global-set-key (kbd "<f9>") #'tool-bar-mode)
