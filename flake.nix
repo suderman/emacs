@@ -9,6 +9,8 @@
     emacs-overlay.inputs.nixpkgs.follows = "nixpkgs";
     kitty-graphics.url = "github:cashmeredev/kitty-graphics.el";
     kitty-graphics.flake = false;
+    pins.url = "github:suderman/pins";
+    pins.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =

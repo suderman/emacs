@@ -36,13 +36,10 @@
       -s "$3" "$1" "$2"
   '';
   # nixpkgs' twig-language-server is a different, older implementation.
+  twiggyPin = inputs.pins.default.npm.twiggy-language-server;
   twiggyLanguageServer = pkgs.stdenvNoCC.mkDerivation {
-    pname = "twiggy-language-server";
-    version = "26.4.1";
-    src = pkgs.fetchurl {
-      url = "https://registry.npmjs.org/twiggy-language-server/-/twiggy-language-server-26.4.1.tgz";
-      hash = "sha256-GlV9NhBLReD6eS6w61WDZ6fv7LvujkcEpCiAEW6zufA=";
-    };
+    inherit (twiggyPin) pname version;
+    src = pkgs.fetchurl {inherit (twiggyPin) url hash;};
     nativeBuildInputs = [pkgs.makeWrapper];
     installPhase = ''
       mkdir -p $out/lib/twiggy-language-server $out/bin
