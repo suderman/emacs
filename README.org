@@ -1,4 +1,4 @@
-#+title: suderman/emacs 🐈
+#+title: suderman/emacs
 #+subtitle: Personal Emacs 31 configuration for NixOS & Android
 #+author: Jon Suderman
 #+options: toc:2 num:nil
@@ -15,10 +15,11 @@ annoying.
 motion. Built-in =project.el= supplies project data.
 IBuffer shows open buffers by project, Dirvish handles the file tree and file
 management, and Magit handles Git. Vertico, Orderless, Consult, Marginalia, and
-Embark handle minibuffer completion.
+Embark handle minibuffer completion. Corfu shows in-buffer completion, with
+Eglot supplying language-server results when the server is available.
 
 Some choices are a little odd on purpose. Comma opens IBuffer, period opens
-Dirvish, and apostrophe repeats edits. =SPC= is both Meow's keypad and my leader
+Dirvish, and semicolon repeats edits. =SPC= is both Meow's keypad and my leader
 key. IBuffer and Dirvish pass file and project context back and forth instead of
 acting like separate tools.
 
@@ -92,8 +93,8 @@ is signed with the public certificate used by official Termux GitHub releases,
 so Android grants Emacs the APK's =com.termux= shared UID and Emacs can execute
 programs under =/data/data/com.termux/files/usr/bin=.
 
-The Android build currently targets Emacs 31.0.50, Android API 35 or newer, and
-=arm64-v8a=. Build it on x86_64 Linux with:
+The Android package uses Emacs 31.0.50 for =arm64-v8a=, requires Android API 35
+or newer, and declares target API 36. Build it on x86_64 Linux with:
 
 #+begin_src sh
 nix build .#emacs-android --out-link result-android
@@ -220,11 +221,11 @@ ELPA keyring to a temporary physical file for import and deletes it afterward.
 Package signature verification stays enabled.
 
 Android keeps the portable editing core: Meow, completion, Org, Magit,
-Dashboard, Dired and Dirvish, Markdown, and Image mode. Ghostel, Nix
-tree-sitter integration, automatic formatting, Pi, PDF Tools, and Kitty graphics
-remain desktop-only. Dashboard and Dirvish only show destinations present on
-the current device. EPUB, audio, and video files open through Android's native
-app chooser.
+Dashboard, Dired and Dirvish, Markdown, and Image mode. Nix tree-sitter
+integration, automatic formatting, Pi, PDF Tools, and Kitty graphics remain
+desktop-only. Ghostel integration is currently disabled. Dashboard and Dirvish
+only show destinations present on the current device. EPUB, audio, and video
+files open through Android's native app chooser.
 
 ** Fonts and input
 
@@ -246,10 +247,11 @@ NixOS/Stylix selects CommitMono for fixed text and Literata for prose. The
 Only =kit= enables =programs.emacs.exportStyle= to avoid competing writers.
 
 The file sets =suderman/system-style= to a plist with =:mono-font=,
-=:variable-font=, =:icon-font=, =:font-size= in points, and =:palettes= containing
-=:light= and =:dark= Base16 plists. Both come from the existing Stylix toggle's
-schemes, currently Catppuccin Latte and Mocha. The file contains no active-mode
-state: changing the desktop appearance must not change Android's preference.
+=:fallback-font=, =:variable-font=, =:icon-font=, and =:font-size= in points.
+Its =:palettes= contains =:light= and =:dark= Base16 plists using the Stylix
+toggle's schemes, currently Catppuccin Latte and Mocha. The file contains no
+active-mode state. Changing the desktop appearance must not change Android's
+preference.
 The activation copies real contents rather than a Nix store symlink, which
 would not work on Android.
 
@@ -281,17 +283,16 @@ Desktop uses Stylix's terminal point size, currently 12. Android multiplies
 that by =suderman/android-font-scale=, initially =17/12=, to preserve its
 17-point baseline. Pinch and frame scaling remain available.
 
-PROPERTIES and LOGBOOK drawers use separate tinted, full-width backgrounds
-with bold boundary labels. Their colors follow the theme's keyword and function
-accents. Native folding and editable text remain unchanged; logbook prose,
+PROPERTIES and LOGBOOK drawers share the source-block background. Folded
+openers keep a compact muted label; expanded bodies and closing lines fill the
+width. Native folding and editable text remain unchanged. Logbook prose,
 links, and timestamps keep their usual fonts and colors.
 
 Nerd Font fallback covers BMP private use and =F0001–F1AF0=, checked against
 Symbols Nerd Font Mono 3.4.0. It does not claim ordinary arrows, mathematics,
 box drawing, or the third private-use block. On Android, CommitMono is the first
-fallback for glyphs missing from Literata. Ioskeley Mono remains the final
-ordinary-glyph fallback during this trial so characters absent from CommitMono,
-such as the plain heart, do not disappear.
+fallback for glyphs missing from Literata. Ioskeley Mono is the final
+ordinary-glyph fallback for characters absent from CommitMono.
 
 *** Install the shared fonts on Android
 
@@ -319,10 +320,16 @@ The host needs =ssh=, =rsync=, and =sha256sum=. =EMACS_ANDROID_HOST= overrides
 native Emacs. The older guided APK installer still provides JetBrains and
 Symbols as bootstrap fallbacks; this helper adds the shared typography.
 
-The bottom toolbar supplies Escape, Tab, Ctrl, and Meta. Volume Down applies
-Ctrl to the next key, and Volume Up applies Meta. Press Volume Down then Volume
-Up for Escape, or Volume Up then Volume Down for Tab. The toolbar Escape button
-calls Meow's insert-exit command directly.
+The bottom toolbar supplies Ctrl, Meta, IBuffer, the software-keyboard toggle,
+Dirvish, Tab, and Escape. Ctrl and Meta apply to the next key and can be combined.
+Volume Down applies Ctrl to the next key, and Volume Up applies Meta. Press
+Volume Down then Volume Up for Escape, or Volume Up then Volume Down for Tab.
+Escape clears a selection and leaves Insert state, or cancels the current command.
+=F9= toggles the toolbar. Pinch scales text globally; vertical swipes use
+pixel-precise scrolling with momentum.
+
+The Android config starts Emacs's server if it is not already running, for
+external apps' Open with requests.
 
 * Nix and mutability
 
@@ -330,13 +337,13 @@ I want deterministic bootstrapping without turning every Lisp edit into a Nix
 rebuild. The split is fairly small.
 
 - =use-package= forms remain the source of truth for pure Elisp dependencies.
-  Most come from the flake's package set; =meow-purrsist= installs from GitHub
-  through =package-vc= when missing, on both desktop and Android.
+  Most come from the flake's package set; =meow-purrsist= and =edger= install
+  from GitHub through =package-vc= when missing, on both desktop and Android.
 - Native Emacs modules, tree-sitter grammars, and external programs live in
   [[file:nix/packages/emacs.nix][nix/packages/emacs.nix]] because they need compiled or system-level
   dependencies.
 - =early-init.el=, =init.el=, =lisp/=, and =assets/= become an immutable config
-  source in the Nix store. =meow-purrsist= lives in the mutable =package.el=
+  source in the Nix store. Git-installed packages live in the mutable =package.el=
   directory on both desktop and Android.
 - =package.el= still works for quick experiments. Its packages live under
   =~/.local/share/emacs/elpa= instead of this repository.
@@ -349,6 +356,8 @@ to the configuration bundled by this flake. A direct =nix run= uses the bundled
 copy by default.
 
 Package data and runtime state follow XDG paths, so they do not end up in Git.
+=SPC q u= upgrades both archive and Git-installed mutable packages without
+per-package confirmation. It does not upgrade Nix-owned packages.
 
 Read [[file:AGENTS.md][AGENTS.md]] before changing the structure. It explains which repository owns
 each package, what each module does, where hot reload has failed before, and how
@@ -362,33 +371,67 @@ Which-Key shows each leader prefix while I type it.
 
 ** Finding a command
 
-| Key       | Action                                  |
-|-----------+-----------------------------------------|
-| =SPC ?=   | Open the Meow cheatsheet                |
-| =SPC ...= | Show the current leader choices         |
-| =C-h k=   | Describe a key                          |
-| =C-h b=   | Show effective bindings in this buffer  |
-| =M-x=     | Run a command by name                   |
-| =F5=      | Reload the modular configuration        |
+| Key       | Action                                 |
+|-----------+----------------------------------------|
+| =SPC ?=   | Open the Meow cheatsheet               |
+| =SPC ...= | Show the current leader choices        |
+| =C-h k=   | Describe a key                         |
+| =C-h b=   | Show effective bindings in this buffer |
+| =M-x=     | Run a command by name                  |
+| =F5=      | Reload the modular configuration       |
+| =F6=      | Pull configuration updates             |
+
+** Completion
+
+Vertico handles minibuffer choices. Corfu handles editing-buffer completion in
+GUI and terminal child frames, including Android. Native mode completion stays
+first. Cape adds file paths and words from open buffers as fallbacks.
+
+| Context        | Key           | Action                          |
+|----------------+---------------+---------------------------------|
+| Editing buffer | =TAB=         | Indent, then request completion |
+| Corfu popup    | =TAB / S-TAB= | Next / previous candidate       |
+| Corfu popup    | =RET=         | Insert the selected candidate   |
+| Corfu popup    | =C-g=         | Close the popup                 |
+| Minibuffer     | =C-. / C-;=   | Embark actions / default action |
+
+Corfu opens automatically while typing, but starts with no candidate selected.
+It shows documentation after a short delay and remembers previous choices.
+Buffer-word fallback starts at three characters. Shell buffers use manual
+completion instead of automatic popups.
+
+Eglot starts when the current buffer can find its language server. On desktop,
+this includes servers supplied by a project's direnv environment. Configured
+languages include PHP, Nix, Lua, HTML, CSS, JavaScript/TypeScript, JSON, YAML,
+Python, and Twig.
+Elisp, Org, and Markdown keep native completion. Android uses the same setup but
+needs server executables supplied locally; the APK does not bundle them.
+
+Phpactor needs WordPress core or project stubs to complete WordPress APIs.
+Installing the server alone does not supply those definitions. Use
+=M-x eglot-code-actions= for actions and =M-x eldoc-doc-buffer= for full hover
+documentation. Routine hover text stays on one echo-area line.
 
 ** Meow normal state
 
 *** Movement and navigation
 
-| Keys        | Action                                         |
-|-------------+------------------------------------------------|
-| =h j k l=   | Move left, down, up, and right                  |
-| =a / e=     | Move to smart beginning / end of line           |
-| =A / Z=     | Move to beginning / end of buffer               |
-| =b / f=     | Move backward / forward by word                 |
-| =B=         | Move backward by symbol                         |
-| =#=         | Go to line                                      |
-| =%=         | Jump to matching delimiter or item              |
-| =C / V=     | Page up / down                                  |
-| =, / .=     | Open project-grouped IBuffer / Dirvish          |
-| =`=         | Open the Dashboard                               |
-| =>=         | Toggle the Dirvish sidebar without moving focus  |
-| =q / Q=     | Quit the view / kill the current buffer         |
+| Keys      | Action                                           |
+|-----------+--------------------------------------------------|
+| =h j k l= | Move left, down, up, and right                   |
+| =^ / $=   | Move to smart beginning / end of line            |
+| =P / N=   | Move to beginning / end of buffer                |
+| =Z=       | Move to end of buffer                            |
+| =b / B=   | Move backward to word / symbol start             |
+| =w / W=   | Move to next word / symbol start                 |
+| =e / E=   | Move forward to word / symbol end                |
+| =#=       | Go to line                                       |
+| =%=       | Jump to matching delimiter or item               |
+| =C / V=   | Page up / down                                   |
+| =, / .=   | Open IBuffer / open Dirvish or focus its sidebar |
+| =`=       | Open the Dashboard                               |
+| =>=       | Toggle the Dirvish sidebar without moving focus  |
+| =q / Q=   | Quit the view / kill the current buffer          |
 
 =meow-purrsist= keeps active selections adjustable by movement, including
 reversed selections and regions made outside Meow. Line selections keep their
@@ -399,39 +442,55 @@ closes the sidebar; in IBuffer it uses the selected buffer or project.
 
 *** Selection and editing
 
-| Keys           | Action                                             |
-|----------------+----------------------------------------------------|
-| =m / mm / mmm= | Select word / symbol / enclosing block              |
-| =M / MM / MMM= | Select line / rectangle / whole buffer               |
-| =g / G=        | Cancel selection / grab another selection           |
-| =i / I / E=    | Insert here / at indentation / at end of line        |
-| =o / O=        | Open a line below / above                            |
-| =c / v=        | Copy / paste                                         |
-| =d / D=        | Delete selection or character / delete line          |
-| =x / X=        | Cut and insert / cut line and insert                  |
-| =r=            | Replace one character                                |
-| =s=            | Surround command prefix                              |
-| =s s=          | Add a surround                                       |
-| =H / L=        | Outdent / indent                                     |
-| =J / K=        | Move selected lines down / up                         |
-| =u / U=        | One-way undo / one-way undo inside selection         |
-| =y=            | Redo                                                 |
-| ='=            | Repeat the last edit                                 |
+| Keys           | Action                                                  |
+|----------------+---------------------------------------------------------|
+| =m / mm / mmm= | Select word / symbol / enclosing block                  |
+| =M / MM / MMM= | Select line / rectangle / whole buffer                  |
+| =g / G=        | Cancel selection / grab another selection               |
+| =i / a=        | Insert here / append after point                        |
+| =I / A=        | Insert at smart line start / end, or extend selection   |
+| =o / O=        | Open a line below / above                               |
+| =c / v=        | Copy selection or file path / paste                     |
+| =d / D=        | Delete selection or character / selection or line       |
+| =x / X=        | Cut and insert / cut selection or line and insert       |
+| =r=            | Replace one character                                   |
+| =s=            | Surround command prefix                                 |
+| =s s=          | Add a surround                                          |
+| =H / L=        | Outdent / indent, or promote / demote in Org            |
+| =J / K=        | Move lines down / up, or move Org elements              |
+| =C-j=          | Join the current line with the next                     |
+| ===            | Format the buffer on desktop                            |
+| =?=            | Reverse selection direction                             |
+| =u / U=        | One-way undo / one-way undo inside selection            |
+| =y=            | Redo                                                    |
+| =;=            | Repeat the last edit or immediately preceding find/till |
 
-=d= does not fill the kill ring. =x= cuts a real multi-character selection,
-then enters Insert state.
+=d= and =D= do not fill the kill ring. =x= cuts a multi-character selection,
+then enters Insert state. With one selected character or no selection, it deletes
+one character without copying it. =X= uses the selection when active, otherwise
+the current line.
+
+=I= and =A= extend an active selection to the smart line start or end without
+entering Insert state. Without a selection, they move there and start inserting.
+Smart line start toggles between indentation and column zero. Smart line end
+stops before a trailing comment, then moves to the physical line end.
+
+Apostrophe, double quote, and =~= are intentionally inert in Normal state.
+=?= reverses a selection on both desktop and Android.
 
 *** Search and repeat
 
-| Keys    | Action                                                   |
-|---------+----------------------------------------------------------|
-| =n / p= | Search forward / backward                               |
-| =t / T= | Move till a character forward / backward                |
-| ='=     | Repeat the last till immediately after =t= or =T=       |
-| =/=     | Search incrementally; Return selects match for =n/p=   |
+| Keys    | Action                                               |
+|---------+------------------------------------------------------|
+| =n / p= | Search forward / backward                            |
+| =f / F= | Find a character forward / backward                  |
+| =t / T= | Move till a character forward / backward             |
+| =;=     | Repeat find/till immediately after =f/F= or =t/T=    |
+| =/=     | Search incrementally; Return selects match for =n/p= |
 
 Slash search uses smartcase: =home= matches =Home= and =home=, while =Home=
-only matches =Home=. This applies to subsequent =n/p= matches and the count.
+only matches =Home=. This applies to subsequent =n/p= matches and the count,
+which appears in the mode line rather than inside the buffer text.
 Starting another slash search clears the previous selection. In Meow Normal
 state, Return clears an active selection. Press it again to run the mode's usual
 Return command.
@@ -442,33 +501,35 @@ across buffers.
 ** SPC leader
 
 =SPC= does two jobs. It opens Meow's keypad and my leader map. Numeric arguments
-fit the same grammar. For example, =SPC 3 f= moves forward three words.
+fit the same grammar. For example, =SPC 3 w= moves forward three word starts.
+=SPC h= starts a native =C-h= help sequence. Arrow keys page through Which-Key
+choices without leaving the keypad.
 
-| Key       | Action                              |
-|-----------+-------------------------------------|
-| =SPC ?=   | Meow cheatsheet                     |
-| =SPC SPC= | =M-x=                               |
-| =SPC g=   | Git commands                        |
-| =SPC ,=   | Buffer commands                     |
-| =SPC .=   | File commands                       |
-| =SPC o=   | Org commands                        |
-| =SPC s=   | Search commands                     |
-| =SPC t=   | Toggles                             |
-| =SPC w=   | Window commands                     |
-| =SPC q=   | Quit and configuration commands     |
+| Key       | Action                          |
+|-----------+---------------------------------|
+| =SPC ?=   | Meow cheatsheet                 |
+| =SPC SPC= | =M-x=                           |
+| =SPC g=   | Git commands                    |
+| =SPC ,=   | Buffer commands                 |
+| =SPC .=   | File commands                   |
+| =SPC o=   | Org commands                    |
+| =SPC s=   | Search commands                 |
+| =SPC t=   | Toggles                         |
+| =SPC w=   | Window commands                 |
+| =SPC q=   | Quit and configuration commands |
 
 I use these subcommands most often:
 
-| Prefix  | Useful keys                                                   |
-|---------+---------------------------------------------------------------|
-| =SPC ,= | =/= switch, =b= IBuffer, =,= alternate, =k= kill, =n/p= next/previous, =r= revert, =s= save |
-| =SPC .= | =.= find with consult-fd, =/= ripgrep, =f= Dirvish, =,= recent, =s= save, =S= save as |
-| =SPC g= | =g= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts |
-| =SPC o= | =a= agenda, =c= capture, =d/s= deadline/schedule, =g= headings, =i/l= insert/store link, =r= refile, =t/T= TODO item/list, =x= checkbox, =e= export |
-| =SPC s= | =c= clear, =i= Imenu, =l= line                                |
+| Prefix  | Useful keys                                                                                                                                                                     |
+|---------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| =SPC ,= | =/= switch, =b= IBuffer, =,= alternate, =k= kill, =n/p= next/previous, =r= revert, =s= save                                                                                     |
+| =SPC .= | =.= find with consult-fd, =/= ripgrep, =f= Dirvish, =,= recent, =s= save, =S= save as                                                                                           |
+| =SPC g= | =g= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts                                                                                                               |
+| =SPC o= | =a= agenda menu, =o= agenda dashboard, =c= capture, =d/s= deadline/schedule, =r= refile, =t= TODO state                                                                         |
+| =SPC s= | =c= clear, =i= Imenu, =l= line                                                                                                                                                  |
 | =SPC t= | =c= column indicator, =d= Dirvish sidebar, =h= current line, =m= menu bar, =n= line numbers, =o= Org indentation, =r= read only, =s= spelling, =v= visual lines, =w= whitespace |
-| =SPC w= | =hjkl= focus, =HJKL= resize, =u/i= split, =w= close, =o= keep one, === balance |
-| =SPC q= | =p= pull config, =q= quit Emacs, =r= reload config, =u= upgrade packages |
+| =SPC w= | =hjkl= focus, =HJKL= resize, =u/i= split, =w= close, =o= keep one, === balance                                                                                                  |
+| =SPC q= | =p= pull config, =q= quit Emacs, =r= reload config, =u= upgrade packages                                                                                                        |
 
 ** Git
 
@@ -477,27 +538,27 @@ drives commits, branches, remotes, logs, diffs, stashes, rebases, and other Git
 operations through its native Transient menus. Meow stays off in Magit buffers
 so those native single-letter commands win.
 
-| Key         | Action                                  |
-|-------------+-----------------------------------------|
-| =SPC g g=   | Open Magit status                       |
-| =SPC g m=   | Open Magit dispatch                     |
-| =SPC g f=   | Open current-file dispatch              |
-| =SPC g d=   | Diff the current file                   |
-| =SPC g l=   | Show current-file history               |
-| =SPC g b=   | Show current-line blame                 |
-| =SPC g B=   | Show full-buffer blame                  |
+| Key       | Action                     |
+|-----------+----------------------------|
+| =SPC g g= | Open Magit status          |
+| =SPC g m= | Open Magit dispatch        |
+| =SPC g f= | Open current-file dispatch |
+| =SPC g d= | Diff the current file      |
+| =SPC g l= | Show current-file history  |
+| =SPC g b= | Show current-line blame    |
+| =SPC g B= | Show full-buffer blame     |
 
 diff-hl updates change indicators while editing. Its hunk commands are grouped
 under =SPC g h=.
 
-| Key           | Action                         |
-|---------------+--------------------------------|
-| =SPC g h n/p= | Next / previous hunk           |
-| =SPC g h v=   | Preview hunk                   |
-| =SPC g h d=   | Open hunk in a diff            |
-| =SPC g h s=   | Stage hunk                     |
-| =SPC g h r=   | Revert hunk                    |
-| =SPC g h u=   | Unstage the current file       |
+| Key           | Action                   |
+|---------------+--------------------------|
+| =SPC g h n/p= | Next / previous hunk     |
+| =SPC g h v=   | Preview hunk             |
+| =SPC g h d=   | Open hunk in a diff      |
+| =SPC g h s=   | Stage hunk               |
+| =SPC g h r=   | Revert hunk              |
+| =SPC g h u=   | Unstage the current file |
 
 Built-in smerge-mode and Ediff handle conflict markers. Upper and lower are
 used instead of ours and theirs because those meanings reverse during rebase.
@@ -515,30 +576,63 @@ used instead of ours and theirs because those meanings reverse during rebase.
 Inside Magit, =j/k= and =n/p= move by section, =^= moves to the parent section,
 =TAB= expands or collapses, =RET= visits, =h= opens the dispatch menu, and =q=
 or =.= restores the previous buffer. The original =j= jump and =k= discard
-commands remain available as =h j= and =h k=. In Transient menus, =ESC= returns
-to the parent menu or closes the top-level menu; =C-q= exits the entire stack.
+commands remain available as =h j= and =h k=. In Transient menus, =<escape>=
+returns to the parent menu or closes the top-level menu; =C-q= exits the entire
+stack.
+
+** Org
+
+=SPC o= groups Org commands. Deadline, schedule, TODO, refile, archive, and
+export commands use the current Org item or Agenda entry as appropriate.
+
+| Key         | Action                                            |
+|-------------+---------------------------------------------------|
+| =SPC o a=   | Open the Agenda menu                              |
+| =SPC o o=   | Show the week and tasks grouped by state          |
+| =SPC o c=   | Capture a task, note, or idea in =inbox.org=      |
+| =SPC o d/s= | Set deadline / schedule                           |
+| =SPC o t/T= | Change TODO state / open the TODO list            |
+| =SPC o g=   | Find a heading here or across Agenda files        |
+| =SPC o i/l= | Insert / store a link                             |
+| =SPC o r=   | Refile the current item                           |
+| =SPC o n=   | Toggle narrowing to the current subtree           |
+| =SPC o A=   | Archive the current item                          |
+| =SPC o B=   | Archive completed Agenda items after confirmation |
+| =SPC o x/e= | Toggle a checkbox / export                        |
+
+Tasks use =TODO=, =PROG=, =EVAL=, =HOLD=, and =DONE=. Agenda collects the inbox,
+main TODO and routines files, calendar files, direct files under =life/= and
+=notes/=, and canonical work files at =work/<domain>/<project>/<project>.org=.
+It also includes Org files directly under each work domain, but skips
+=archive.org= and archived directories. Capture goes to the inbox; refile uses
+active context files rather than scanning every task attachment directory.
+Archives go to =archive.org= beside the source file. Bulk archiving leaves
+completed parents in place when they still contain unfinished tasks.
+
+In Agenda, comma opens IBuffer, period opens Dirvish for the selected entry's
+file, and =C-c .= returns to today.
 
 ** Dashboard
 
-New Emacs sessions and fileless =emacsclient= frames start on a small dashboard.
-Its top row opens my common source and configuration directories through
-Dirvish, followed by recent projects and recent files. Backtick returns to it
-from Meow Normal and Motion states, IBuffer, or Dirvish. =M-x
-suderman/dashboard= works everywhere without using the leader map.
+Dashboard is on demand, not an automatic startup screen. Its top row opens
+common source and configuration directories through Dirvish, followed by recent
+projects and recent files. Backtick opens it from Meow Normal and Motion states,
+IBuffer, or Dirvish. =M-x suderman/dashboard= works everywhere without using
+the leader map.
 
-| Key       | Action                                      |
-|-----------+---------------------------------------------|
-| =h / l=   | Move to the previous / next button in a row |
-| =j / k=   | Move to the nearest button below / above    |
-| =1 ... 8= | Open the matching pinned destination         |
-| =TAB=     | Move to the next item                        |
-| =RET=     | Open the item at point                       |
-| =p / r=   | Jump to projects / recent files             |
-| =s=       | Open =*scratch*=                             |
-| =SPC=     | Open the Meow keypad                         |
-| =, / .=   | Open IBuffer / Dirvish                       |
-| =g=       | Refresh the dashboard                       |
-| =q=       | Close the dashboard                         |
+| Key     | Action                                           |
+|---------+--------------------------------------------------|
+| =h / l= | Move to the previous / next button in a row      |
+| =j / k= | Move to the nearest button below / above         |
+| =1 ...= | Open a numbered destination shown on this device |
+| =TAB=   | Move to the next item                            |
+| =RET=   | Open the item at point                           |
+| =p / r= | Jump to projects / recent files                  |
+| =s=     | Open =*scratch*=                                 |
+| =SPC=   | Open the Meow keypad                             |
+| =, / .= | Open IBuffer / Dirvish                           |
+| =g=     | Refresh the dashboard                            |
+| =q=     | Close the dashboard                              |
 
 ** IBuffer and the file sidebar
 
@@ -546,38 +640,47 @@ I use IBuffer to answer "what is open?" and the Dirvish sidebar to answer
 "where is this file?" The sidebar follows the selected file and project while
 leaving editor focus alone. Meow stays off in both views so their own maps win.
 
+Built-in =project.el= also recognizes =~/org/work/<domain>/<project>/= as a
+project. Matching =~/src/<domain>/<project>/= and
+=~/data/work/<domain>/<project>/= directories join that project when present.
+IBuffer groups their buffers together and labels companion paths with =src/=
+and =data/=. Normal project file searches include Org and source, but do not
+scan the data directory unless explicitly requested.
+
 *** IBuffer
 
-| Key       | Action                                                       |
-|-----------+--------------------------------------------------------------|
-| =j / k=   | Move by row                                                  |
-| =l=       | Visit the selected buffer, or toggle a group heading         |
-| =h / ,=   | Close IBuffer and restore the previous window               |
-| =>=       | Toggle a contextual file sidebar without leaving IBuffer     |
-| =SPC=     | Open the Meow keypad without enabling Meow                    |
-| =m=       | Toggle the current mark without moving                       |
-| =M=       | Mark every visible buffer                                    |
-| =t=       | Invert marks; =M t= clears all marks                         |
-| =u / U=   | Unmark without moving / unmark all                           |
-| =.=       | Open Dirvish for the selected buffer or project              |
-| =,=       | Close IBuffer and restore the previous window                |
+| Key     | Action                                                   |
+|---------+----------------------------------------------------------|
+| =j / k= | Move by row                                              |
+| =l=     | Visit the selected buffer, or toggle a group heading     |
+| =h / ,= | Close IBuffer and restore the previous window            |
+| =>=     | Toggle a contextual file sidebar without leaving IBuffer |
+| =SPC=   | Open the Meow keypad without enabling Meow               |
+| =m=     | Toggle the current mark without moving                   |
+| =M=     | Mark every visible buffer                                |
+| =t=     | Invert marks; =M t= clears all marks                     |
+| =u / U= | Unmark without moving / unmark all                       |
+| =.=     | Open Dirvish for the selected buffer or project          |
+| =d=     | Kill marked buffers, or the buffer at point              |
+| =B=     | Copy the selected buffer's name                          |
 
 Left click visits a buffer. Middle click toggles its mark. Non-project images
 have their own group; other non-project buffers remain in the default group.
+Dirvish's internal panes and temporary preview buffers stay hidden.
 
 *** Dirvish sidebar
 
-| Key        | Action                                         |
-|------------+------------------------------------------------|
-| =j / k=    | Move to the next / previous entry              |
-| =h / l=    | Move to the parent / open the selected entry   |
-| =TAB=      | Expand or collapse a directory subtree         |
-| => / q=    | Close the sidebar                              |
-| =.=        | Close the sidebar                              |
-| =,=        | Open IBuffer without closing the sidebar       |
-| =i=        | Toggle dotfiles                                |
-| =g=        | Refresh                                        |
-| =?=        | Show the effective bindings                    |
+| Key     | Action                                       |
+|---------+----------------------------------------------|
+| =j / k= | Move to the next / previous entry            |
+| =h / l= | Move to the parent / open the selected entry |
+| =TAB=   | Expand or collapse a directory subtree       |
+| => / q= | Close the sidebar                            |
+| =.=     | Close the sidebar                            |
+| =,=     | Open IBuffer without closing the sidebar     |
+| =i=     | Toggle dotfiles                              |
+| =g=     | Refresh                                      |
+| =?=     | Show the effective bindings                  |
 
 The sidebar follows the active file and project and expands its parent
 directories. =>= from an editor toggles visibility without stealing focus. =>=
@@ -585,42 +688,45 @@ from IBuffer uses the selected buffer or project heading as context.
 
 ** Dirvish and Image mode
 
-| Context | Keys                  | Action                                      |
-|---------+-----------------------+---------------------------------------------|
-| Dirvish | =h / j / k / l=       | Parent / next / previous / open             |
-| Dirvish | =f=                   | Toggle full-frame layout                    |
-| Dirvish | =TAB=                 | Toggle directory subtree                   |
-| Dirvish | =>=                   | Toggle file sidebar                        |
-| Dirvish | =H / L=               | Directory history backward / forward        |
-| Dirvish | =N / E / R=           | Narrow / file groups / rsync               |
-| Dirvish | =m / M / t=           | Toggle mark / mark all / invert marks       |
-| Dirvish | =u / U=               | Unmark without moving / unmark all          |
-| Dirvish | =c / x / v=           | Stage copy / stage cut / paste              |
-| Dirvish | =d / X=               | Flag for deletion / delete flagged files    |
-| Dirvish | =a / r=               | Create / rename                             |
-| Dirvish | =. / ,=               | Close Dirvish / replace it with IBuffer     |
-| Dirvish | =g / I / i=           | Refresh / file information / toggle dotfiles |
-| Dirvish | =s / z=               | Sort / quick access                         |
-| Dirvish | =/ / ; / ?=           | Search here / Dirvish menu / current keys   |
-| Dirvish | =SPC=                 | Meow keypad                                 |
-| Dirvish | =q=                   | Close Dirvish                               |
-| Image   | =n / p=               | Browse images in cyclic alphabetical order |
-| Image   | =h=                   | Move left                                   |
-| Image   | =, / .=               | Open IBuffer / Dirvish                      |
-| Image   | =SPC=                 | Keep Meow's keypad                         |
-| Image   | =+= / === / =-=       | Zoom in / zoom in / zoom out               |
-| Image   | =r / R=               | Rotate clockwise / counterclockwise        |
-| Image   | =0=                   | Reset image transformations                |
+| Context | Keys            | Action                                       |
+|---------+-----------------+----------------------------------------------|
+| Dirvish | =h / j / k / l= | Parent / next / previous / open              |
+| Dirvish | =f=             | Toggle full-frame layout                     |
+| Dirvish | =G=             | Open the image thumbnail gallery             |
+| Dirvish | =TAB=           | Toggle directory subtree                     |
+| Dirvish | =>=             | Toggle file sidebar                          |
+| Dirvish | =H / L=         | Directory history backward / forward         |
+| Dirvish | =N / E / R=     | Narrow / file groups / rsync                 |
+| Dirvish | =m / M / t=     | Toggle mark / mark all / invert marks        |
+| Dirvish | =u / U=         | Unmark without moving / unmark all           |
+| Dirvish | =c / x / v=     | Stage copy / stage cut / paste               |
+| Dirvish | =V=             | Save Wayland clipboard PNG in this directory |
+| Dirvish | =d / X=         | Flag for deletion / delete flagged files     |
+| Dirvish | =a / r=         | Create / rename                              |
+| Dirvish | =. / ,=         | Close Dirvish / replace it with IBuffer      |
+| Dirvish | =g / I / i=     | Refresh / file information / toggle dotfiles |
+| Dirvish | =s / z=         | Sort / quick access                          |
+| Dirvish | =/ / ; / ?=     | Search here / Dirvish menu / current keys    |
+| Dirvish | ='=             | Change view attributes                       |
+| Dirvish | =SPC=           | Meow keypad                                  |
+| Dirvish | =q=             | Close Dirvish                                |
+| Image   | =n / p=         | Browse images in cyclic alphabetical order   |
+| Image   | =h=             | Move left                                    |
+| Image   | =c=             | Copy image to the Wayland clipboard          |
+| Image   | =, / .=         | Open IBuffer / Dirvish                       |
+| Image   | =SPC=           | Keep Meow's keypad                           |
+| Image   | =+= / === / =-= | Zoom in / zoom in / zoom out                 |
+| Image   | =r / R=         | Rotate clockwise / counterclockwise          |
+| Image   | =0=             | Reset image transformations                  |
 
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
 marked. Copies remain staged after =v=; cuts clear once the move starts.
-On Android, Period always opens a single-column view and files replace Dirvish
-in its current window. On desktop, Period opens the full-frame layout when no
-other window is visible; with splits or the sidebar it uses only the selected
-editor window. The =f= key toggles between those layouts. Comma closes a
-full-frame layout before opening IBuffer.
-From the sidebar it opens IBuffer in an editor window and leaves the sidebar
-visible. Closing IBuffer restores the prior editor window.
+Period opens Dirvish in the selected window on desktop and Android. If a sidebar
+is already visible, Period focuses it instead. Within Dirvish, Period closes
+the view. =f= toggles the full-frame parent/current/preview layout. Close that
+layout before using =>= to open the sidebar. Comma closes a full-frame layout
+before opening IBuffer. From the sidebar it opens IBuffer in an editor window
+and leaves the sidebar visible. Closing IBuffer restores the prior editor window.
 Dotfiles start hidden in the parent and current panes, and =i= toggles them
 together without status messages. The preview remains unfiltered. Deleting a
 file kills its unmodified visiting buffer, while modified buffers still require
@@ -645,55 +751,74 @@ archives, fonts, and PDFs. Minibuffer file selection uses the same preview
 dispatchers after a short delay. Animated images opened in Image mode also
 autoplay and loop.
 
+=G= opens a full-frame Image-Dired gallery of the current directory's top-level
+images. =hjkl= move between thumbnails, =RET= opens an image, =g= refreshes, and
+=x= deletes flagged images. In the image view, =n/p= cycle through gallery images
+and =q= returns to thumbnails. From thumbnails, =q= restores the original
+Dirvish layout and selected file. Ordinary Image mode keeps its separate keys
+listed above.
+
+On Wayland, Image mode's =c= copies image data. GIFs are copied as file URIs so
+receiving apps can use the animation. Dirvish =V= saves a clipboard PNG as
+=screenshot-YYYYMMDD-HHMMSS.png= without overwriting an existing file.
+
 ** Windows and frames
 
 These bindings work in Meow Normal and Motion states, Magit, IBuffer, and
 Dirvish.
 
-| Key           | Action                              |
-|---------------+-------------------------------------|
-| =M-h/j/k/l=   | Focus the adjacent window           |
-| =M-H/J/K/L=   | Move divider left/down/up/right       |
-| =M-u / M-i=   | Split below / split right           |
-| =M-w=         | Delete the window or current tab    |
-| =M-z=         | Zoom / restore the selected window  |
-| =s-+ / s--=   | Increase / decrease frame text size |
-| =s-t=         | New tab                             |
-| =s-[ / s-]=   | Previous / next tab                 |
-| =s-w=         | Close tab                           |
+| Key         | Action                                 |
+|-------------+----------------------------------------|
+| =M-h/j/k/l= | Focus the adjacent window              |
+| =M-H/J/K/L= | Move divider left/down/up/right        |
+| =M-u / M-i= | Split below / split right              |
+| =M-w=       | Close window, tab, or multiplexer pane |
+| =M-z=       | Zoom / restore the selected window     |
+| =s-+ / s--= | Increase / decrease frame text size    |
+| =s-t=       | New tab                                |
+| =s-[ / s-]= | Previous / next tab                    |
+| =s-w=       | Close tab                              |
+
+Edger handles Meta and =SPC w= navigation, resizing, splits, and closing. At an
+Emacs boundary, it can hand control to the surrounding terminal multiplexer.
 
 * Repository map
 
-| Path                            | Role                                             |
-|---------------------------------+--------------------------------------------------|
-| [[file:flake.nix][flake.nix]]                       | Flake inputs and Blueprint outputs               |
-| =nix/=                          | Desktop and Android packages, shells, and checks |
-| =android/install.sh=            | Guided Android APK installer                     |
-| =assets/=                       | Dashboard and Markdown preview assets            |
-| [[file:early-init.el][early-init.el]]                 | Process-level startup and frame defaults         |
-| [[file:init.el][init.el]]                       | Boring dependency-ordered module loader          |
-| =lisp/suderman-paths.el=        | XDG state paths                                  |
-| =lisp/suderman-android.el=      | Android paths and input toolbar                  |
-| =lisp/suderman-packages.el=     | =package.el= and =use-package= bootstrap          |
-| =lisp/suderman-defaults.el=     | Small built-in behavior changes                  |
-| =lisp/suderman-appearance.el=   | Fonts, faces, modeline, and visual guides        |
-| =lisp/suderman-windows.el=      | Window helpers and smooth jump animation         |
-| =lisp/suderman-meow.el=         | Personal editing and the Normal/Motion maps     |
-| =lisp/suderman-images.el=       | Image navigation, transforms, and clipboard      |
-| =lisp/suderman-buffers.el=      | Project-grouped IBuffer                          |
-| =lisp/suderman-completion.el=   | Vertico, Orderless, Consult, Marginalia, Embark  |
-| =lisp/suderman-files.el=        | Dired, Dirvish, sidebar, previews, and transfers |
-| =lisp/suderman-dashboard.el=    | Startup dashboard and common destinations       |
-| =lisp/suderman-markdown.el=     | Markdown editing and Pandoc preview              |
-| =lisp/suderman-languages.el=    | Broad language associations and tree-sitter use  |
-| =lisp/suderman-nix.el=          | Embedded-language highlighting in Nix strings    |
-| =lisp/suderman-git.el=          | Magit, live hunks, and conflict handling          |
-| =lisp/suderman-org.el=          | Org agenda, capture, and refile workflow           |
-| =lisp/suderman-keys.el=         | Global, Meta, and =SPC= leader bindings          |
-| =lisp/suderman-formatting.el=   | Project and buffer formatting commands           |
-| =lisp/suderman-reload.el=       | Safe modular hot reload                          |
-| =test/=                         | Small behavioral and deployment safety suite     |
-| [[file:AGENTS.md][AGENTS.md]]                   | Maintenance decisions and verification rules     |
+| Path                          | Role                                                |
+|-------------------------------+-----------------------------------------------------|
+| [[file:flake.nix][flake.nix]]                     | Flake inputs and Blueprint outputs                  |
+| =nix/=                        | Desktop and Android packages, shells, and checks    |
+| =android/install.sh=          | Guided Android APK installer                        |
+| =android/install-fonts.sh=    | Copy and verify shared fonts on Android             |
+| =assets/=                     | Dashboard and Markdown preview assets               |
+| [[file:early-init.el][early-init.el]]                 | Process-level startup and frame defaults            |
+| [[file:init.el][init.el]]                       | Boring dependency-ordered module loader             |
+| =lisp/suderman-paths.el=      | XDG state paths                                     |
+| =lisp/suderman-android.el=    | Android paths, server, touch input, and toolbar     |
+| =lisp/suderman-packages.el=   | =package.el= and =use-package= bootstrap            |
+| =lisp/suderman-defaults.el=   | Small built-in behavior changes                     |
+| =lisp/suderman-clipboard.el=  | Terminal clipboard via Wayland or OSC 52            |
+| =lisp/suderman-projects.el=   | Org work projects and companion source/data roots   |
+| =lisp/suderman-appearance.el= | Fonts, faces, modeline, and visual guides           |
+| =lisp/suderman-windows.el=    | Window helpers and smooth jump animation            |
+| =lisp/suderman-meow.el=       | Personal editing and the Normal/Motion maps         |
+| =lisp/suderman-images.el=     | Image navigation, transforms, and clipboard         |
+| =lisp/suderman-buffers.el=    | Project-grouped IBuffer                             |
+| =lisp/suderman-completion.el= | Minibuffer completion, Corfu, and Cape              |
+| =lisp/suderman-terminal.el=   | Ghostel integration, currently disabled             |
+| =lisp/suderman-files.el=      | Dired, Dirvish, sidebar, previews, and transfers    |
+| =lisp/suderman-dashboard.el=  | On-demand dashboard and common destinations         |
+| =lisp/suderman-markdown.el=   | Markdown editing and Pandoc preview                 |
+| =lisp/suderman-languages.el=  | Language modes, tree-sitter associations, and Eglot |
+| =lisp/suderman-nix.el=        | Embedded-language highlighting in Nix strings       |
+| =lisp/suderman-git.el=        | Magit, live hunks, and conflict handling            |
+| =lisp/suderman-org.el=        | Org agenda, capture, and refile workflow            |
+| =lisp/suderman-keys.el=       | Global, Meta, and =SPC= leader bindings             |
+| =lisp/suderman-formatting.el= | Project and buffer formatting commands              |
+| =lisp/suderman-reload.el=     | Modular hot reload and configuration updates        |
+| =lisp/suderman-pi.el=         | Pi coding agent and clipboard image attachments     |
+| =test/=                       | Small behavioral and deployment safety suite        |
+| [[file:AGENTS.md][AGENTS.md]]                     | Maintenance decisions and verification rules        |
 
 The source wins when this file falls behind. This reference only covers the
 parts I use often enough to want on one page.
