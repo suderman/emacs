@@ -86,8 +86,10 @@ The current modules have clear jobs.
 - `suderman-buffers.el` owns project-grouped IBuffer.
 - `suderman-completion.el` owns Vertico, Orderless, Consult, Marginalia, and
   Embark.
-- `suderman-meow.el` owns modal editing, selections, editing commands, and the
-  normal and motion maps.
+- `meow-purrsist` owns generic persistent Meow selection behavior in
+  `~/src/suderman/meow-purrsist`; this repo installs it through `package-vc`
+  on desktop and Android, not through Nix.
+- `suderman-meow.el` owns personal Meow bindings, search, and editing commands.
 - `suderman-images.el` owns Image mode navigation, transforms, animation, and
   clipboard behavior.
 - `suderman-files.el` owns Dired, Dirvish, its sidebar, previews, and transfers.
@@ -118,7 +120,7 @@ Important parts of the current grammar follow.
 
 - `hjkl` moves. Active Meow selections expand with movement.
 - `m`, `mm`, and `mmm` select a word, symbol, and enclosing block.
-- `M`, `MM`, and `MMM` select a rectangle, line, and whole buffer.
+- `M`, `MM`, and `MMM` select a line, rectangle, and whole buffer.
 - `s` is the full Surround prefix. `s s` inserts a surround.
 - `'` repeats the last Repeat-FU edit, except immediately after `t` or `T`,
   when it repeats that till motion.
