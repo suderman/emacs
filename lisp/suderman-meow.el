@@ -222,6 +222,20 @@ Crossing the anchor reverses the selection naturally."
          (skip-syntax-backward "w")))
      (point))))
 
+(defun suderman/meow-next-symbol-start (n)
+  "Move to the start of the next N symbols, extending an active selection."
+  (interactive "p")
+  (suderman/meow--move-to
+   (save-excursion
+     (if (> n 0)
+         (dotimes (_ n)
+           (skip-syntax-forward "w_")
+           (skip-syntax-forward "^w_"))
+       (dotimes (_ (- n))
+         (skip-syntax-backward "^w_")
+         (skip-syntax-backward "w_")))
+     (point))))
+
 (defun suderman/meow-next-symbol (n)
   "Move forward N symbols, extending an active selection."
   (interactive "p")
@@ -754,8 +768,9 @@ An active selection is replaced without modifying the kill ring."
                    (suderman/dirvish-side-toggle . "sidebar")
                    (surround-insert . "surround")
                    (suderman/meow-next-word . "word fwd")
-                   (suderman/meow-next-word-start . "word start")
+                   (suderman/meow-next-word-start . "word beg")
                    (suderman/meow-next-symbol . "sym fwd")
+                   (suderman/meow-next-symbol-start . "sym beg")
                    (suderman/meow-kill . "cut")
                    (suderman/meow-kill-line . "cut line")
                    (suderman/meow-save . "copy")))
@@ -857,7 +872,7 @@ An active selection is replaced without modifying the kill ring."
    '("v" . suderman/meow-paste)
    '("V" . meow-page-down)
    '("w" . suderman/meow-next-word-start)
-   '("W" . ignore)
+   '("W" . suderman/meow-next-symbol-start)
    '("x" . suderman/meow-kill)
    '("X" . suderman/meow-kill-line)
    '("y" . undo-redo)
