@@ -185,10 +185,11 @@ transfer engine. Deleting a file automatically kills its unmodified visiting
 buffer; modified buffers remain protected by a confirmation. Slash searches
 below the current directory. Question mark shows a compact Which-Key view
 generated from the effective bindings; semicolon opens the upstream Dirvish
-dispatcher. `TAB` toggles subtrees, `N` narrows, `E` manages emerge groups, and
-`R` runs rsync. `g` refreshes, `I` shows file information, `u` unmarks without
-moving, and `U` clears all marks. Clicking a directory's subtree-state arrow
-also toggles its subtree without changing ordinary row-click behavior.
+dispatcher. `TAB` and `o` toggle subtrees, `N` narrows, `E` manages emerge
+groups, and `R` runs rsync. `g` refreshes, `I` shows file information, `u`
+unmarks without moving, and `U` clears all marks. Clicking a directory's
+subtree-state arrow also toggles its subtree without changing ordinary row-click
+behavior.
 
 Android taps open files in the current window because Emacs translates a tap on
 Dired's highlighted filename to `mouse-2`; do not let native Dired's other-window
@@ -201,7 +202,7 @@ In the parent pane, left click changes the root directory or selects the clicked
 file in its directory. Its `j/k` bindings move between sibling directories and
 update the root, `h` moves both panes up a level, and `l` returns focus to the
 root. Breadcrumb clicks run in the root pane, while Meta window movement excludes
-breadcrumb and footer windows. Preview panes remain normal windows because `o`
+breadcrumb and footer windows. Preview panes remain normal windows because `M-o`
 can deliberately turn one into an editable file buffer.
 
 Magit disables Meow locally because its single-letter commands and Transient
