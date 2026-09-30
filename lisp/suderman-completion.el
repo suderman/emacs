@@ -12,6 +12,8 @@
 (defvar vertico-map)
 (defvar vertico-mouse-map)
 (defvar vertico-scroll-margin)
+(defvar xref-show-xrefs-function)
+(defvar xref-show-definitions-function)
 
 (declare-function touch-screen-relative-xy "touch-screen" (posn window))
 (declare-function vertico--exhibit "vertico" ())
@@ -121,12 +123,14 @@
    ([remap bookmark-jump] . consult-bookmark)
    :map minibuffer-local-map
    ("M-r" . consult-history))
+  :init
+  (with-eval-after-load 'xref
+    (setq xref-show-xrefs-function #'consult-xref
+          xref-show-definitions-function #'consult-xref))
   :custom
   (consult-narrow-key "<")
   :config
   (require 'consult-compile)
-  (setq xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref)
   ;; Keep in-buffer previews immediate; avoid opening files on every keypress.
   (consult-customize
    consult-ripgrep consult-git-grep consult-grep
