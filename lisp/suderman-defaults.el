@@ -26,6 +26,8 @@
               tab-width 2
               standard-indent 2)
 
+(setq bookmark-save-flag 1)
+
 (savehist-mode 1)
 (save-place-mode 1)
 (recentf-mode 1)

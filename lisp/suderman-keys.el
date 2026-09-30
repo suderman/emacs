@@ -38,7 +38,7 @@
 (defvar suderman/leader-org-map nil
   "SPC o Org command keymap.")
 (defvar suderman/leader-search-map nil
-  "SPC s search command keymap.")
+  "SPC / search command keymap.")
 (defvar suderman/leader-toggle-map nil
   "SPC t toggle command keymap.")
 (defvar suderman/leader-window-map nil
@@ -71,6 +71,9 @@
 (keymap-set suderman/leader-file-map "." #'consult-fd)
 (keymap-set suderman/leader-file-map "/" #'consult-ripgrep)
 (keymap-set suderman/leader-file-map "f" #'suderman/dirvish)
+(keymap-set suderman/leader-file-map "b" #'consult-bookmark)
+(keymap-set suderman/leader-file-map "m" #'bookmark-set)
+(keymap-set suderman/leader-file-map "M" #'bookmark-delete)
 (keymap-set suderman/leader-file-map "," #'consult-recent-file)
 (keymap-set suderman/leader-file-map "s" #'save-buffer)
 (keymap-set suderman/leader-file-map "S" #'write-file)
@@ -127,9 +130,21 @@
 (keymap-set suderman/leader-org-map "x" #'suderman/org-toggle-checkbox)
 
 ;; Search
-(keymap-set suderman/leader-search-map "c" #'suderman/clear-search)
-(keymap-set suderman/leader-search-map "i" #'consult-imenu)
+(keymap-set suderman/leader-search-map "/" #'consult-ripgrep)
+(keymap-set suderman/leader-search-map "g" #'consult-git-grep)
 (keymap-set suderman/leader-search-map "l" #'consult-line)
+(keymap-set suderman/leader-search-map "L" #'consult-line-multi)
+(keymap-set suderman/leader-search-map "i" #'consult-imenu)
+(keymap-set suderman/leader-search-map "I" #'consult-imenu-multi)
+(keymap-set suderman/leader-search-map "o" #'consult-outline)
+(keymap-set suderman/leader-search-map "m" #'consult-mark)
+(keymap-set suderman/leader-search-map "M" #'consult-global-mark)
+(keymap-set suderman/leader-search-map "r" #'consult-register)
+(keymap-set suderman/leader-search-map "y" #'consult-yank-pop)
+(keymap-set suderman/leader-search-map "e" #'consult-compile-error)
+(keymap-set suderman/leader-search-map "f" #'consult-flymake)
+(keymap-set suderman/leader-search-map "s" #'consult-isearch-history)
+(keymap-set suderman/leader-search-map "c" #'suderman/clear-search)
 
 ;; Toggles
 (keymap-set suderman/leader-toggle-map "c" #'display-fill-column-indicator-mode)
@@ -241,7 +256,7 @@
  (cons "." suderman/leader-file-map)
  (cons "o" suderman/leader-org-map)
  (cons "q" suderman/leader-quit-map)
- (cons "s" suderman/leader-search-map)
+ (cons "/" suderman/leader-search-map)
  (cons "t" suderman/leader-toggle-map)
  (cons "w" suderman/leader-window-map))
 (when (fboundp 'ghostel-project)
@@ -254,7 +269,7 @@
   "." (cons "files" suderman/leader-file-map)
   "o" (cons "org" suderman/leader-org-map)
   "q" (cons "quit/config" suderman/leader-quit-map)
-  "s" (cons "search" suderman/leader-search-map)
+  "/" (cons "search" suderman/leader-search-map)
   "t" (cons "toggles" suderman/leader-toggle-map)
   "w" (cons "windows" suderman/leader-window-map))
 

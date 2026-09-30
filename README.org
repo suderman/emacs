@@ -523,7 +523,7 @@ choices without leaving the keypad.
 | =SPC ,=   | Buffer commands                 |
 | =SPC .=   | File commands                   |
 | =SPC o=   | Org commands                    |
-| =SPC s=   | Search commands                 |
+| =SPC /=   | Search commands                 |
 | =SPC t=   | Toggles                         |
 | =SPC w=   | Window commands                 |
 | =SPC q=   | Quit and configuration commands |
@@ -536,10 +536,51 @@ I use these subcommands most often:
 | =SPC .= | =.= find with consult-fd, =/= ripgrep, =f= Dirvish, =,= recent, =s= save, =S= save as                                                                                           |
 | =SPC g= | =g= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts                                                                                                               |
 | =SPC o= | =a= agenda menu, =o= agenda dashboard, =c= capture, =d/s= deadline/schedule, =r= refile, =t= TODO state                                                                         |
-| =SPC s= | =c= clear, =i= Imenu, =l= line                                                                                                                                                  |
+| =SPC /= | =/= ripgrep, =l/L= lines, =i/I= Imenu, =m/M= marks, =y= kill ring                                                                                                               |
 | =SPC t= | =c= column indicator, =d= Dirvish sidebar, =h= current line, =m= menu bar, =n= line numbers, =o= Org indentation, =r= read only, =s= spelling, =v= visual lines, =w= whitespace |
 | =SPC w= | =hjkl= focus, =HJKL= resize, =u/i= split, =w= close, =o= keep one, === balance                                                                                                  |
 | =SPC q= | =p= pull config, =q= quit Emacs, =r= reload config, =u= upgrade packages                                                                                                        |
+
+** Search and bookmarks
+
+=SPC /= owns Consult searches. Bare =/= keeps Meow's literal search and
+persistent selections; the old =SPC s= search menu moves to =SPC /=.
+
+| Key         | Action                                      |
+|-------------+---------------------------------------------|
+| =SPC / /=   | Ripgrep in the current project               |
+| =SPC / g=   | Git grep for tracked files                   |
+| =SPC / l/L= | Search lines here / across project buffers   |
+| =SPC / i/I= | Imenu here / across project buffers          |
+| =SPC / o=   | Jump to an outline heading                   |
+| =SPC / m/M= | Local / global mark history                  |
+| =SPC / r=   | Preview and use a register                   |
+| =SPC / y=   | Browse the kill ring                         |
+| =SPC / e/f= | Compilation errors / Flymake diagnostics     |
+| =SPC / s=   | Previous Isearch queries                     |
+| =SPC / c=   | Clear search highlighting                    |
+| =SPC . b=   | Jump to a bookmark, or create a new name      |
+| =SPC . m/M= | Set / delete a bookmark                      |
+
+Consult uses =project.el='s root, including the canonical Org root for work
+projects. =C-u SPC / /= prompts for directories or files instead, so a search
+can target the source companion, the current directory, or several roots.
+Remote ripgrep needs =rg= on the remote host; =SPC / g= can use its Git instead.
+Line and Imenu searches preview immediately. Grep previews wait 0.2 seconds;
+=C-SPC= previews immediately. Bookmarks preview only on =C-SPC=, and Consult
+never opens a remote file merely to preview it.
+
+Bookmarks remember files, directories, remote paths, and locations supported by
+other modes. They save after each change under
+=~/.local/state/emacs/bookmarks=. =C-x r b= also uses Consult. During
+=consult-buffer=, =m SPC= narrows to bookmarks. =C-.= opens Embark actions,
+including bookmark rename and delete.
+
+In minibuffers, =M-r= searches the current prompt's history. =C-c C-e= exports
+results to a normal buffer, such as Grep or Dired, and =C-c C-l= collects the
+candidate list. =DEL= at a file-path slash removes one directory component;
+=M-DEL= removes a directory or word. Shadowed paths such as =/tmp/~/= tidy
+automatically. Xref results use Consult's preview and filtering too.
 
 ** Git
 

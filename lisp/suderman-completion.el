@@ -92,6 +92,14 @@
   (with-eval-after-load 'vertico
     (suderman/vertico-setup-touchscreen)))
 
+(use-package vertico-directory
+  :ensure nil
+  :after vertico
+  :bind (:map vertico-map
+              ("DEL" . vertico-directory-delete-char)
+              ("M-DEL" . vertico-directory-delete-word))
+  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
+
 (use-package marginalia
   :init
   (marginalia-mode 1))
@@ -107,17 +115,36 @@
   (("C-x b" . consult-buffer)
    ("M-s r" . consult-ripgrep)
    ("M-s l" . consult-line)
-   ("M-s i" . consult-imenu))
+   ("M-s i" . consult-imenu)
+   ([remap bookmark-jump] . consult-bookmark)
+   :map minibuffer-local-map
+   ("M-r" . consult-history))
   :custom
-  (consult-narrow-key "<"))
+  (consult-narrow-key "<")
+  :config
+  (require 'consult-compile)
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref)
+  ;; Keep in-buffer previews immediate; avoid opening files on every keypress.
+  (consult-customize
+   consult-ripgrep consult-git-grep consult-grep
+   :preview-key '("C-SPC" :debounce 0.2 any))
+  (consult-customize
+   consult-bookmark consult-source-bookmark
+   :preview-key "C-SPC"))
 
 (use-package embark
   :bind
   (("C-." . embark-act)
-   ("C-;" . embark-dwim)))
+   ("C-;" . embark-dwim)
+   :map minibuffer-local-map
+   ("C-c C-e" . embark-export)
+   ("C-c C-l" . embark-collect)))
 
 (use-package embark-consult
-  :after (embark consult))
+  :after (embark consult)
+  :demand t
+  :hook (embark-collect-mode . consult-preview-at-point-mode))
 
 ;; Keep TAB's usual indentation, with completion when indentation is done.
 (setq tab-always-indent 'complete
