@@ -39,6 +39,11 @@
   (keymap-local-set "j" #'magit-section-forward)
   (keymap-local-set "k" #'magit-section-backward))
 
+(defun suderman/magit-after-save-refresh-status ()
+  "Refresh local Magit status after saving, without remote Git probes."
+  (unless (file-remote-p default-directory)
+    (magit-after-save-refresh-status)))
+
 (defun suderman/git-commit-start-insert ()
   "Enter Meow Insert state when the commit summary is blank."
   (when (and (bound-and-true-p meow-mode) (bobp) (eolp))
@@ -62,7 +67,8 @@
         magit-diff-refine-hunk t
         magit-revision-insert-related-refs nil)
   :config
-  (add-hook 'after-save-hook #'magit-after-save-refresh-status)
+  (remove-hook 'after-save-hook #'magit-after-save-refresh-status)
+  (add-hook 'after-save-hook #'suderman/magit-after-save-refresh-status)
   (add-hook 'magit-mode-hook #'suderman/magit-setup)
   (add-hook 'git-commit-setup-hook #'suderman/git-commit-start-insert)
   (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
@@ -86,6 +92,8 @@
 
 (use-package diff-hl
   :demand t
+  :custom
+  (diff-hl-disable-on-remote t)
   :config
   (global-diff-hl-mode 1)
   (diff-hl-flydiff-mode 1))

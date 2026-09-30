@@ -17,8 +17,8 @@
 (declare-function apheleia-format-buffer "apheleia")
 
 (defun suderman/formatting--treefmt-root (file)
-  "Return FILE's enclosing treefmt project root, or nil."
-  (when file
+  "Return local FILE's enclosing treefmt project root, or nil."
+  (when (and file (not (file-remote-p file)))
     (locate-dominating-file file "treefmt.nix")))
 
 (cl-defun suderman/formatting-treefmt
@@ -82,6 +82,7 @@ CALLBACK follows the formatter function protocol used by Apheleia."
     :demand t
     :custom
     (apheleia-formatters-respect-indent-level nil)
+    (apheleia-remote-algorithm 'cancel)
     :config
     (setf (alist-get 'suderman/treefmt apheleia-formatters)
           #'suderman/formatting-treefmt)
@@ -100,6 +101,7 @@ CALLBACK follows the formatter function protocol used by Apheleia."
     :demand t
     :custom
     (envrc-show-summary-in-minibuffer nil)
+    (envrc-remote nil)
     :config
     (envrc-global-mode 1)))
 

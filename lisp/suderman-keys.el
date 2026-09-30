@@ -77,6 +77,7 @@
 (keymap-set suderman/leader-file-map "," #'consult-recent-file)
 (keymap-set suderman/leader-file-map "s" #'save-buffer)
 (keymap-set suderman/leader-file-map "S" #'write-file)
+(keymap-set suderman/leader-file-map "R" #'tramp-cleanup-this-connection)
 
 ;; Git
 (keymap-set suderman/leader-git-map "B" #'magit-blame-addition)

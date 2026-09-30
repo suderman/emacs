@@ -9,6 +9,10 @@
 (require 'project)
 (require 'so-long)
 
+(defvar tramp-default-method)
+(defvar tramp-copy-size-limit)
+(defvar tramp-remote-path)
+
 (add-to-list 'project-vc-extra-root-markers ".stignore")
 
 (setq ring-bell-function #'ignore
@@ -27,6 +31,12 @@
               standard-indent 2)
 
 (setq bookmark-save-flag 1)
+
+(setq tramp-default-method "ssh"
+      tramp-copy-size-limit (* 1024 1024))
+(with-eval-after-load 'tramp
+  ;; Include the remote login PATH for user-installed tools on NixOS.
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path t))
 
 (savehist-mode 1)
 (save-place-mode 1)

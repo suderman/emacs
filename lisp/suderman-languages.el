@@ -49,7 +49,7 @@
                '((web-mode :language-id "twig") "twiggy-language-server" "--stdio")))
 
 (defun suderman/eglot-ensure-if-available ()
-  "Start Eglot when the current language server is installed."
+  "Start Eglot for local buffers whose language server is installed."
   (let ((program (pcase major-mode
                    ((or 'php-mode 'php-ts-mode) "phpactor")
                    ((or 'nix-mode 'nix-ts-mode) "nil")
@@ -67,7 +67,8 @@
                    ((or 'js-mode 'js-ts-mode 'typescript-mode
                         'typescript-ts-mode 'tsx-ts-mode)
                     "typescript-language-server"))))
-    (when (and program (executable-find program))
+    (when (and program (not (file-remote-p default-directory))
+               (executable-find program))
       (eglot-ensure))))
 
 ;; Envrc updates the buffer's PATH after its major-mode hook runs.

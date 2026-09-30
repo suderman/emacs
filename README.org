@@ -582,6 +582,29 @@ candidate list. =DEL= at a file-path slash removes one directory component;
 =M-DEL= removes a directory or word. Shadowed paths such as =/tmp/~/= tidy
 automatically. Xref results use Consult's preview and filtering too.
 
+** Remote files
+
+Open =/ssh:user@host:/path= with =C-x C-f= or bookmark it with =SPC . m=.
+The shorthand =/host:/path= now defaults to SSH. For large transfers, use an
+explicit =/scp:user@host:/path= path. SCP keeps files up to 1 MiB inline before
+using its separate copy process. SSH connection sharing and TRAMP's normal
+caches remain enabled; the config does not change host keys or agent forwarding.
+TRAMP includes the host's login PATH so user-installed tools such as =rg= work
+on NixOS as they do in plain SSH.
+
+Remote buffers skip automatic Eglot startup, direnv, Apheleia formatting,
+diff-hl indicators, and Magit's after-save status refresh. The treefmt selector
+also skips remote project-root probes. Local behavior stays the same. Run
+=M-x eglot= when you want a server installed on the remote host. Use
+=SPC g m= or =SPC g f= for Git operations without opening status, and =SPC g g=
+when you want the full dashboard. Refresh remote status explicitly with =g=.
+
+=SPC . R= resets the current buffer's TRAMP connection. The next file operation
+reconnects. This stops that connection's remote processes, so do not use it
+while a remote build or shell should keep running. Visiting buffers stay open.
+Bookmarks and recent files reuse their remote paths without a second remote
+navigation system.
+
 ** Git
 
 Magit is the repository dashboard. It stages files, hunks, and selected lines;

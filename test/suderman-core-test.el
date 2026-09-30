@@ -12,6 +12,8 @@
 (require 'suderman-clipboard)
 (require 'suderman-defaults)
 (require 'suderman-formatting)
+(require 'suderman-git)
+(require 'suderman-languages)
 (require 'suderman-packages)
 (require 'suderman-org)
 (require 'suderman-projects)
@@ -249,6 +251,66 @@
       (kill-buffer scratch)
       (delete-directory directory t))))
 
+
+;; Remote background work
+
+(ert-deftest suderman/remote-buffers-skip-local-language-server-probes ()
+  (let ((available t) (probes 0) (starts 0))
+    (cl-letf (((symbol-function 'executable-find)
+               (lambda (&rest _)
+                 (cl-incf probes)
+                 (when available "/tools/server")))
+              ((symbol-function 'eglot-ensure)
+               (lambda () (cl-incf starts))))
+      (with-temp-buffer
+        (setq major-mode 'nix-ts-mode
+              default-directory "/ssh:test@example.invalid:/tmp/")
+        (suderman/eglot-ensure-if-available)
+        (should (= probes 0))
+        (should (= starts 0))
+        (setq default-directory "/tmp/")
+        (suderman/eglot-ensure-if-available)
+        (should (= probes 1))
+        (should (= starts 1))
+        (setq available nil)
+        (suderman/eglot-ensure-if-available)
+        (should (= probes 2))
+        (should (= starts 1))
+        (setq major-mode 'fundamental-mode)
+        (suderman/eglot-ensure-if-available)
+        (should (= probes 2))
+        (should (= starts 1))))))
+
+(ert-deftest suderman/treefmt-root-probes-only-local-files ()
+  (let (probes)
+    (cl-letf (((symbol-function 'locate-dominating-file)
+               (lambda (file &rest _)
+                 (push file probes)
+                 "/tmp/project/")))
+      (should-not (suderman/formatting--treefmt-root nil))
+      (should-not (suderman/formatting--treefmt-root
+                   "/ssh:test@example.invalid:/tmp/sample.nix"))
+      (with-temp-buffer
+        (setq buffer-file-name "/ssh:test@example.invalid:/tmp/sample.nix")
+        (setq-local apheleia-formatter 'suderman/treefmt)
+        (suderman/formatting-select-formatter)
+        (should-not (local-variable-p 'apheleia-formatter)))
+      (should-not probes)
+      (should (equal (suderman/formatting--treefmt-root "/tmp/sample.nix")
+                     "/tmp/project/"))
+      (should (equal probes '("/tmp/sample.nix"))))))
+
+(ert-deftest suderman/save-refresh-probes-only-local-git ()
+  (let ((calls 0))
+    (cl-letf (((symbol-function 'magit-after-save-refresh-status)
+               (lambda () (cl-incf calls))))
+      (with-temp-buffer
+        (setq default-directory "/ssh:test@example.invalid:/tmp/")
+        (suderman/magit-after-save-refresh-status)
+        (should (= calls 0))
+        (setq default-directory "/tmp/")
+        (suderman/magit-after-save-refresh-status)
+        (should (= calls 1))))))
 
 ;; Android package bootstrap
 
