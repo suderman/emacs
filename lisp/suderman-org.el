@@ -8,10 +8,13 @@
 (require 'use-package)
 (require 'cl-lib)
 (require 'face-remap)
+(require 'org-macs)
+(eval-when-compile (require 'org-agenda))
 
 (defvar org-done-keywords)
 (defvar org-not-done-keywords)
 (defvar org-archive-subtree-save-file-p)
+(defvar org-archive-from-agenda)
 (defvar org-tag-line-re)
 (defvar org-highlight-links)
 (defvar org-font-lock-extra-keywords)
@@ -20,7 +23,13 @@
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
 (declare-function org-agenda "org-agenda" (&optional arg keys restriction))
-(declare-function org-agenda-archive "org-agenda" (&optional arg))
+(declare-function org-agenda-redo "org-agenda" (&optional all))
+(declare-function org-agenda-redo-all "org-agenda" (&optional exhaustive))
+(declare-function org-remove-subtree-entries-from-agenda "org-agenda"
+                  (&optional buf beg end))
+(declare-function meow--disable "meow")
+(declare-function meow-mode "meow")
+(declare-function meow-keypad "meow-keypad")
 (declare-function org-agenda-deadline "org-agenda" (arg &optional time))
 (declare-function org-agenda-goto-today "org-agenda" ())
 (declare-function org-agenda-maybe-redo "org-agenda" ())
@@ -339,6 +348,26 @@
    (suderman/org--direct-org-files (expand-file-name "notes" org-directory))
    (suderman/org-work-agenda-files (expand-file-name "work" org-directory))))
 
+(defun suderman/org-agenda-files ()
+  "Return the current Agenda file set without scanning task directories."
+  (append
+   (mapcar (lambda (file) (expand-file-name file org-directory))
+           '("inbox.org" "todo.org" "routines.org"))
+   (suderman/org--direct-org-files (expand-file-name "calendar" org-directory))
+   (suderman/org-context-files)))
+
+(defun suderman/org-agenda-refresh (&optional all)
+  "Rediscover Agenda files and rebuild the current view, or ALL views."
+  (interactive "P")
+  (setq org-agenda-files (suderman/org-agenda-files))
+  (org-agenda-redo all))
+
+(defun suderman/org-agenda-refresh-all (&optional exhaustive)
+  "Rediscover files and rebuild all views, or all buffers with EXHAUSTIVE."
+  (interactive "P")
+  (setq org-agenda-files (suderman/org-agenda-files))
+  (org-agenda-redo-all exhaustive))
+
 (defun suderman/org-refile-files ()
   "Return valid refile destinations, including the current Org file."
   (let* ((current (and buffer-file-name (expand-file-name buffer-file-name)))
@@ -370,10 +399,39 @@
    (t
     (user-error "This command requires an Org buffer"))))
 
-(defun suderman/org-archive ()
-  "Archive the current Org item or Agenda entry."
+(defun suderman/org--archive-task (&optional agenda-buffer)
+  "Archive the closest TODO-state heading, updating AGENDA-BUFFER if given."
   (interactive)
-  (suderman/org--call-contextually #'org-archive-subtree #'org-agenda-archive))
+  (org-with-wide-buffer
+    (org-back-to-heading t)
+    (while (not (org-get-todo-state))
+      (unless (org-up-heading-safe)
+        (user-error "No enclosing heading has a TODO state")))
+    (when agenda-buffer
+      (let ((org-agenda-buffer-name agenda-buffer))
+        (org-remove-subtree-entries-from-agenda)))
+    ;; This command archives one task, even when a region spans other tasks.
+    (let ((org-loop-over-headlines-in-active-region nil))
+      (org-archive-subtree))))
+
+(defun suderman/org--agenda-archive-task ()
+  "Archive the closest TODO-state heading for the current Agenda entry."
+  (interactive)
+  (let ((marker (or (org-get-at-bol 'org-hd-marker)
+                    (org-get-at-bol 'org-marker)))
+        (agenda-buffer (buffer-name))
+        (org-archive-from-agenda t))
+    (unless (and (markerp marker) (marker-buffer marker))
+      (user-error "No Org entry at point"))
+    (org-with-remote-undo (marker-buffer marker)
+      (org-with-point-at marker
+        (suderman/org--archive-task agenda-buffer)))))
+
+(defun suderman/org-archive ()
+  "Archive the closest heading with a TODO state in Org or Agenda."
+  (interactive)
+  (suderman/org--call-contextually
+   #'suderman/org--archive-task #'suderman/org--agenda-archive-task))
 
 (defun suderman/org-archive-done (&optional no-confirm)
   "Archive completed Agenda headings without hiding unfinished descendants.
@@ -435,6 +493,34 @@ Batch calls do not prompt.  Save changed files before returning."
   "Open the custom Org Agenda dashboard."
   (interactive)
   (org-agenda nil "d"))
+
+(defun suderman/org-daily ()
+  "Show today's calendar and tasks in progress."
+  (interactive)
+  (org-agenda nil "D"))
+
+(defun suderman/org-inbox ()
+  "Open the Inbox for processing tasks, notes, and ideas."
+  (interactive)
+  (find-file (expand-file-name "inbox.org" org-directory)))
+
+(defun suderman/org-agenda-goto-other-window (original &rest args)
+  "Keep Agenda visible when ORIGINAL displays an entry with ARGS."
+  ;; Follow and preview must not fall back to replacing the Agenda pane.
+  (let ((display-buffer-overriding-action '(nil (inhibit-same-window . t))))
+    (apply original args)))
+
+(defun suderman/org-agenda-disable-meow ()
+  "Let Agenda's own map take precedence over Meow."
+  (if (bound-and-true-p meow-mode)
+      (meow-mode -1)
+    (when (fboundp 'meow--disable)
+      (meow--disable))))
+
+(defun suderman/org-agenda-setup ()
+  "Keep Meow off locally while retaining direct keypad access."
+  (add-hook 'meow-mode-hook #'suderman/org-agenda-disable-meow nil t)
+  (suderman/org-agenda-disable-meow))
 
 (defun suderman/org-deadline ()
   "Set an Org item's deadline, or open the TODO list."
@@ -517,13 +603,7 @@ Batch calls do not prompt.  Save changed files before returning."
         org-directory (expand-file-name "~/org")
         org-attach-id-dir (expand-file-name ".attach/" org-directory)
         org-attach-use-inheritance t
-        org-agenda-files
-        (append
-         (mapcar (lambda (file) (expand-file-name file org-directory))
-                 '("inbox.org" "todo.org" "routines.org"))
-         (suderman/org--direct-org-files
-          (expand-file-name "calendar" org-directory))
-         (suderman/org-context-files))
+        org-agenda-files (suderman/org-agenda-files)
         org-default-notes-file (expand-file-name "inbox.org" org-directory)
         org-capture-templates
         `(("t" "Task" entry (file ,org-default-notes-file)
@@ -540,22 +620,59 @@ Batch calls do not prompt.  Save changed files before returning."
         org-archive-file-header-format nil
         org-agenda-skip-scheduled-if-done t
         org-agenda-skip-deadline-if-done t
+        org-agenda-window-setup 'current-window
+        org-agenda-restore-windows-after-quit t
+        org-agenda-span 7
+        org-agenda-start-on-weekday nil
         org-agenda-custom-commands
         '(("d" "Dashboard"
            ((agenda "" ((org-agenda-span 7)))
             (todo "PROG" ((org-agenda-overriding-header "In progress")))
             (todo "EVAL" ((org-agenda-overriding-header "In review")))
             (todo "HOLD" ((org-agenda-overriding-header "On hold")))
-            (todo "TODO" ((org-agenda-overriding-header "Todo")))))))
+            (todo "TODO" ((org-agenda-overriding-header "Todo")))))
+          ("D" "Daily"
+           ((agenda "" ((org-agenda-span 1)))
+            (todo "PROG" ((org-agenda-overriding-header "In progress")))))
+          ("w" "Monday-based week" agenda ""
+           ((org-agenda-span 7) (org-agenda-start-on-weekday 1)))))
   (auto-save-visited-mode 1))
 
 (use-package org-agenda
   :ensure nil
   :after org
+  :hook (org-agenda-mode . suderman/org-agenda-setup)
   :config
+  (advice-add 'org-agenda-goto :around #'suderman/org-agenda-goto-other-window)
+  (keymap-set org-agenda-mode-map "SPC" #'meow-keypad)
+  (keymap-set org-agenda-mode-map "j" #'org-agenda-next-line)
+  (keymap-set org-agenda-mode-map "k" #'org-agenda-previous-line)
+  (keymap-set org-agenda-mode-map "l" #'org-agenda-switch-to)
+  (keymap-set org-agenda-mode-map "h" #'org-agenda-quit)
+  (keymap-set org-agenda-mode-map "m" #'org-agenda-bulk-toggle)
+  (keymap-set org-agenda-mode-map "M" #'org-agenda-bulk-unmark-all)
+  (keymap-set org-agenda-mode-map "B" #'org-agenda-bulk-action)
+  (keymap-set org-agenda-mode-map "C-SPC" #'org-agenda-show-and-scroll-up)
+  (keymap-set org-agenda-mode-map "r" #'suderman/org-agenda-refresh)
+  (keymap-set org-agenda-mode-map "g" #'suderman/org-agenda-refresh-all)
+  (keymap-set org-agenda-mode-map "M-p" #'consult-recent-file)
+  (keymap-set org-agenda-mode-map "M-U" #'suderman/split-window-below-and-focus)
+  (keymap-set org-agenda-mode-map "M-I" #'suderman/split-window-right-and-focus)
   (keymap-set org-agenda-mode-map "," #'suderman/ibuffer-toggle)
   (keymap-set org-agenda-mode-map "." #'suderman/org-agenda-dirvish)
-  (keymap-set org-agenda-mode-map "C-c ." #'org-agenda-goto-today))
+  (keymap-set org-agenda-mode-map "`" #'suderman/dashboard)
+  (keymap-set org-agenda-mode-map ">" #'suderman/dirvish-side-toggle)
+  (keymap-set org-agenda-mode-map "C-c ." #'org-agenda-goto-today)
+  ;; Keep displaced native actions reachable without giving up navigation.
+  (keymap-set org-agenda-mode-map "C-c j" #'org-agenda-goto-date)
+  (keymap-set org-agenda-mode-map "C-c k" #'org-agenda-capture)
+  (keymap-set org-agenda-mode-map "C-c l" #'org-agenda-log-mode)
+  (keymap-set org-agenda-mode-map "C-c M" #'org-agenda-phases-of-moon)
+  (keymap-set org-agenda-mode-map "C-c >" #'org-agenda-date-prompt)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (derived-mode-p 'org-agenda-mode)
+        (suderman/org-agenda-setup)))))
 
 (use-package org-tempo
   :ensure nil
