@@ -12,6 +12,7 @@
 (require 'suderman-completion)
 (require 'suderman-meow)
 (require 'suderman-help)
+(require 'suderman-git)
 (require 'org-agenda)
 (require 'touch-screen)
 (require 'vertico-mouse)
@@ -931,6 +932,30 @@
                 (execute-kbd-macro (kbd "q"))
                 (should (eq (window-buffer) source)))
             (kill-buffer sheet)))))))
+
+;; Commit editing
+
+(ert-deftest suderman/commit-starts-insert-only-at-a-blank-summary ()
+  (let ((calls 0))
+    (cl-letf (((symbol-function 'meow-insert)
+               (lambda () (cl-incf calls))))
+      (dolist (text '("" "\n# Changes to be committed:\n" "Existing summary\n"))
+        (with-temp-buffer
+          (insert text)
+          (goto-char (point-min))
+          (setq-local meow-mode t)
+          (suderman/git-commit-start-insert)))
+      (should (= calls 2))
+      (with-temp-buffer
+        (insert "\n\n")
+        (goto-char (point-min))
+        (forward-line 1)
+        (setq-local meow-mode t)
+        (suderman/git-commit-start-insert))
+      (with-temp-buffer
+        (setq-local meow-mode nil)
+        (suderman/git-commit-start-insert))
+      (should (= calls 2)))))
 
 (provide 'suderman-input-test)
 ;;; suderman-input-test.el ends here

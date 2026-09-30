@@ -596,6 +596,10 @@ so those native single-letter commands win.
 | =SPC g f= | Open current-file dispatch |
 | =SPC g d= | Diff the current file      |
 | =SPC g l= | Show current-file history  |
+| =SPC g L= | Show current-branch history |
+| =SPC g C= | Check out a branch          |
+| =SPC g s= | Stage files                 |
+| =SPC g u= | Unstage files               |
 | =SPC g b= | Show current-line blame    |
 | =SPC g B= | Show full-buffer blame     |
 
@@ -627,9 +631,17 @@ used instead of ours and theirs because those meanings reverse during rebase.
 Inside Magit, =j/k= and =n/p= move by section, =^= moves to the parent section,
 =TAB= expands or collapses, =RET= visits, =h= opens the dispatch menu, and =q=
 or =.= restores the previous buffer. The original =j= jump and =k= discard
-commands remain available as =h j= and =h k=. In Transient menus, =<escape>=
-returns to the parent menu or closes the top-level menu; =C-q= exits the entire
-stack.
+commands remain available as =h j= and =h k=. =SPC= retains Magit's diff preview;
+=C-SPC= opens the Meow keypad so the same leader maps remain available without
+enabling Meow in Magit. In Transient menus, =<escape>= returns to the parent
+menu or closes the top-level menu; =C-q= exits the entire stack.
+
+Word-level diffs appear when you move into a hunk, rather than refining every
+hunk at once. Revision buffers omit the related-ref lists. Stage and unstage
+prompts default to the current file and can select several files. Blank commit
+messages start in Meow Insert state; amend messages and templates with existing
+summaries keep Normal state. =C-c C-c= finishes a commit and =C-c C-k= cancels.
+Magit's native prompt to save modified repository buffers remains enabled.
 
 ** Org
 

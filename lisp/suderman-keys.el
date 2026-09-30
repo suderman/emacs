@@ -80,6 +80,7 @@
 
 ;; Git
 (keymap-set suderman/leader-git-map "B" #'magit-blame-addition)
+(keymap-set suderman/leader-git-map "C" #'magit-branch-checkout)
 (keymap-set suderman/leader-git-map "b" #'magit-blame-echo)
 (keymap-set suderman/leader-git-map "c" suderman/leader-git-conflict-map)
 (keymap-set suderman/leader-git-map "d" #'magit-diff-buffer-file)
@@ -87,7 +88,10 @@
 (keymap-set suderman/leader-git-map "g" #'magit-status)
 (keymap-set suderman/leader-git-map "h" suderman/leader-git-hunk-map)
 (keymap-set suderman/leader-git-map "l" #'magit-log-buffer-file)
+(keymap-set suderman/leader-git-map "L" #'magit-log-current)
 (keymap-set suderman/leader-git-map "m" #'magit-dispatch)
+(keymap-set suderman/leader-git-map "s" #'magit-stage-files)
+(keymap-set suderman/leader-git-map "u" #'magit-unstage-files)
 
 ;; Git hunks
 (keymap-set suderman/leader-git-hunk-map "d" #'diff-hl-diff-goto-hunk)

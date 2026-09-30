@@ -17,6 +17,7 @@
 (declare-function magit-section-forward "magit-section")
 (declare-function meow--disable "meow")
 (declare-function meow-mode "meow")
+(declare-function meow-insert "meow")
 (declare-function transient-quit-one "transient")
 
 (use-package transient
@@ -38,8 +39,17 @@
   (keymap-local-set "j" #'magit-section-forward)
   (keymap-local-set "k" #'magit-section-backward))
 
+(defun suderman/git-commit-start-insert ()
+  "Enter Meow Insert state when the commit summary is blank."
+  (when (and (bound-and-true-p meow-mode) (bobp) (eolp))
+    (meow-insert)))
+
 (use-package magit
-  :commands (magit-blame-addition
+  :commands (magit-branch-checkout
+             magit-stage-files
+             magit-unstage-files
+             magit-log-current
+             magit-blame-addition
              magit-blame-echo
              magit-diff-buffer-file
              magit-dispatch
@@ -48,12 +58,16 @@
              magit-status)
   :init
   (setq magit-display-buffer-function
-        #'magit-display-buffer-same-window-except-diff-v1)
+        #'magit-display-buffer-same-window-except-diff-v1
+        magit-diff-refine-hunk t
+        magit-revision-insert-related-refs nil)
   :config
   (add-hook 'after-save-hook #'magit-after-save-refresh-status)
   (add-hook 'magit-mode-hook #'suderman/magit-setup)
+  (add-hook 'git-commit-setup-hook #'suderman/git-commit-start-insert)
   (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
   (keymap-set magit-mode-map "." #'magit-mode-bury-buffer)
+  (keymap-set magit-mode-map "C-SPC" #'meow-keypad)
   (keymap-set magit-mode-map "M-h" #'edger-left)
   (keymap-set magit-mode-map "M-j" #'edger-down)
   (keymap-set magit-mode-map "M-k" #'edger-up)
