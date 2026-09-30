@@ -11,6 +11,8 @@
 (require 'suderman-android)
 (require 'suderman-completion)
 (require 'suderman-meow)
+(require 'suderman-help)
+(require 'org-agenda)
 (require 'touch-screen)
 (require 'vertico-mouse)
 
@@ -778,6 +780,157 @@
       (should (equal (buffer-string) "one\nthree\ntwo\n"))
       (should (equal (meow--selection-type) '(expand . line)))
       (should (equal (cons (region-beginning) (region-end)) '(11 . 14))))))
+
+;; Context-aware keyboard help
+
+(ert-deftest suderman/cheatsheet-resolves-source-remaps-and-restores-view ()
+  (save-window-excursion
+    (with-temp-buffer
+      (let ((source (current-buffer))
+            (suderman/cheatsheet-command-labels
+             '((forward-char . "fixture")
+               (forward-word . "preview fixture")
+               (undefined . "")
+               (self-insert-command . ""))))
+        (set-window-buffer (selected-window) source)
+        (org-agenda-mode)
+        (use-local-map (copy-keymap (current-local-map)))
+        (keymap-set (current-local-map) "j" #'backward-char)
+        (keymap-set (current-local-map) "<remap> <backward-char>" #'forward-char)
+        (keymap-set (current-local-map) "C-SPC" #'forward-word)
+        (keymap-set (current-local-map) "K" #'undefined)
+        (let ((original-terminal-map overriding-terminal-local-map)
+              (original-local-map overriding-local-map))
+          ;; Ambient current-buffer must not replace the visible view's context.
+          (with-temp-buffer (suderman/cheatsheet))
+          (should (eq overriding-terminal-local-map original-terminal-map))
+          (should (eq overriding-local-map original-local-map)))
+        (let ((sheet (window-buffer)))
+          (unwind-protect
+              (progn
+                (with-current-buffer sheet
+                  (should (derived-mode-p 'suderman/cheatsheet-mode))
+                  (should-not meow-mode)
+                  (should buffer-read-only)
+                  (should (string-match-p "fixture" (buffer-string)))
+                  (should (string-match-p "C-SPC  preview fixture" (buffer-string)))
+                  (should-not (string-match-p "<AD01>" (buffer-string))))
+                (execute-kbd-macro (kbd "q"))
+                (should (eq (window-buffer) source))
+                (should (eq (with-current-buffer source (key-binding (kbd "j")))
+                            #'forward-char)))
+            (kill-buffer sheet)))))))
+
+(ert-deftest suderman/cheatsheet-keeps-long-and-wide-labels-readable ()
+  (save-window-excursion
+    (with-temp-buffer
+      (set-window-buffer (selected-window) (current-buffer))
+      (org-agenda-mode)
+      (use-local-map (make-sparse-keymap))
+      (keymap-local-set "j" #'forward-char)
+      (keymap-local-set "k" #'backward-char)
+      (let ((suderman/cheatsheet-command-labels
+             `((forward-char . "deliberately long fixture")
+               (backward-char . ,(make-string 5 ?界))
+               (undefined . "")
+               (self-insert-command . "")))
+            (original (symbol-function 'meow--short-command-name))
+            rendered-labels)
+        (cl-letf (((symbol-function 'meow--short-command-name)
+                   (lambda (command)
+                     (push (alist-get command meow-command-to-short-name-list)
+                           rendered-labels)
+                     (funcall original command))))
+          (suderman/cheatsheet))
+        (let ((sheet (window-buffer)))
+          (unwind-protect
+              (progn
+                (dolist (label rendered-labels)
+                  (should (stringp label))
+                  (should (<= (string-width label) 9)))
+                (with-current-buffer sheet
+                  (should (string-match-p "\\[[[:digit:]]+\\]" (buffer-string)))
+                  (should (string-match-p "deliberately long fixture" (buffer-string)))
+                  (should (string-match-p (make-string 5 ?界) (buffer-string))))
+                (execute-kbd-macro (kbd "q")))
+            (kill-buffer sheet)))))))
+
+(ert-deftest suderman/cheatsheet-keeps-local-help-keys-after-meow-enable ()
+  (save-window-excursion
+    (with-temp-buffer
+      (set-window-buffer (selected-window) (current-buffer))
+      (suderman/cheatsheet-mode)
+      (meow-mode 1)
+      (should-not meow-mode)
+      (should-not (meow-normal-mode-p))
+      (should-not (meow-motion-mode-p))
+      (should (eq (key-binding (kbd "q")) #'quit-window)))))
+
+(ert-deftest suderman/cheatsheet-cycles-without-leaving-original-view ()
+  (save-window-excursion
+    (with-temp-buffer
+      (let ((source (current-buffer))
+            (suderman/cheatsheet-views '(org-agenda-mode ibuffer-mode dired-mode)))
+        (set-window-buffer (selected-window) source)
+        (org-agenda-mode)
+        (cl-letf (((symbol-function 'suderman/cheatsheet-view-content)
+                   (lambda (view origin)
+                     (should (eq origin source))
+                     (format "Fixture for %s\n" view))))
+          (suderman/cheatsheet)
+          (let ((sheet (window-buffer)))
+            (unwind-protect
+                (progn
+                  (should (eq (buffer-local-value 'suderman/cheatsheet-view sheet)
+                              'org-agenda-mode))
+                  (execute-kbd-macro (kbd "n n n"))
+                  (should (eq (window-buffer) sheet))
+                  (should (eq (buffer-local-value 'suderman/cheatsheet-view sheet)
+                              'org-agenda-mode))
+                  (execute-kbd-macro (kbd "p"))
+                  (should (eq (buffer-local-value 'suderman/cheatsheet-view sheet)
+                              'dired-mode))
+                  (execute-kbd-macro (kbd "n q"))
+                  (should (eq (window-buffer) source)))
+              (kill-buffer sheet))))))))
+
+(ert-deftest suderman/cheatsheet-reference-sheets-do-not-open-views ()
+  (with-temp-buffer
+    (let ((source (current-buffer)))
+      (cl-letf (((symbol-function 'buffer-list) (lambda (&rest _) (list source)))
+                ((symbol-function 'org-agenda) (lambda (&rest _) (ert-fail "Opened Agenda")))
+                ((symbol-function 'ibuffer) (lambda (&rest _) (ert-fail "Opened IBuffer")))
+                ((symbol-function 'dirvish) (lambda (&rest _) (ert-fail "Opened Dirvish")))
+                ((symbol-function 'magit-status) (lambda (&rest _) (ert-fail "Opened Magit"))))
+        (dolist (view (remq 'meow suderman/cheatsheet-views))
+          (let ((content (suderman/cheatsheet-view-content view source)))
+            (should (string-match-p "cheatsheet" content))
+            (should-not (string-match-p "<AD01>" content)))))
+      (should (eq major-mode 'fundamental-mode)))))
+
+(ert-deftest suderman/cheatsheet-preserves-meow-sheet-for-editor-states ()
+  (save-window-excursion
+    (with-temp-buffer
+      (let ((source (current-buffer)) called)
+        (set-window-buffer (selected-window) source)
+        (setq-local meow-mode t)
+        (cl-letf (((symbol-function 'meow-cheatsheet)
+                   (lambda ()
+                     (setq called (current-buffer))
+                     (switch-to-buffer (get-buffer-create "*Meow Cheatsheet*"))
+                     (let ((inhibit-read-only t))
+                       (erase-buffer)
+                       (insert "Native Meow fixture\n")))))
+          (with-temp-buffer (suderman/cheatsheet)))
+        (let ((sheet (window-buffer)))
+          (unwind-protect
+              (progn
+                (should (eq called source))
+                (should (with-current-buffer sheet
+                          (string-match-p "Native Meow fixture" (buffer-string))))
+                (execute-kbd-macro (kbd "q"))
+                (should (eq (window-buffer) source)))
+            (kill-buffer sheet)))))))
 
 (provide 'suderman-input-test)
 ;;; suderman-input-test.el ends here

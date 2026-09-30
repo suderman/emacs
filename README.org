@@ -366,14 +366,24 @@ I test changes.
 * Keymap reference
 
 These are the keys I want close at hand. They cover the daily map without
-copying every binding from the source. =SPC ?= opens Meow's full cheatsheet.
-Which-Key shows each leader prefix while I type it.
+copying every binding from the source. =SPC ?= opens a keyboard cheatsheet for
+this view. Meow states keep the original Meow sheet. Views with Meow disabled
+use their effective local bindings, with short labels for Agenda, IBuffer,
+Dired/Dirvish, and Magit commands. Labels that cannot fit the nine-column cells
+get a numbered note below the keyboard instead of being cut off. =C-c h= opens
+the same sheet without the keypad, so Magit's native =SPC= preview stays intact.
+Inside a sheet, =n= and =p= cycle through Meow, Agenda, IBuffer, Dired/Dirvish,
+and Magit, wrapping at either end. =q=, =h=, or Escape returns to the original
+view. Cycling uses an open buffer or the configured mode map; it does not open
+an Agenda, explorer, or Git repository. Which-Key shows each leader prefix
+while I type it.
 
 ** Finding a command
 
 | Key       | Action                                 |
 |-----------+----------------------------------------|
-| =SPC ?=   | Open the Meow cheatsheet               |
+| =SPC ?=   | Open this view's keyboard cheatsheet   |
+| =C-c h=   | Open the sheet without the keypad     |
 | =SPC ...= | Show the current leader choices        |
 | =C-h k=   | Describe a key                         |
 | =C-h b=   | Show effective bindings in this buffer |
@@ -507,7 +517,7 @@ choices without leaving the keypad.
 
 | Key       | Action                          |
 |-----------+---------------------------------|
-| =SPC ?=   | Meow cheatsheet                 |
+| =SPC ?=   | Context keyboard cheatsheet     |
 | =SPC SPC= | =M-x=                           |
 | =SPC g=   | Git commands                    |
 | =SPC ,=   | Buffer commands                 |
@@ -620,6 +630,9 @@ for native bulk actions. =SPC= still opens the Meow keypad. Comma opens IBuffer,
 period opens Dirvish for the entry's file, and Meta window keys stay available.
 =F= toggles follow mode, =<= filters by category, and =|= clears filters.
 =r= refreshes the current view and =g= all views, rediscovering files first.
+=SPC ?= draws the current bindings on a keyboard, with preview, date, and
+window keys below it. =q=, =h=, or Escape closes the sheet and returns to Agenda.
+Bare =?= still shows Org's flagging note.
 
 The normal calendar shows today and the next six days. =SPC o a w= opens a
 Monday-based week. =C-c .= returns to today and =C-c ,= changes priority.
@@ -827,6 +840,7 @@ Emacs boundary, it can hand control to the surrounding terminal multiplexer.
 | =lisp/suderman-nix.el=        | Embedded-language highlighting in Nix strings       |
 | =lisp/suderman-git.el=        | Magit, live hunks, and conflict handling            |
 | =lisp/suderman-org.el=        | Org agenda, capture, and refile workflow            |
+| =lisp/suderman-help.el=       | Context-aware keyboard cheatsheets                 |
 | =lisp/suderman-keys.el=       | Global, Meta, and =SPC= leader bindings             |
 | =lisp/suderman-formatting.el= | Project and buffer formatting commands              |
 | =lisp/suderman-reload.el=     | Modular hot reload and configuration updates        |
