@@ -273,6 +273,13 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
                   (cons (cdr entry) command))))
   (which-key-show-keymap 'suderman/dirvish-help-map))
 
+(defun suderman/dirvish-toggle-subtree ()
+  "Toggle the subtree at point only when the entry is a directory."
+  (interactive)
+  (when-let* ((entry (dired-get-filename nil t))
+              ((file-directory-p entry)))
+    (dirvish-subtree-toggle)))
+
 (defun suderman/dirvish-search (pattern)
   "Search below the current directory for comma-separated PATTERNs."
   (interactive (list (read-string "Search current directory: ")))
@@ -852,9 +859,9 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     (keymap-set map "/" #'suderman/dirvish-search)
     (keymap-set map "'" #'dirvish-setup-menu)
     (keymap-set map ";" #'dirvish-dispatch)
-    (keymap-set map "TAB" #'dirvish-subtree-toggle)
-    (keymap-set map "<tab>" #'dirvish-subtree-toggle)
-    (keymap-set map "o" #'dirvish-subtree-toggle)
+    (keymap-set map "TAB" #'suderman/dirvish-toggle-subtree)
+    (keymap-set map "<tab>" #'suderman/dirvish-toggle-subtree)
+    (keymap-set map "o" #'suderman/dirvish-toggle-subtree)
     (keymap-set map "M-o" #'dired-find-file-other-window)
     (keymap-set map "E" #'dirvish-emerge-menu)
     (keymap-set map "H" #'dirvish-history-go-backward)
