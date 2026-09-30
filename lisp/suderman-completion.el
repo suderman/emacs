@@ -111,6 +111,8 @@
   (completion-category-overrides '((file (styles basic partial-completion orderless)))))
 
 (use-package consult
+  ;; consult-customize expands to this non-autoloaded helper.
+  :functions consult--customize-put
   :bind
   (("C-x b" . consult-buffer)
    ("M-s r" . consult-ripgrep)
