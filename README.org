@@ -562,9 +562,11 @@ persistent selections; the old =SPC s= search menu moves to =SPC /=.
 | =SPC . b=   | Jump to a bookmark, or create a new name      |
 | =SPC . m/M= | Set / delete a bookmark                      |
 
-Consult uses =project.el='s root, including the canonical Org root for work
+Ripgrep uses =project.el='s root, including the canonical Org root for work
 projects. =C-u SPC / /= prompts for directories or files instead, so a search
 can target the source companion, the current directory, or several roots.
+Git grep uses the current checkout's root rather than its linked Org directory.
+=C-u SPC / g= still prompts for directories or files.
 Remote ripgrep needs =rg= on the remote host; =SPC / g= can use its Git instead.
 Line and Imenu searches preview immediately. Grep previews wait 0.2 seconds;
 =C-SPC= previews immediately. Bookmarks preview only on =C-SPC=, and Consult

@@ -14,6 +14,7 @@
 (defvar vertico-scroll-margin)
 (defvar xref-show-xrefs-function)
 (defvar xref-show-definitions-function)
+(defvar consult-project-function)
 
 (declare-function touch-screen-relative-xy "touch-screen" (posn window))
 (declare-function vertico--exhibit "vertico" ())
@@ -31,6 +32,12 @@
     (lazy-highlight-cleanup t))
   (when (fboundp 'isearch-dehighlight)
     (isearch-dehighlight)))
+
+(defun suderman/consult-git-grep-in-repository (grep &rest args)
+  "Run GREP in the current checkout, preserving explicit directory ARGS."
+  ;; A logical work project has an Org root, not necessarily a Git root.
+  (let ((consult-project-function (lambda (_) (vc-root-dir 'Git))))
+    (apply grep args)))
 
 ;; https://github.com/minad/vertico/discussions/615#discussioncomment-13872270
 ;; This relies on private Vertico scrolling and mouse APIs.
@@ -131,6 +138,8 @@
   (consult-narrow-key "<")
   :config
   (require 'consult-compile)
+  (advice-add 'consult-git-grep :around
+              #'suderman/consult-git-grep-in-repository)
   ;; Keep in-buffer previews immediate; avoid opening files on every keypress.
   (consult-customize
    consult-ripgrep consult-git-grep consult-grep
