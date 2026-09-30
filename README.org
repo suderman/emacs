@@ -271,6 +271,13 @@ the file, so a later sync is picked up on the next switch. Use
 without restarting. Switching disables other themes and resets old definitions
 before rebuilding the selected variant.
 
+Doom Modeline uses the buffer background in active and inactive windows, with
+no border. Normal state stays quiet; Insert, Motion, Keypad, and Beacon remain
+visible, as do native overwrite warnings. File paths are normalized and
+home-relative, such as =~/src/suderman/nfhours/PROMPT.md=, regardless of the
+logical project's Org root. Dashboard, Files, and Buffers remain available
+through their keys rather than modeline buttons.
+
 Org uses built-in variable pitch for prose and headings, with buffer-local
 fixed-pitch overrides for code, tables, metadata, timestamps, TODO states,
 tags, and indentation. TODO and link colors remain theme-owned. Heading tags

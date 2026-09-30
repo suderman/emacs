@@ -489,6 +489,23 @@
 
 ;; Shared appearance
 
+(ert-deftest suderman/modeline-normalizes-paths-outside-the-logical-project ()
+  (cl-letf (((symbol-function 'doom-modeline-project-root)
+             (lambda () (expand-file-name "~/org/work/modeline-fixture/"))))
+    (dolist (file '("~/src/modeline-fixture/note.org"
+                    "/tmp/modeline-fixture/note.org"))
+      (with-temp-buffer
+        (setq buffer-file-name (expand-file-name file)
+              default-directory (file-name-directory buffer-file-name))
+        (let* ((doom-modeline-buffer-file-name-style 'truncate-nil)
+               (name (doom-modeline-buffer-file-name)))
+          (should (equal (substring-no-properties name)
+                         (abbreviate-file-name buffer-file-name)))
+          (should (eq (get-text-property 0 'local-map name)
+                      mode-line-buffer-identification-keymap))
+          (should (string-match-p (regexp-quote buffer-file-name)
+                                  (get-text-property 0 'help-echo name))))))))
+
 (ert-deftest suderman/base16-gnus-faces-avoid-emacs-31-inheritance-cycles ()
   (let (faces transformed)
     (dolist (group '(mail news))

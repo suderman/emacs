@@ -11,12 +11,11 @@
 (require 'use-package)
 
 (defvar base16-theme-256-color-source)
+(defvar meow-mode)
 
 (declare-function base16-theme-define "base16-theme" (theme colors))
 (declare-function base16-theme-set-faces "base16-theme" (theme colors faces))
-(declare-function suderman/dashboard "suderman-dashboard")
-(declare-function suderman/dirvish "suderman-files")
-(declare-function suderman/ibuffer-toggle "suderman-buffers")
+(declare-function doom-modeline-segment--modals "doom-modeline-segments")
 
 (defconst suderman/font-family "JetBrainsMono Nerd Font Mono")
 (defconst suderman/nerd-symbol-font "Symbols Nerd Font Mono")
@@ -51,12 +50,6 @@ The producer owns values; this configuration owns their use on faces.")
            (find-font (font-spec :family
                                  (or (plist-get suderman/system-style :icon-font)
                                      suderman/nerd-symbol-font)) frame))))
-
-(defun suderman/mode-line-navigation-segments ()
-  "Return navigation segments appropriate for the current platform."
-  (append '(suderman-dashboard)
-          (unless (eq system-type 'android)
-            '(suderman-dirvish suderman-ibuffer))))
 
 ;; Emacs 31 rejects the Gnus inheritance cycles created by base16-theme
 ;; 20260419.235 and upstream main as of 2026-08-25.  Remove this when the empty
@@ -184,7 +177,12 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
      (outline-4 :foreground base0D)
      (org-block-begin-line :foreground base04 :background base01)
      (suderman/org-drawer-block :background base01)
-     (mode-line-inactive :foreground base04 :background base01 :box nil)
+     (mode-line :foreground base05 :background base00
+                :box nil :overline nil :underline nil)
+     (mode-line-active :inherit mode-line :foreground unspecified
+                       :background unspecified :box nil)
+     (mode-line-inactive :foreground base04 :background base00
+                         :box nil :overline nil :underline nil)
      (window-divider :foreground base02)
      (window-divider-first-pixel :foreground base02)
      (window-divider-last-pixel :foreground base02)
@@ -415,23 +413,15 @@ retries."
   (indent-bars-starting-column 0)
   (indent-bars-display-on-blank-lines 'least))
 
-(defun suderman/dashboard-from-mode-line (event)
-  "Open Dashboard for the window whose mode line EVENT clicked."
-  (interactive "e")
-  (select-window (posn-window (event-start event)))
-  (suderman/dashboard))
-
-(defun suderman/dirvish-from-mode-line (event)
-  "Open Dirvish for the window whose mode line EVENT clicked."
-  (interactive "e")
-  (select-window (posn-window (event-start event)))
-  (suderman/dirvish))
-
-(defun suderman/ibuffer-from-mode-line (event)
-  "Open IBuffer for the window whose mode line EVENT clicked."
-  (interactive "e")
-  (select-window (posn-window (event-start event)))
-  (suderman/ibuffer-toggle))
+(defun suderman/modeline-normalize-file-name (name)
+  "Normalize NAME's full path while preserving its mouse actions."
+  ;; Doom builds paths through the logical project root, which may be elsewhere.
+  (let ((path (abbreviate-file-name (expand-file-name name))))
+    (set-text-properties 0 (length path) (text-properties-at 0 name) path)
+    (put-text-property 0 (length path) 'face 'doom-modeline-buffer-path path)
+    (put-text-property (length (file-name-directory path)) (length path)
+                       'face 'doom-modeline-buffer-file path)
+    path))
 
 (with-eval-after-load 'dirvish
   (advice-remove 'dirvish--setup-mode-line
@@ -444,52 +434,23 @@ retries."
              (not (suderman/nerd-fonts-available-p)))
     (setq doom-modeline-icon nil))
   (setq doom-modeline-modal-icon nil
-        doom-modeline-buffer-file-name-style 'relative-to-project
-        doom-modeline-buffer-encoding 'nondefault)
+        doom-modeline-buffer-encoding 'nondefault
+        doom-modeline-height 1
+        doom-modeline-bar-width 1)
   :config
-  (doom-modeline-def-segment suderman-dashboard
-    "Clickable Dashboard button."
-    (propertize (concat " "
-                       (doom-modeline-icon 'codicon "nf-cod-dashboard" "D" "D"
-                                            :face (doom-modeline-face))
-                       " ")
-                'mouse-face 'doom-modeline-highlight
-                'help-echo "mouse-1: Open Dashboard"
-                'local-map (let ((map (make-sparse-keymap)))
-                             (define-key map [mode-line mouse-1]
-                                         #'suderman/dashboard-from-mode-line)
-                             map)))
-  (doom-modeline-def-segment suderman-dirvish
-    "Clickable Dirvish button."
-    (propertize (concat " "
-                       (doom-modeline-icon 'codicon "nf-cod-folder" "🗀" "D"
-                                            :face (doom-modeline-face))
-                       " ")
-                'mouse-face 'doom-modeline-highlight
-                'help-echo "mouse-1: Toggle Dirvish"
-                'local-map (let ((map (make-sparse-keymap)))
-                             (define-key map [mode-line mouse-1]
-                                         #'suderman/dirvish-from-mode-line)
-                             map)))
-  (doom-modeline-def-segment suderman-ibuffer
-    "Clickable IBuffer button."
-    (propertize (concat " "
-                       (doom-modeline-icon 'codicon "nf-cod-files" "🗎" "B"
-                                            :face (doom-modeline-face))
-                       " ")
-                'mouse-face 'doom-modeline-highlight
-                'help-echo "mouse-1: Toggle IBuffer"
-                'local-map (let ((map (make-sparse-keymap)))
-                             (define-key map [mode-line mouse-1]
-                                         #'suderman/ibuffer-from-mode-line)
-                             map)))
-  (doom-modeline-remove-segment 'suderman-dashboard)
-  (doom-modeline-remove-segment 'suderman-dirvish)
-  (doom-modeline-remove-segment 'suderman-ibuffer)
-  (let ((anchor 'bar))
-    (dolist (segment (suderman/mode-line-navigation-segments))
-      (doom-modeline-add-segment segment anchor :after)
-      (setq anchor segment)))
+  (advice-add 'doom-modeline-buffer-file-name :filter-return
+              #'suderman/modeline-normalize-file-name)
+  (setq doom-modeline-buffer-file-name-style 'truncate-nil)
+  (doom-modeline-def-segment suderman-modals
+    "Show exceptional Meow states and native overwrite warnings."
+    (let ((meow-mode (and (bound-and-true-p meow-mode)
+                          (not (bound-and-true-p meow-normal-mode)))))
+      (doom-modeline-segment--modals)))
+  ;; Clear old buttons and our replacement before rebuilding live layouts.
+  (dolist (segment '(suderman-dashboard suderman-dirvish suderman-ibuffer
+                    suderman-modals modals))
+    (doom-modeline-remove-segment segment))
+  (doom-modeline-add-segment 'suderman-modals 'window-number :after)
   (doom-modeline-mode 1))
 
 (add-hook 'enable-theme-functions #'suderman/refresh-system-fonts t)
