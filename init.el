@@ -38,7 +38,6 @@
 (require 'suderman-nix)
 (require 'suderman-git)
 (require 'suderman-formatting)
-(require 'suderman-pi)
 (require 'suderman-help)
 (require 'suderman-reload)
 

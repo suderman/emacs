@@ -929,7 +929,6 @@ Emacs boundary, it can hand control to the surrounding terminal multiplexer.
 | =lisp/suderman-keys.el=       | Global, Meta, and =SPC= leader bindings             |
 | =lisp/suderman-formatting.el= | Project and buffer formatting commands              |
 | =lisp/suderman-reload.el=     | Modular hot reload and configuration updates        |
-| =lisp/suderman-pi.el=         | Pi coding agent and clipboard image attachments     |
 | =test/=                       | Small behavioral and deployment safety suite        |
 | [[file:AGENTS.md][AGENTS.md]]                     | Maintenance decisions and verification rules        |
 
