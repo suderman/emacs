@@ -109,13 +109,17 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
       (meow--disable))))
 
 (defun suderman/mail-buffer-setup ()
-  "Keep Notmuch and Message keys usable without Meow's emulation maps."
+  "Keep Notmuch reader keys usable without Meow's emulation maps."
   (add-hook 'meow-mode-hook #'suderman/mail-disable-meow nil t)
   (suderman/mail-disable-meow))
 
 (defun suderman/mail-compose-setup ()
-  "Set up native editing, sender signatures, and guarded sending."
-  (suderman/mail-buffer-setup)
+  "Set up modal editing, sender signatures, and guarded sending."
+  ;; Reader keys own reader buffers, but replies and drafts are text editors.
+  (remove-hook 'meow-mode-hook #'suderman/mail-disable-meow t)
+  (when (and (bound-and-true-p meow-global-mode)
+             (not (bound-and-true-p meow-mode)))
+    (meow-mode 1))
   ;; Remove the first slice's blocker from buffers already open during reload.
   (remove-hook 'message-send-hook 'suderman/mail-send-pending t)
   (setq-local message-signature #'suderman/mail-signature

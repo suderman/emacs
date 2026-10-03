@@ -35,6 +35,7 @@
 (require 'suderman-markdown)
 (require 'suderman-org)
 (require 'suderman-mail)
+(require 'suderman-mail-drafts)
 (require 'suderman-languages)
 (require 'suderman-nix)
 (require 'suderman-git)
