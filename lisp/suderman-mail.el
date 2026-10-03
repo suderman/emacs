@@ -9,10 +9,13 @@
 (require 'use-package)
 (require 'package)
 (require 'message)
+(require 'mail-parse)
 (eval-when-compile (require 'notmuch nil t))
 
 (declare-function notmuch "notmuch")
 (declare-function notmuch-unthreaded "notmuch-tree")
+(declare-function notmuch-fcc-header-setup "notmuch-maildir-fcc")
+(declare-function notmuch-draft--mark-deleted "notmuch-draft")
 (declare-function meow--disable "meow")
 (declare-function meow-mode "meow")
 
@@ -49,9 +52,54 @@
   (interactive)
   (user-error "Use phone/web for folder moves until Maildir-aware moves are tested"))
 
-(defun suderman/mail-send-pending ()
-  "Block sending until msmtp routing and failure recovery are verified."
-  (user-error "Sending is not set up yet; C-x C-s saves a local Notmuch draft"))
+(defconst suderman/mail-accounts
+  '(("jon@suderman.net" :account "suderman"
+     :fcc "suderman/Sent -inbox -unread -draft"
+     :signature "Jon Suderman\nhttps://suderman.net\n")
+    ("jon@nonfiction.ca" :account "nonfiction"
+     :fcc nil
+     :signature "Jon Suderman\nhttps://www.nonfiction.ca\n"))
+  "Sender identities and their existing msmtp accounts.
+Fastmail needs a local Sent copy; Gmail creates its own server-side copy.")
+
+(defun suderman/mail-account ()
+  "Return settings for the single known mailbox in the From header.
+Reject missing, multiple, and unknown senders rather than using msmtp's default."
+  (save-excursion
+    (save-restriction
+      (message-narrow-to-headers)
+      (let* ((addresses (mail-header-parse-addresses
+                         (or (message-fetch-field "From") "")))
+             (account (and (= (length addresses) 1)
+                           (assoc-string (caar addresses)
+                                         suderman/mail-accounts t))))
+        (unless account
+          (user-error "From must contain one known sender: jon@suderman.net or jon@nonfiction.ca"))
+        (cdr account)))))
+
+(defun suderman/mail-signature ()
+  "Choose the initial signature from the compose buffer's From header."
+  (plist-get (suderman/mail-account) :signature))
+
+(defun suderman/mail-prepare-send ()
+  "Recompute msmtp routing and Fcc from the current From header."
+  (let ((account (suderman/mail-account)))
+    (setq-local message-sendmail-extra-arguments
+                (list (concat "--account=" (plist-get account :account)))
+                message-sendmail-envelope-from 'header)
+    (save-excursion
+      (save-restriction
+        (message-narrow-to-headers)
+        ;; A saved draft or edited From must not retain stale routing headers.
+        (message-remove-header "Fcc")
+        (message-remove-header "X-Message-SMTP-Method")))
+    (let ((notmuch-fcc-dirs (plist-get account :fcc)))
+      (notmuch-fcc-header-setup))))
+
+(defun suderman/mail-mark-sent-draft (&rest _)
+  "Retire the saved draft after transport succeeds, before Fcc storage.
+A Sent-copy failure must not leave a delivered message ready to resume and send."
+  (notmuch-draft--mark-deleted))
 
 (defun suderman/mail-disable-meow ()
   "Let Notmuch's native keys own the current buffer."
@@ -66,10 +114,13 @@
   (suderman/mail-disable-meow))
 
 (defun suderman/mail-compose-setup ()
-  "Keep this first mail setup draft-only, including direct Message sends."
+  "Set up native editing, sender signatures, and guarded sending."
   (suderman/mail-buffer-setup)
-  ;; Run before Notmuch's send hook, which hides drafts before transport succeeds.
-  (add-hook 'message-send-hook #'suderman/mail-send-pending -90 t))
+  ;; Remove the first slice's blocker from buffers already open during reload.
+  (remove-hook 'message-send-hook 'suderman/mail-send-pending t)
+  (setq-local message-signature #'suderman/mail-signature
+              message-confirm-send t)
+  (add-hook 'message-send-hook #'suderman/mail-prepare-send -90 t))
 
 ;; The stable frontend must match the system CLI, currently Notmuch 0.40.
 (add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/"))
@@ -82,6 +133,9 @@
   (setq mail-user-agent 'notmuch-user-agent
         notmuch-search-oldest-first nil
         notmuch-show-empty-saved-searches t
+        ;; 0.40's window refresh can change the current buffer during composition.
+        ;; Refresh explicitly with g instead.
+        notmuch-hello-auto-refresh nil
         notmuch-show-text/html-blocked-images "."
         notmuch-archive-tags nil
         notmuch-identities '("Jon Suderman <jon@suderman.net>"
@@ -90,8 +144,14 @@
         notmuch-draft-folder "drafts"
         notmuch-draft-tags '("+draft" "-inbox" "-unread")
         notmuch-draft-quoted-tags nil
-        ;; Fcc and SMTP belong to the next, transport-tested slice.
-        notmuch-fcc-dirs nil
+        message-send-mail-function #'message-send-mail-with-sendmail
+        sendmail-program "msmtp"
+        message-sendmail-envelope-from 'header
+        notmuch-fcc-dirs
+        (mapcar (lambda (account)
+                  (cons (regexp-quote (car account))
+                        (plist-get (cdr account) :fcc)))
+                suderman/mail-accounts)
         notmuch-tagging-keys '(("r" ("-unread") "Read")
                               ("u" ("+unread") "Unread")
                               ("f" ("+flagged") "Star")
@@ -137,7 +197,11 @@
                   notmuch-tree-mode-hook notmuch-show-mode-hook))
     (add-hook hook #'suderman/mail-buffer-setup))
   (add-hook 'notmuch-message-mode-hook #'suderman/mail-compose-setup)
-  (add-hook 'notmuch-mua-send-hook #'suderman/mail-send-pending)
+  (remove-hook 'notmuch-mua-send-hook 'suderman/mail-send-pending)
+  (add-hook 'notmuch-mua-send-hook #'suderman/mail-prepare-send -90)
+  ;; Native Notmuch hides drafts before SMTP.  Wait for successful transport.
+  (remove-hook 'message-send-hook #'notmuch-draft--mark-deleted)
+  (advice-add 'message-send-mail :after #'suderman/mail-mark-sent-draft)
   (keymap-set notmuch-common-keymap "G" #'suderman/mail-sync)
   (keymap-set notmuch-common-keymap "J" #'notmuch-jump-search)
   (keymap-set notmuch-common-keymap "O" #'suderman/mail-folder)

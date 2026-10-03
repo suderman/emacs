@@ -9,7 +9,7 @@
 (require 'cl-lib)
 (require 'suderman-mail)
 
-(ert-deftest suderman/mail-drafts-survive-resave-resume-and-blocked-send ()
+(ert-deftest suderman/mail-drafts-survive-resave-resume-and-invalid-sender ()
   (skip-unless (and (executable-find "notmuch") (locate-library "notmuch")))
   (require 'notmuch)
   (let* ((root (make-temp-file "suderman-mail-test-" t))
@@ -65,12 +65,14 @@
             (should-not (string-match-p ":2,.*S" file))
             (should (string-prefix-p (expand-file-name "drafts/" mail) file)))
           (notmuch-tag first-id '("-flagged" "-unread"))
-          ;; Sending must stop before transport, Fcc, or hiding the saved draft.
+          ;; An unknown sender must stop before transport or hiding the draft.
+          (message-replace-header "From" "unknown@example.invalid")
           (let ((message-send-mail-function
                  (lambda () (setq transport-called t))))
             (should-error (notmuch-mua-send) :type 'user-error)
             (should-error (run-hooks 'message-send-hook) :type 'user-error))
           (should-not transport-called)
+          (message-replace-header "From" "Jon Suderman <jon@suderman.net>")
           (should (equal "1\n" (notmuch-command-to-string "count" first-id)))
           (message-goto-body)
           (insert "Revision kept.\n")
