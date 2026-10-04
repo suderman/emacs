@@ -782,6 +782,43 @@
       (should (equal (meow--selection-type) '(expand . line)))
       (should (equal (cons (region-beginning) (region-end)) '(11 . 14))))))
 
+;; Mail widget navigation
+
+(ert-deftest suderman/mail-overview-escape-preserves-input-and-restores-navigation ()
+  (require 'wid-edit)
+  (with-temp-buffer
+    (suderman/mail-buffer-setup)
+    (use-local-map (make-sparse-keymap))
+    (keymap-local-set "j" #'widget-forward)
+    (let ((first (widget-create 'editable-field :size 20 "subject:first"))
+          (second (progn (insert "\n")
+                         (widget-create 'editable-field :size 20 "subject:second"))))
+      (insert "\n")
+      (widget-create 'push-button "Go")
+      (widget-setup)
+      (let ((global-escape (lookup-key widget-field-keymap (kbd "<escape>"))))
+        (suderman/mail-overview-field-setup)
+        (suderman/mail-overview-field-setup)
+        (should (eq global-escape (lookup-key widget-field-keymap (kbd "<escape>")))))
+      (dolist (field (list first second))
+        (dolist (position (list (widget-field-start field)
+                               (widget-field-end field)))
+          (goto-char position)
+          (should (widget-field-find (point)))
+          (should (eq (key-binding (kbd "j")) #'self-insert-command))
+          (should (eq (key-binding (kbd "<escape>")) #'suderman/mail-overview-escape))
+          (call-interactively (key-binding (kbd "<escape>")))
+          (should-not (widget-field-find (point)))
+          (should (eq (key-binding (kbd "j")) #'widget-forward))))
+      (should (equal (widget-value first) "subject:first"))
+      (should (equal (widget-value second) "subject:second"))
+      ;; Outside input, retain the ordinary Escape behavior.
+      (let (escaped)
+        (cl-letf (((symbol-function 'suderman/meow-escape)
+                   (lambda () (setq escaped t))))
+          (suderman/mail-overview-escape))
+        (should escaped)))))
+
 ;; Context-aware keyboard help
 
 (ert-deftest suderman/cheatsheet-resolves-source-remaps-and-restores-view ()
@@ -821,6 +858,34 @@
                 (should (eq (with-current-buffer source (key-binding (kbd "j")))
                             #'forward-char)))
             (kill-buffer sheet)))))))
+
+(ert-deftest suderman/cheatsheet-overview-field-does-not-hide-command-diagram ()
+  (save-window-excursion
+    (with-temp-buffer
+      (set-window-buffer (selected-window) (current-buffer))
+      (setq major-mode 'notmuch-hello-mode)
+      (suderman/cheatsheet-disable-meow)
+      (use-local-map (make-sparse-keymap))
+      (keymap-local-set "m" #'forward-char)
+      (keymap-local-set "G" #'backward-char)
+      (insert "Search: query\n")
+      (goto-char 9)
+      (let ((field (make-overlay 9 14))
+            (typing-map (make-keymap))
+            (suderman/cheatsheet-command-labels
+             '((forward-char . "compose fixture") (backward-char . "sync fixture")
+               (undefined . "") (self-insert-command . ""))))
+        (keymap-set typing-map "m" #'self-insert-command)
+        (keymap-set typing-map "G" #'self-insert-command)
+        (overlay-put field 'keymap typing-map)
+        (should (eq (key-binding (kbd "m")) #'self-insert-command))
+        (let ((position (point)) (override overriding-local-map)
+              (sheet (suderman/cheatsheet-local-content)))
+          (should (string-match-p "compose fixture" sheet))
+          (should (string-match-p "sync fixture" sheet))
+          (should (= position (point)))
+          (should (eq override overriding-local-map))
+          (should (eq (key-binding (kbd "m")) #'self-insert-command)))))))
 
 (ert-deftest suderman/cheatsheet-keeps-long-and-wide-labels-readable ()
   (save-window-excursion

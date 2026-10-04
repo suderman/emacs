@@ -90,18 +90,39 @@ the fallback when an experiment does not work.
 
 =C-c m= or Meow =SPC e= opens Notmuch. =J= chooses saved searches; =O= chooses
 an IMAP folder. =G= starts the existing account sync services, and =g= refreshes
-the view after sync finishes. Organizational tags do not replace IMAP folders.
-Archive and trash moves remain disabled until their sync behavior is tested.
+the view after sync finishes. Gmail gets a second sync pass to settle All Mail
+changes after trashing. Organizational tags do not replace IMAP folders.
+
+In single-message rows and message views, =a= moves the selected message's Inbox
+copy to Archive and =x= moves it to Trash. Both ask for confirmation with the
+source account and target folder. If both accounts have Inbox copies of that
+message, choose which account to move. Changes are local until sync runs; =G=
+syncs phone folders. Thread-wide and bulk moves remain disabled, including
+=A/X= and moves directly from a thread-search row. Trash is not permanent
+local deletion, but providers apply their normal Trash retention policy.
 
 =m= composes with a sender prompt. =C-x C-s= saves a local draft, =C-c C-p= saves
 and closes it, and =e= resumes a selected draft. =C-c C-c= sends after confirmation.
 Local drafts live outside the synced account folders, so they do not appear in
 phone Drafts. msmtp uses the current From address to choose Fastmail or Gmail.
 
-Reader views use native Notmuch keys. New messages, replies, and resumed drafts
-use Meow and meow-purrsist, like other text buffers. =i= enters Insert, =<escape>=
-returns to Normal, and =m= selects text for movement to extend. Native draft and
-send shortcuts remain available in both states.
+Reader views follow the explorer keys. =SPC= opens Meow's keypad, =,= opens
+IBuffer, =.= opens Dirvish, =h= goes back, and =l= runs the same action as Return,
+including links and MIME buttons. =j/k= navigate, and =/= searches or filters
+mail in the current view. =C-v= pages or advances without archiving. In message
+views, =H= toggles headers and =C-c .= opens the MIME-part menu.
+
+New messages, replies, and resumed drafts use Meow and meow-purrsist, like other
+text buffers. =i= enters Insert, =<escape>= returns to Normal, and =m= selects
+text for movement to extend. Native draft and send shortcuts remain available
+in both states. Insert state and the overview's query field keep normal typing,
+including spaces and punctuation. In overview input fields, =<escape>= leaves
+input unchanged and restores reader navigation and keypad keys. =TAB= moves
+between widgets.
+
+=C-c h= or =SPC ?= opens this mail view's keyboard cheatsheet outside typing
+fields. =C-SPC ?= remains an alternative in reader command areas. =n/p= cycles through the other sheets. Mail sheets include
+saved-search choices, flag shortcuts, sync versus refresh, and folder-move limits.
 
 ** Rich drafts for humans and agents
 
@@ -443,12 +464,14 @@ These are the keys I want close at hand. They cover the daily map without
 copying every binding from the source. =SPC ?= opens a keyboard cheatsheet for
 this view. Meow states keep the original Meow sheet. Views with Meow disabled
 use their effective local bindings, with short labels for Agenda, IBuffer,
-Dired/Dirvish, and Magit commands. Labels that cannot fit the nine-column cells
+Dired/Dirvish, Magit, and Notmuch commands. Mail composition has its own sheet
+with Meow editing and native draft, attachment, and send shortcuts.
+Labels that cannot fit the nine-column cells
 get a numbered note below the keyboard instead of being cut off. =C-c h= opens
 the same sheet without the keypad, so Magit's native =SPC= preview stays intact.
 Inside a sheet, =n= and =p= cycle through Meow, Agenda, IBuffer, Dired/Dirvish,
-and Magit, wrapping at either end. =q=, =h=, or Escape returns to the original
-view. Cycling uses an open buffer or the configured mode map; it does not open
+Magit, and mail overview/thread/message/compose sheets, wrapping at either end.
+=q=, =h=, or Escape returns to the original view. Cycling uses an open buffer or the configured mode map; it does not open
 an Agenda, explorer, or Git repository. Which-Key shows each leader prefix
 while I type it.
 

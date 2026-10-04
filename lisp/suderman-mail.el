@@ -10,6 +10,8 @@
 (require 'package)
 (require 'message)
 (require 'mail-parse)
+(require 'wid-edit)
+(require 'suderman-mail-moves)
 (eval-when-compile (require 'notmuch nil t))
 
 (declare-function notmuch "notmuch")
@@ -18,6 +20,9 @@
 (declare-function notmuch-draft--mark-deleted "notmuch-draft")
 (declare-function meow--disable "meow")
 (declare-function meow-mode "meow")
+(declare-function suderman/ibuffer-toggle "suderman-buffers")
+(declare-function suderman/dirvish "suderman-files")
+(declare-function suderman/meow-escape "suderman-meow")
 
 (defconst suderman/mail-folders
   '("suderman/Inbox" "suderman/Archive" "suderman/Drafts"
@@ -40,17 +45,44 @@
    (format "folder:\"%s\""
            (completing-read "Mail folder: " suderman/mail-folders nil t))))
 
+(defun suderman/mail-open ()
+  "Run the current reader's Return action, including links and MIME buttons."
+  (interactive)
+  (call-interactively (key-binding (kbd "RET"))))
+
+(defun suderman/mail-overview-escape ()
+  "Leave the current overview input field without submitting or clearing it."
+  (interactive)
+  (if (widget-field-find (point))
+      ;; End positions retain typing maps.  Skip adjacent fields as well.
+      (while-let ((field (widget-field-find (point))))
+        (goto-char (1+ (widget-field-end field))))
+    (suderman/meow-escape)))
+
+(defun suderman/mail-overview-field-setup ()
+  "Keep Escape available in overview fields without changing global widgets."
+  (dolist (field widget-field-list)
+    (let ((map (copy-keymap (widget-get field :keymap))))
+      (keymap-set map "<escape>" #'suderman/mail-overview-escape)
+      (widget-put field :keymap map)
+      ;; Fields replace the reader's local map, including at their end boundary.
+      (dolist (property '(:field-overlay :field-end-overlay))
+        (when-let* ((overlay (widget-get field property)))
+          (overlay-put overlay 'local-map map))))))
+
 (defun suderman/mail-sync ()
-  "Run the existing account sync services.  Use g to refresh after they finish."
+  "Run account sync services, then g refreshes the view.
+Gmail needs a second pass to settle All Mail after Inbox and Trash changes."
   (interactive)
   (async-shell-command
-   "systemctl --user start email-suderman.service email-nonfiction.service"
+   (concat "systemctl --user start email-suderman.service email-nonfiction.service"
+           " && systemctl --user start email-nonfiction.service")
    "*Mail sync*"))
 
 (defun suderman/mail-folder-action-pending ()
-  "Explain why tag-only archive and delete actions are unavailable."
+  "Explain why thread-wide and bulk folder moves are unavailable."
   (interactive)
-  (user-error "Use phone/web for folder moves until Maildir-aware moves are tested"))
+  (user-error "Use a single-message row or message view; thread-wide/bulk moves are disabled"))
 
 (defconst suderman/mail-accounts
   '(("jon@suderman.net" :account "suderman"
@@ -111,7 +143,9 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
 (defun suderman/mail-buffer-setup ()
   "Keep Notmuch reader keys usable without Meow's emulation maps."
   (add-hook 'meow-mode-hook #'suderman/mail-disable-meow nil t)
-  (suderman/mail-disable-meow))
+  (suderman/mail-disable-meow)
+  (when (eq major-mode 'notmuch-hello-mode)
+    (suderman/mail-overview-field-setup)))
 
 (defun suderman/mail-compose-setup ()
   "Set up modal editing, sender signatures, and guarded sending."
@@ -200,6 +234,7 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
   (dolist (hook '(notmuch-hello-mode-hook notmuch-search-mode-hook
                   notmuch-tree-mode-hook notmuch-show-mode-hook))
     (add-hook hook #'suderman/mail-buffer-setup))
+  (add-hook 'notmuch-hello-refresh-hook #'suderman/mail-overview-field-setup)
   (add-hook 'notmuch-message-mode-hook #'suderman/mail-compose-setup)
   (remove-hook 'notmuch-mua-send-hook 'suderman/mail-send-pending)
   (add-hook 'notmuch-mua-send-hook #'suderman/mail-prepare-send -90)
@@ -210,6 +245,25 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
   (keymap-set notmuch-common-keymap "J" #'notmuch-jump-search)
   (keymap-set notmuch-common-keymap "O" #'suderman/mail-folder)
   (keymap-set notmuch-common-keymap "C-SPC" #'meow-keypad)
+  (dolist (map (list notmuch-hello-mode-map notmuch-search-mode-map
+                    notmuch-tree-mode-map notmuch-show-mode-map))
+    (keymap-set map "SPC" #'meow-keypad)
+    (keymap-set map "," #'suderman/ibuffer-toggle)
+    (keymap-set map "." #'suderman/dirvish)
+    (keymap-set map "h" #'notmuch-bury-or-kill-this-buffer)
+    (keymap-set map "l" #'suderman/mail-open))
+  (keymap-set notmuch-tree-mode-map "h" #'notmuch-tree-quit)
+  (keymap-set notmuch-hello-mode-map "/" #'notmuch-unthreaded)
+  (keymap-set notmuch-search-mode-map "/" #'notmuch-search-filter)
+  (keymap-set notmuch-tree-mode-map "/" #'notmuch-tree-filter)
+  (keymap-set notmuch-show-mode-map "/" #'notmuch-show-filter-thread)
+  ;; Preserve reader paging and displaced header/part commands away from SPC/h/.
+  (keymap-set notmuch-search-mode-map "C-v" #'notmuch-search-scroll-up)
+  (keymap-set notmuch-tree-mode-map "C-v" #'notmuch-tree-scroll-or-next)
+  (keymap-set notmuch-show-mode-map "C-v" #'notmuch-show-advance)
+  (keymap-set notmuch-show-mode-map "H" #'notmuch-show-toggle-visibility-headers)
+  (keymap-set notmuch-show-mode-map "C-c ." #'notmuch-show-part-map)
+  (keymap-set notmuch-hello-mode-map "<escape>" #'suderman/mail-overview-escape)
   (keymap-set notmuch-hello-mode-map "j" #'widget-forward)
   (keymap-set notmuch-hello-mode-map "k" #'widget-backward)
   (keymap-set notmuch-search-mode-map "j" #'notmuch-search-next-thread)
@@ -218,12 +272,14 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
   (keymap-set notmuch-tree-mode-map "k" #'notmuch-tree-prev-matching-message)
   (keymap-set notmuch-show-mode-map "j" #'next-line)
   (keymap-set notmuch-show-mode-map "k" #'previous-line)
-  (keymap-set notmuch-show-mode-map "SPC" #'notmuch-show-advance)
   (dolist (map (list notmuch-search-mode-map notmuch-tree-mode-map
                     notmuch-show-mode-map))
     (keymap-set map "t" #'notmuch-tag-jump)
     (dolist (key '("a" "A" "x" "X"))
       (keymap-set map key #'suderman/mail-folder-action-pending)))
+  (dolist (map (list notmuch-tree-mode-map notmuch-show-mode-map))
+    (keymap-set map "a" #'suderman/mail-archive)
+    (keymap-set map "x" #'suderman/mail-trash))
   ;; Apply hooks to already-open buffers after a hot reload.
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
