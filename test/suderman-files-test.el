@@ -584,6 +584,36 @@
         (should (equal navigation '(find-alternate-file "/tmp/next/")))
         (should (eq (selected-window) parent))))))
 
+(ert-deftest suderman/dirvish-preview-keeps-explorer-keys-buffer-local ()
+  ;; Isolate shared maps so a failing test cannot poison later tests.
+  (let ((emacs-lisp-mode-map (copy-keymap emacs-lisp-mode-map))
+        (org-mode-map (copy-keymap org-mode-map))
+        (text-mode-map (copy-keymap text-mode-map)))
+    (dolist (mode '(emacs-lisp-mode org-mode text-mode fundamental-mode))
+      (save-window-excursion
+        (with-temp-buffer
+          (funcall mode)
+          (let* ((shared-map (current-local-map))
+                 (original-map (and shared-map (copy-keymap shared-map))))
+            (run-hooks 'dirvish-preview-setup-hook)
+            (run-hooks 'dirvish-preview-setup-hook)
+            (should (equal shared-map original-map))
+            (should (eq (lookup-key (current-local-map) (kbd ","))
+                        #'suderman/dirvish-ibuffer))
+            (should (eq (lookup-key (current-local-map) (kbd "`"))
+                        #'suderman/dashboard)))
+          ;; A new editor in the same mode must retain its typing map.
+          (with-temp-buffer
+            (funcall mode)
+            (set-window-buffer (selected-window) (current-buffer))
+            (meow-mode 1)
+            (should (eq (key-binding (kbd ",")) #'suderman/ibuffer-toggle))
+            (should (eq (key-binding (kbd ".")) #'suderman/dirvish))
+            (suderman/meow-insert)
+            (execute-kbd-macro (kbd ", . `"))
+            (should (equal (buffer-string) ",.`"))
+            (should (meow-insert-mode-p))))))))
+
 (ert-deftest suderman/dirvish-peek-follows-consult-async-results ()
   (let* ((file (make-temp-file "suderman-peek-"))
          (default-directory (file-name-directory file))

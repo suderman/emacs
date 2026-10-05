@@ -358,6 +358,10 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   "Configure the current Dirvish preview."
   (add-hook 'display-line-numbers-mode-hook
             #'suderman/dired-disable-line-numbers nil t)
+  ;; Preview buffers use real major-mode maps.  Do not change editor bindings.
+  (use-local-map (if (current-local-map)
+                     (copy-keymap (current-local-map))
+                   (make-sparse-keymap)))
   (keymap-local-set "`" #'suderman/dashboard)
   (keymap-local-set "," #'suderman/dirvish-ibuffer)
   (suderman/dired-disable-line-numbers))
