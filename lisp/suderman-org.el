@@ -20,6 +20,7 @@
 (defvar org-font-lock-extra-keywords)
 (defvar font-lock-beg)
 
+(declare-function suderman/dired-archive "suderman-files" ())
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
 (declare-function org-agenda "org-agenda" (&optional arg keys restriction))
@@ -425,10 +426,12 @@
         (suderman/org--archive-task agenda-buffer)))))
 
 (defun suderman/org-archive ()
-  "Archive the current subtree in Org or Agenda."
+  "Archive a subtree in Org or Agenda, or selected files in Dired."
   (interactive)
-  (suderman/org--call-contextually
-   #'suderman/org--archive-task #'suderman/org--agenda-archive-task))
+  (if (derived-mode-p 'dired-mode)
+      (call-interactively #'suderman/dired-archive)
+    (suderman/org--call-contextually
+     #'suderman/org--archive-task #'suderman/org--agenda-archive-task)))
 
 (defun suderman/org-archive-done (&optional no-confirm)
   "Archive completed headings in this buffer, keeping unfinished descendants.

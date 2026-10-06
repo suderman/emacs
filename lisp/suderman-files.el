@@ -629,6 +629,42 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     (dired-goto-file file)
     (message "Saved clipboard image to %s" file)))
 
+(defun suderman/dired-archive ()
+  "Move marked items, or the item at point, into sibling archive directories.
+Skip archive.org files and archive directories.  Timestamp names on collisions."
+  (interactive)
+  (unless (derived-mode-p 'dired-mode)
+    (user-error "This command requires a Dired buffer"))
+  (dired-create-files
+   (lambda (from to _overwrite)
+     (make-directory (file-name-directory to) t)
+     ;; Never overwrite, even if another entry appears after choosing the name.
+     (let ((dired-backup-overwrite nil))
+       (dired-rename-file from to nil)))
+   "Archive" (dired-get-marked-files)
+   (lambda (file)
+     (let* ((file (directory-file-name file))
+            (name (file-name-nondirectory file)))
+       (unless (or (member name '("." ".." "archive.org"))
+                   (and (equal name "archive") (file-directory-p file)))
+         (let ((destination (expand-file-name
+                             name (expand-file-name "archive/"
+                                                    (file-name-directory file)))))
+           (when (or (file-exists-p destination) (file-symlink-p destination))
+             (let* ((extension (unless (file-directory-p file)
+                                 (file-name-extension name t)))
+                    (base (concat (if extension
+                                      (file-name-sans-extension destination)
+                                    destination)
+                                  "-" (format-time-string "%Y%m%d-%H%M%S")))
+                    (number 1))
+               (setq destination (concat base extension))
+               (while (or (file-exists-p destination) (file-symlink-p destination))
+                 (setq number (1+ number)
+                       destination (concat base "-" (number-to-string number)
+                                           extension)))))
+           destination))))))
+
 (defvar suderman/dired-transfer nil
   "Staged file operation as (METHOD . FILES).")
 

@@ -774,7 +774,7 @@ as appropriate. Bulk archive and subtree deletion require an Org buffer.
 | Key               | Action                                            |
 |-------------------+---------------------------------------------------|
 | =SPC o t/p/e/h/d= | Set TODO / PROG / EVAL / HOLD / DONE directly       |
-| =SPC o a=         | Archive the current subtree                       |
+| =SPC o a=         | Archive a subtree, or selected files in Dired       |
 | =SPC o A=         | Archive completed tasks in this buffer             |
 | =SPC o D=         | Discard the current subtree into the kill ring     |
 | =SPC o o=         | Show the rolling week and tasks grouped by state   |
@@ -807,6 +807,14 @@ a prefix argument, and saves the source and archives. Save an unnamed buffer
 before using it. Completed parents stay in place when they contain unfinished
 tasks; completed children can still be archived. Other agenda files are untouched.
 =SPC o D= cuts one whole subtree, including when narrowed. Recover it with yank.
+
+In Dirvish or Dired, =SPC o a= moves marked files and folders, or the item at
+point when none are marked, into an =archive/= directory beside each item.
+It creates that directory when needed. Name conflicts get a timestamp before
+the file extension, such as =prompt-20261006-120345.org=. Folder names get the
+timestamp at the end. If that name also exists, a numeric suffix follows the
+timestamp. Existing entries are never overwritten. =archive.org= files and
+=archive= folders are skipped, including when marked.
 
 Agenda opens in the current window; =h= or =q= restores the previous layout.
 Its own map supplies =j/k= for rows, =l= or Return to visit, =C-SPC= to preview
