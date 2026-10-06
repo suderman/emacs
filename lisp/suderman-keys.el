@@ -38,6 +38,10 @@
   "SPC g h hunk command keymap.")
 (defvar suderman/leader-org-map nil
   "SPC o Org command keymap.")
+(defvar suderman/leader-org-view-map nil
+  "SPC o v Org view keymap.")
+(defvar suderman/leader-org-schedule-map nil
+  "SPC o s Org planning keymap.")
 (defvar suderman/leader-search-map nil
   "SPC / search command keymap.")
 (defvar suderman/leader-toggle-map nil
@@ -53,6 +57,8 @@
       suderman/leader-git-conflict-map (make-sparse-keymap)
       suderman/leader-git-hunk-map (make-sparse-keymap)
       suderman/leader-org-map (make-sparse-keymap)
+      suderman/leader-org-view-map (make-sparse-keymap)
+      suderman/leader-org-schedule-map (make-sparse-keymap)
       suderman/leader-search-map (make-sparse-keymap)
       suderman/leader-toggle-map (make-sparse-keymap)
       suderman/leader-window-map (make-sparse-keymap)
@@ -116,24 +122,34 @@
 (keymap-set suderman/leader-git-conflict-map "u" #'smerge-keep-upper)
 
 ;; Org
-(keymap-set suderman/leader-org-map "a" #'org-agenda)
-(keymap-set suderman/leader-org-map "A" #'suderman/org-archive)
-(keymap-set suderman/leader-org-map "B" #'suderman/org-archive-done)
+(keymap-set suderman/leader-org-map "TAB" #'org-overview)
+(keymap-set suderman/leader-org-map "a" #'suderman/org-archive)
+(keymap-set suderman/leader-org-map "A" #'suderman/org-archive-done)
 (keymap-set suderman/leader-org-map "c" #'org-capture)
-(keymap-set suderman/leader-org-map "d" #'suderman/org-deadline)
-(keymap-set suderman/leader-org-map "D" #'suderman/org-daily)
-(keymap-set suderman/leader-org-map "e" #'suderman/org-export)
+(keymap-set suderman/leader-org-map "d" #'suderman/org-todo-done)
+(keymap-set suderman/leader-org-map "D" #'suderman/org-delete-subtree)
+(keymap-set suderman/leader-org-map "e" #'suderman/org-todo-eval)
+(keymap-set suderman/leader-org-map "E" #'suderman/org-export)
 (keymap-set suderman/leader-org-map "g" #'suderman/org-heading)
+(keymap-set suderman/leader-org-map "h" #'suderman/org-todo-hold)
 (keymap-set suderman/leader-org-map "i" #'suderman/org-insert-link)
-(keymap-set suderman/leader-org-map "I" #'suderman/org-inbox)
 (keymap-set suderman/leader-org-map "l" #'org-store-link)
 (keymap-set suderman/leader-org-map "n" #'org-toggle-narrow-to-subtree)
-(keymap-set suderman/leader-org-map "r" #'suderman/org-refile)
-(keymap-set suderman/leader-org-map "s" #'suderman/org-schedule)
-(keymap-set suderman/leader-org-map "t" #'suderman/org-todo)
-(keymap-set suderman/leader-org-map "T" #'org-todo-list)
 (keymap-set suderman/leader-org-map "o" #'suderman/org-dashboard)
+(keymap-set suderman/leader-org-map "p" #'suderman/org-todo-prog)
+(keymap-set suderman/leader-org-map "r" #'suderman/org-refile)
+(keymap-set suderman/leader-org-map "s" suderman/leader-org-schedule-map)
+(keymap-set suderman/leader-org-map "t" #'suderman/org-todo-todo)
+(keymap-set suderman/leader-org-map "v" suderman/leader-org-view-map)
 (keymap-set suderman/leader-org-map "x" #'suderman/org-toggle-checkbox)
+
+;; Org views and planning
+(keymap-set suderman/leader-org-view-map "a" #'org-agenda)
+(keymap-set suderman/leader-org-view-map "t" #'org-todo-list)
+(keymap-set suderman/leader-org-view-map "d" #'suderman/org-daily)
+(keymap-set suderman/leader-org-view-map "i" #'suderman/org-inbox)
+(keymap-set suderman/leader-org-schedule-map "s" #'suderman/org-schedule)
+(keymap-set suderman/leader-org-schedule-map "d" #'suderman/org-deadline)
 
 ;; Search
 (keymap-set suderman/leader-search-map "/" #'consult-ripgrep)
@@ -293,6 +309,34 @@
   "s" "spelling"
   "v" "visual lines"
   "w" "whitespace")
+
+(which-key-add-keymap-based-replacements
+  suderman/leader-org-map
+  "TAB" "collapse all"
+  "t" "TODO"
+  "p" "PROG"
+  "e" "EVAL"
+  "h" "HOLD"
+  "d" "DONE"
+  "a" "archive"
+  "A" "archive completed in buffer"
+  "D" "delete subtree"
+  "o" "dashboard"
+  "E" "export"
+  "v" (cons "views" suderman/leader-org-view-map)
+  "s" (cons "planning" suderman/leader-org-schedule-map))
+
+(which-key-add-keymap-based-replacements
+  suderman/leader-org-view-map
+  "a" "agenda"
+  "t" "TODO list"
+  "d" "daily"
+  "i" "inbox")
+
+(which-key-add-keymap-based-replacements
+  suderman/leader-org-schedule-map
+  "s" "schedule"
+  "d" "deadline")
 
 (which-key-add-keymap-based-replacements
   suderman/leader-git-map

@@ -114,15 +114,15 @@
 
 ;; Archiving and synced files
 
-(ert-deftest suderman/org-archive-finds-the-nearest-task-from-body-or-child ()
+(ert-deftest suderman/org-archive-cuts-only-the-current-subtree ()
   (dolist (case '(("* TODO Parent\nBody\n** Notes\n*** Details\nChild body\n"
                    "Body" "Parent" nil)
                   ("* PROG Parent\n** Notes\n*** Details\nChild body\n"
-                   "Child body" "Parent" t)
+                   "Child body" "Details" t)
                   ("* TODO Parent\n** TODO Child\nChild body\n"
                    "Child body" "Child" nil)
                   ("* DONE Parent\n** Notes\nChild body\n"
-                   "Child body" "Parent" nil)
+                   "Child body" "Notes" nil)
                   ("* TODO Parent\nBody\n"
                    "Parent" "Parent" nil)
                   ("* TODO Parent\nBody\n"
@@ -152,9 +152,9 @@
               (should-not (search-forward (nth 2 case) nil t))
               (goto-char (point-min))
               (should (search-forward "TODO Keep" nil t))
-              (when (equal (nth 2 case) "Child")
+              (when (member (nth 2 case) '("Child" "Details" "Notes"))
                 (goto-char (point-min))
-                (should (search-forward "TODO Parent" nil t))))
+                (should (search-forward "Parent" nil t))))
             (with-current-buffer (find-buffer-visiting archive)
               (goto-char (point-min))
               (should (search-forward (nth 2 case) nil t))
@@ -166,9 +166,8 @@
             (kill-buffer buffer)))
         (delete-directory directory t)))))
 
-(ert-deftest suderman/org-archive-refuses-to-archive-without-a-task ()
-  (dolist (text '("Before first heading\n* TODO Later\n"
-                  "* Notes\n** Details\nBody\n"))
+(ert-deftest suderman/org-archive-refuses-to-archive-before-first-heading ()
+  (dolist (text '("Before first heading\n* TODO Later\n"))
     (with-temp-buffer
       (insert text)
       (org-mode)
@@ -178,7 +177,7 @@
         (should (= (point) position))
         (should (equal (buffer-string) text))))))
 
-(ert-deftest suderman/org-agenda-archive-removes-the-whole-enclosing-task ()
+(ert-deftest suderman/org-agenda-archive-removes-only-the-selected-subtree ()
   (let* ((directory (make-temp-file "suderman-agenda-archive-task-" t))
          (source (expand-file-name "tasks.org" directory))
          (archive (expand-file-name "archive.org" directory))
@@ -194,16 +193,17 @@
           (suderman/org-dashboard)
           (goto-char (point-min))
           (search-forward "Plain")
-          (let ((text (buffer-string)))
-            (should-error (suderman/org-archive) :type 'user-error)
-            (should (equal (buffer-string) text)))
+          (suderman/org-archive)
+          (should-not (string-match-p "Plain" (buffer-string)))
           (goto-char (point-min))
           (search-forward "Note")
           (suderman/org-archive)
-          (should-not (string-match-p "Parent\\|Note" (buffer-string)))
+          (should-not (string-match-p "Note" (buffer-string)))
+          (should (string-match-p "Parent" (buffer-string)))
           (should (string-match-p "Keep" (buffer-string)))
           (with-current-buffer (find-file-noselect source)
-            (should-not (string-match-p "Parent\\|Note" (buffer-string)))
+            (should-not (string-match-p "Note" (buffer-string)))
+            (should (string-match-p "Parent" (buffer-string)))
             (should (string-match-p "TODO Keep" (buffer-string)))))
       (when-let* ((buffer (get-buffer org-agenda-buffer-name)))
         (kill-buffer buffer))
@@ -213,7 +213,7 @@
           (kill-buffer buffer)))
       (delete-directory directory t))))
 
-(ert-deftest suderman/org-bulk-archive-saves-done-trees-in-their-own-archives ()
+(ert-deftest suderman/org-bulk-archive-saves-only-current-buffer-completed-trees ()
   (let* ((directory (make-temp-file "suderman-org-bulk-" t))
          (first (expand-file-name "first.org" directory))
          (second (expand-file-name "second.org" directory))
@@ -226,18 +226,25 @@
     (unwind-protect
         (progn
           (with-temp-file first
-            (insert "* DONE Finished parent\n** DONE Finished child\n"
+            (insert "#+TODO: TODO | DONE CLOSED\n"
+                    "* DONE Finished parent\n** DONE Finished child\n"
                     "* DONE Mixed parent\n** TODO Still open\n"
                     "** DONE Finished under mixed parent\n"
-                    "* TODO Keep working\n"))
+                    "* TODO Keep working\n"
+                    "* CLOSED Special\n:PROPERTIES:\n"
+                    ":ARCHIVE: special.org::\n:END:\n"))
           (with-temp-file second
             (insert "* DONE Special\n:PROPERTIES:\n"
                     ":ARCHIVE: special.org::\n:END:\n"))
-          (cl-letf (((symbol-function 'yes-or-no-p)
-                     (lambda (&rest _) (error "Batch archiving prompted")))
-                    ((symbol-function 'org-agenda-maybe-redo)
-                     (lambda () (setq refreshed t))))
-            (should (= (suderman/org-archive-done) 3)))
+          (with-current-buffer (find-file-noselect first)
+            (goto-char (point-min))
+            (re-search-forward "^\\* DONE")
+            (org-narrow-to-subtree)
+            (cl-letf (((symbol-function 'yes-or-no-p)
+                       (lambda (&rest _) (error "Batch archiving prompted")))
+                      ((symbol-function 'org-agenda-maybe-redo)
+                       (lambda () (setq refreshed t))))
+              (should (= (suderman/org-archive-done) 3))))
           (should refreshed)
           (should (string-match-p "Still open"
                                   (with-temp-buffer
@@ -256,7 +263,12 @@
             (insert-file-contents override)
             (should (search-forward "Special" nil t))
             (should (search-forward "ARCHIVE_FILE" nil t)))
-          (should (= (suderman/org-archive-done) 0)))
+          (with-temp-buffer
+            (insert-file-contents second)
+            (should (equal (buffer-string)
+                           "* DONE Special\n:PROPERTIES:\n:ARCHIVE: special.org::\n:END:\n")))
+          (with-current-buffer (find-file-noselect first)
+            (should (= (suderman/org-archive-done) 0))))
       (dolist (file (list first second archive override))
         (when-let* ((buffer (find-buffer-visiting file)))
           (with-current-buffer buffer (set-buffer-modified-p nil))
@@ -274,13 +286,14 @@
     (unwind-protect
         (progn
           (with-temp-file source (insert "* DONE Finished\n"))
-          (cl-letf (((symbol-function 'yes-or-no-p)
-                     (lambda (_prompt) (setq asked t) nil)))
-            (should (= (call-interactively #'suderman/org-archive-done) 0))
-            (should asked)
-            (should (= (let ((current-prefix-arg '(4)))
-                         (call-interactively #'suderman/org-archive-done))
-                       1)))
+          (with-current-buffer (find-file-noselect source)
+            (cl-letf (((symbol-function 'yes-or-no-p)
+                       (lambda (_prompt) (setq asked t) nil)))
+              (should (= (call-interactively #'suderman/org-archive-done) 0))
+              (should asked)
+              (should (= (let ((current-prefix-arg '(4)))
+                           (call-interactively #'suderman/org-archive-done))
+                         1))))
           (should (file-exists-p (expand-file-name "archive.org" directory))))
       (dolist (file (list source (expand-file-name "archive.org" directory)))
         (when-let* ((buffer (find-buffer-visiting file)))
@@ -455,18 +468,43 @@
       (kill-buffer source)
       (kill-buffer agenda))))
 
+(ert-deftest suderman/org-direct-states-set-plain-and-existing-headings ()
+  (dolist (case '((suderman/org-todo-todo . "TODO")
+                  (suderman/org-todo-prog . "PROG")
+                  (suderman/org-todo-eval . "EVAL")
+                  (suderman/org-todo-hold . "HOLD")
+                  (suderman/org-todo-done . "DONE")))
+    (dolist (initial '("" "DONE "))
+      (with-temp-buffer
+        (insert "* " initial "Task\n** Child\n* TODO Keep\n")
+        (org-mode)
+        (goto-char (point-min))
+        (call-interactively (car case))
+        (should (equal (org-get-todo-state) (cdr case)))
+        (should (string-match-p "\\*\\* Child" (buffer-string)))
+        (should (string-match-p "TODO Keep" (buffer-string)))))
+    (with-temp-buffer
+      (should-error (call-interactively (car case)) :type 'user-error))))
+
+(ert-deftest suderman/org-delete-cuts-one-complete-subtree-to-kill-ring ()
+  (let ((kill-ring nil)
+        (kill-ring-yank-pointer nil))
+    (with-temp-buffer
+      (insert "* TODO Discard\nBody\n** Child\nChild body\n* TODO Keep\n")
+      (org-mode)
+      (goto-char (point-min))
+      (search-forward "Body")
+      (narrow-to-region (line-beginning-position) (line-end-position))
+      (call-interactively #'suderman/org-delete-subtree)
+      (widen)
+      (should (equal (buffer-string) "* TODO Keep\n"))
+      (should (equal (current-kill 0 t)
+                     "* TODO Discard\nBody\n** Child\nChild body\n")))
+    (with-temp-buffer
+      (should-error (suderman/org-delete-subtree) :type 'user-error)
+      (should-error (suderman/org-archive-done) :type 'user-error))))
+
 (ert-deftest suderman/org-item-commands-follow-buffer-context ()
-  (dolist (binding '(("A" . suderman/org-archive)
-                     ("d" . suderman/org-deadline)
-                     ("e" . suderman/org-export)
-                     ("g" . suderman/org-heading)
-                     ("i" . suderman/org-insert-link)
-                     ("r" . suderman/org-refile)
-                     ("s" . suderman/org-schedule)
-                     ("t" . suderman/org-todo)
-                     ("x" . suderman/org-toggle-checkbox)))
-    (should (eq (lookup-key suderman/leader-org-map (kbd (car binding)))
-                (cdr binding))))
   (let (called)
     (cl-letf (((symbol-function 'consult-org-agenda)
                (lambda () (interactive) (setq called 'consult-org-agenda)))

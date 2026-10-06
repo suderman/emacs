@@ -400,22 +400,19 @@
     (user-error "This command requires an Org buffer"))))
 
 (defun suderman/org--archive-task (&optional agenda-buffer)
-  "Archive the closest TODO-state heading, updating AGENDA-BUFFER if given."
+  "Archive the current subtree, updating AGENDA-BUFFER if given."
   (interactive)
   (org-with-wide-buffer
     (org-back-to-heading t)
-    (while (not (org-get-todo-state))
-      (unless (org-up-heading-safe)
-        (user-error "No enclosing heading has a TODO state")))
     (when agenda-buffer
       (let ((org-agenda-buffer-name agenda-buffer))
         (org-remove-subtree-entries-from-agenda)))
-    ;; This command archives one task, even when a region spans other tasks.
+    ;; Archive one subtree, even when a region spans other headings.
     (let ((org-loop-over-headlines-in-active-region nil))
       (org-archive-subtree))))
 
 (defun suderman/org--agenda-archive-task ()
-  "Archive the closest TODO-state heading for the current Agenda entry."
+  "Archive the current Agenda entry's subtree."
   (interactive)
   (let ((marker (or (org-get-at-bol 'org-hd-marker)
                     (org-get-at-bol 'org-marker)))
@@ -428,56 +425,62 @@
         (suderman/org--archive-task agenda-buffer)))))
 
 (defun suderman/org-archive ()
-  "Archive the closest heading with a TODO state in Org or Agenda."
+  "Archive the current subtree in Org or Agenda."
   (interactive)
   (suderman/org--call-contextually
    #'suderman/org--archive-task #'suderman/org--agenda-archive-task))
 
 (defun suderman/org-archive-done (&optional no-confirm)
-  "Archive completed Agenda headings without hiding unfinished descendants.
+  "Archive completed headings in this buffer, keeping unfinished descendants.
 Ask for confirmation in Emacs, unless given a prefix argument or NO-CONFIRM.
 Batch calls do not prompt.  Save changed files before returning."
   (interactive "P")
-  (let (headings)
-    (unwind-protect
-        (progn
-          (org-map-entries
-           (lambda ()
-             (let ((parent (point)))
-               (unless (memq t (org-map-entries
-                                (lambda ()
-                                  (and (> (point) parent)
-                                       (member (org-get-todo-state)
-                                               org-not-done-keywords)
-                                       t))
-                                nil 'tree))
-                 (push (point-marker) headings)
-                 (setq org-map-continue-from
-                       (save-excursion (org-end-of-subtree t t))))))
-           "/DONE" (org-agenda-files t) 'archive 'comment)
-          (setq headings (nreverse headings))
-          (let ((count (length headings))
-                (archive-p (and headings
-                                (or no-confirm noninteractive
-                                    (yes-or-no-p
-                                     (format "Archive %d completed Org headings? "
-                                             (length headings)))))))
-            (when archive-p
-              (let ((org-archive-subtree-save-file-p t))
-                (dolist (heading headings)
-                  (with-current-buffer (marker-buffer heading)
-                    (save-excursion
-                      (goto-char heading)
-                      (org-archive-subtree))
-                    (save-buffer))))
-              (suderman/org-refresh-agenda-after-revert)
-              (message "Archived %d completed Org headings" count))
-            (unless headings
-              (when (called-interactively-p 'interactive)
-                (message "No completed Org headings to archive")))
-            (if archive-p count 0)))
-      (dolist (heading headings)
-        (set-marker heading nil)))))
+  (unless (derived-mode-p 'org-mode)
+    (user-error "This command requires an Org buffer"))
+  (unless buffer-file-name
+    (user-error "Save this Org buffer before archiving"))
+  (org-with-wide-buffer
+    (let (headings)
+      (unwind-protect
+          (progn
+            (org-map-entries
+             (lambda ()
+               (let ((parent (point)))
+                 (when (and (member (org-get-todo-state) org-done-keywords)
+                            (not (memq t
+                                       (org-map-entries
+                                        (lambda ()
+                                          (and (> (point) parent)
+                                               (member (org-get-todo-state)
+                                                       org-not-done-keywords)
+                                               t))
+                                        nil 'tree))))
+                   (push (point-marker) headings)
+                   (setq org-map-continue-from
+                         (save-excursion (org-end-of-subtree t t))))))
+             nil nil 'archive 'comment)
+            (setq headings (nreverse headings))
+            (let ((count (length headings))
+                  (archive-p (and headings
+                                  (or no-confirm noninteractive
+                                      (yes-or-no-p
+                                       (format "Archive %d completed Org headings? "
+                                               (length headings)))))))
+              (when archive-p
+                (let ((org-archive-subtree-save-file-p t)
+                      (org-loop-over-headlines-in-active-region nil))
+                  (dolist (heading headings)
+                    (goto-char heading)
+                    (org-archive-subtree))
+                  (save-buffer))
+                (suderman/org-refresh-agenda-after-revert)
+                (message "Archived %d completed Org headings" count))
+              (unless headings
+                (when (called-interactively-p 'interactive)
+                  (message "No completed Org headings to archive")))
+              (if archive-p count 0)))
+        (dolist (heading headings)
+          (set-marker heading nil))))))
 
 (defun suderman/org-agenda-dirvish ()
   "Open Dirvish at the file for the selected Agenda entry."
@@ -557,11 +560,51 @@ Batch calls do not prompt.  Save changed files before returning."
   (suderman/org--call-contextually
    #'org-schedule #'org-agenda-schedule #'org-todo-list))
 
-(defun suderman/org-todo ()
-  "Change an Org item's TODO state, or open the TODO list."
+(defun suderman/org-todo (&optional state)
+  "Change an Org item's TODO state, or set it directly to STATE.
+Without STATE, open the TODO list outside Org or Agenda."
+  (interactive)
+  (if state
+      (suderman/org--call-contextually
+       (lambda () (interactive) (org-todo state))
+       (lambda () (interactive) (org-agenda-todo state)))
+    (suderman/org--call-contextually
+     #'org-todo #'org-agenda-todo #'org-todo-list)))
+
+(defun suderman/org-todo-todo ()
+  "Set the current Org heading or Agenda entry to TODO."
+  (interactive)
+  (suderman/org-todo "TODO"))
+
+(defun suderman/org-todo-prog ()
+  "Set the current Org heading or Agenda entry to PROG."
+  (interactive)
+  (suderman/org-todo "PROG"))
+
+(defun suderman/org-todo-eval ()
+  "Set the current Org heading or Agenda entry to EVAL."
+  (interactive)
+  (suderman/org-todo "EVAL"))
+
+(defun suderman/org-todo-hold ()
+  "Set the current Org heading or Agenda entry to HOLD."
+  (interactive)
+  (suderman/org-todo "HOLD"))
+
+(defun suderman/org-todo-done ()
+  "Set the current Org heading or Agenda entry to DONE."
+  (interactive)
+  (suderman/org-todo "DONE"))
+
+(defun suderman/org-delete-subtree ()
+  "Discard the current Org subtree, keeping it in the kill ring."
   (interactive)
   (suderman/org--call-contextually
-   #'org-todo #'org-agenda-todo #'org-todo-list))
+   (lambda ()
+     (interactive)
+     (org-with-wide-buffer
+       (org-back-to-heading t)
+       (org-cut-subtree)))))
 
 (defun suderman/org-toggle-checkbox ()
   "Toggle a checkbox in an Org buffer."

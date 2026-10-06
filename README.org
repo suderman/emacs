@@ -632,7 +632,7 @@ I use these subcommands most often:
 | =SPC ,= | =/= switch, =b= IBuffer, =,= alternate, =k= kill, =n/p= next/previous, =r= revert, =s= save                                                                                     |
 | =SPC .= | =.= find with consult-fd, =/= ripgrep, =f= Dirvish, =,= recent, =s= save, =S= save as                                                                                           |
 | =SPC g= | =g= status, =d= file diff, =l= file log, =h= hunks, =c= conflicts                                                                                                               |
-| =SPC o= | =a= agenda menu, =o= agenda dashboard, =c= capture, =d/s= deadline/schedule, =r= refile, =t= TODO state                                                                         |
+| =SPC o= | =t/p/e/h/d= TODO/PROG/EVAL/HOLD/DONE, =a/A= archive subtree/completed in buffer, =D= discard, =o= dashboard, =v= views, =s= planning, =c= capture, =r= refile                       |
 | =SPC /= | =/= ripgrep, =l/L= lines, =i/I= Imenu, =m/M= marks, =y= kill ring                                                                                                               |
 | =SPC t= | =c= column indicator, =d= Dirvish sidebar, =h= current line, =m= menu bar, =n= line numbers, =o= Org indentation, =r= read only, =s= spelling, =v= visual lines, =w= whitespace |
 | =SPC w= | =hjkl= focus, =HJKL= resize, =u/i= split, =w= close, =o= keep one, === balance                                                                                                  |
@@ -767,25 +767,31 @@ Magit's native prompt to save modified repository buffers remains enabled.
 
 ** Org
 
-=SPC o= groups Org commands. Deadline, schedule, TODO, refile, archive, and
-export commands use the current Org item or Agenda entry as appropriate.
+=SPC o= is a global Org namespace. Direct state setters, single-subtree
+archive, planning, refile, and export use the current Org item or Agenda entry
+as appropriate. Bulk archive and subtree deletion require an Org buffer.
 
-| Key         | Action                                            |
-|-------------+---------------------------------------------------|
-| =SPC o a=   | Open the Agenda menu                              |
-| =SPC o o=   | Show the rolling week and tasks grouped by state  |
-| =SPC o D=   | Show today and tasks in progress                  |
-| =SPC o I=   | Open Inbox for processing                         |
-| =SPC o c=   | Capture a task, note, or idea in =inbox.org=      |
-| =SPC o d/s= | Set deadline / schedule                           |
-| =SPC o t/T= | Change TODO state / open the TODO list            |
-| =SPC o g=   | Find a heading here or across Agenda files        |
-| =SPC o i/l= | Insert / store a link                             |
-| =SPC o r=   | Refile the current item                           |
-| =SPC o n=   | Toggle narrowing to the current subtree           |
-| =SPC o A=   | Archive the nearest enclosing TODO-state heading  |
-| =SPC o B=   | Archive completed Agenda items after confirmation |
-| =SPC o x/e= | Toggle a checkbox / export                        |
+| Key               | Action                                            |
+|-------------------+---------------------------------------------------|
+| =SPC o t/p/e/h/d= | Set TODO / PROG / EVAL / HOLD / DONE directly       |
+| =SPC o a=         | Archive the current subtree                       |
+| =SPC o A=         | Archive completed tasks in this buffer             |
+| =SPC o D=         | Discard the current subtree into the kill ring     |
+| =SPC o o=         | Show the rolling week and tasks grouped by state   |
+| =SPC o v a=       | Open the Agenda menu                               |
+| =SPC o v t=       | Open the TODO list                                 |
+| =SPC o v d=       | Show today and tasks in progress                   |
+| =SPC o v i=       | Open Inbox for processing                          |
+| =SPC o s s=       | Schedule the current item                          |
+| =SPC o s d=       | Set its deadline                                   |
+| =SPC o E=         | Export                                             |
+| =SPC o c=         | Capture a task, note, or idea in =inbox.org=         |
+| =SPC o g=         | Find a heading here or across Agenda files         |
+| =SPC o i/l=       | Insert / store a link                              |
+| =SPC o r=         | Refile the current item                            |
+| =SPC o n=         | Toggle narrowing to the current subtree            |
+| =SPC o TAB=       | Collapse all headings to the top-level overview    |
+| =SPC o x=         | Toggle a checkbox                                  |
 
 Tasks use =TODO=, =PROG=, =EVAL=, =HOLD=, and =DONE=. Agenda collects the inbox,
 main TODO and routines files, calendar files, direct files under =life/= and
@@ -793,10 +799,14 @@ main TODO and routines files, calendar files, direct files under =life/= and
 It also includes Org files directly under each work domain, but skips
 =archive.org= and archived directories. Capture goes to the inbox; refile uses
 active context files rather than scanning every task attachment directory.
-Archives go to =archive.org= beside the source file. =SPC o A= works from body
-text or a plain child heading and chooses the closest heading with a TODO
-state, including DONE. It refuses when no enclosing task exists. Bulk archiving
-leaves completed parents in place when they still contain unfinished tasks.
+Archives go to =archive.org= beside the source file. =SPC o a= archives only
+the current heading and its children, even for headings without a TODO state.
+=SPC o A= uses Org's completed states and scans the whole current buffer,
+including outside a narrowed subtree. It asks for confirmation, unless given
+a prefix argument, and saves the source and archives. Save an unnamed buffer
+before using it. Completed parents stay in place when they contain unfinished
+tasks; completed children can still be archived. Other agenda files are untouched.
+=SPC o D= cuts one whole subtree, including when narrowed. Recover it with yank.
 
 Agenda opens in the current window; =h= or =q= restores the previous layout.
 Its own map supplies =j/k= for rows, =l= or Return to visit, =C-SPC= to preview
@@ -809,7 +819,7 @@ period opens Dirvish for the entry's file, and Meta window keys stay available.
 window keys below it. =q=, =h=, or Escape closes the sheet and returns to Agenda.
 Bare =?= still shows Org's flagging note.
 
-The normal calendar shows today and the next six days. =SPC o a w= opens a
+The normal calendar shows today and the next six days. =SPC o v a w= opens a
 Monday-based week. =C-c .= returns to today and =C-c ,= changes priority.
 Displaced date, capture, log, moon-phase, and date-prompt commands remain on
 =C-c j=, =C-c k=, =C-c l=, =C-c M=, and =C-c >=.
