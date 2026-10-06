@@ -577,6 +577,7 @@
             ":LOGBOOK:\n- Note taken on [2026-09-17 Thu] \\\\\n  Prose with [[https://example.com][a link]].\n:END:\n\nOutside\n")
     (let ((text (buffer-string)))
       (org-mode)
+      (org-fold-show-all)
       (set-buffer-modified-p nil)
       (font-lock-ensure)
       (should (equal text (buffer-substring-no-properties (point-min) (point-max))))

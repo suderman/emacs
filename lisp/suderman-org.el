@@ -592,7 +592,7 @@ Batch calls do not prompt.  Save changed files before returning."
         org-log-into-drawer t
         org-fontify-whole-block-delimiter-line nil
         org-startup-indented t
-        org-startup-folded 'nofold
+        org-startup-folded 'fold
         org-hide-drawer-startup t
         org-startup-with-link-previews t
         org-tags-column 0
