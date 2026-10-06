@@ -921,7 +921,7 @@ from IBuffer uses the selected buffer or project heading as context.
 | Dirvish | =u / U=         | Unmark without moving / unmark all           |
 | Dirvish | =c / x / v=     | Stage copy / stage cut / paste               |
 | Dirvish | =V=             | Save Wayland clipboard PNG in this directory |
-| Dirvish | =d / X=         | Flag for deletion / delete flagged files     |
+| Dirvish | =d / D=         | Delete with / without confirmation           |
 | Dirvish | =a / r=         | Create / rename                              |
 | Dirvish | =. / ,=         | Close Dirvish / replace it with IBuffer      |
 | Dirvish | =g / I / i=     | Refresh / file information / toggle dotfiles |
@@ -941,6 +941,11 @@ from IBuffer uses the selected buffer or project heading as context.
 
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
 marked. Copies remain staged after =v=; cuts clear once the move starts.
+Dirvish =d= deletes ordinary =m= marks, or the current entry when none are
+marked, after confirmation. =D= deletes the same selection without confirmation,
+including nonempty directories and their contents. It keeps visiting buffers
+alive to preserve unsaved edits. There is no separate delete-flag step or =X=
+shortcut.
 Period opens Dirvish in the selected window on desktop and Android. If a sidebar
 is already visible, Period focuses it instead. Within Dirvish, Period closes
 the view. =f= toggles the full-frame parent/current/preview layout. Close that
@@ -948,11 +953,11 @@ layout before using =>= to open the sidebar. Comma closes a full-frame layout
 before opening IBuffer. From the sidebar it opens IBuffer in an editor window
 and leaves the sidebar visible. Closing IBuffer restores the prior editor window.
 Dotfiles start hidden in the parent and current panes, and =i= toggles them
-together without status messages. The preview remains unfiltered. Deleting a
-file kills its unmodified visiting buffer, while modified buffers still require
-confirmation. Use =M-x revert-buffer= when another program changes the
-directory. The =?= popup reads the current bindings instead of Dirvish's default
-command menu. Semicolon opens the original Dirvish menu. Directory arrows toggle
+together without status messages. The preview remains unfiltered. Confirmed
+deletion with =d= kills unmodified visiting buffers, while modified buffers still
+require confirmation before being killed. Use =M-x revert-buffer= when another
+program changes the directory. The =?= popup reads the current bindings instead
+of Dirvish's default command menu. Semicolon opens the original Dirvish menu. Directory arrows toggle
 subtrees on click, matching =TAB=.
 
 On Android, one tap opens a row in the current window. On desktop, single left

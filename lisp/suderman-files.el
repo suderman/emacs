@@ -198,9 +198,8 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     ("v" . "Paste staged files")
     ("V" . "Paste clipboard PNG")
     ("C" . "Copy immediately")
-    ("D" . "Delete immediately")
-    ("d" . "Flag for deletion")
-    ("X" . "Delete flagged files")
+    ("D" . "Delete without confirmation")
+    ("d" . "Delete with confirmation")
     ("Z" . "Compress")
     ("a" . "Create file or directory")
     ("r" . "Rename or move")
@@ -556,6 +555,17 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   (save-excursion
     (call-interactively #'dired-unmark)))
 
+(defun suderman/dired-delete-without-confirmation ()
+  "Delete marked files, or the current file, without confirmation.
+Delete nonempty directories recursively.  Keep visiting buffers alive so
+unsaved edits are not discarded or interrupted by buffer-killing prompts."
+  (interactive)
+  (let ((dired-deletion-confirmer (lambda (&rest _) t))
+        (dired-no-confirm t)
+        (dired-recursive-deletes 'always)
+        (dired-clean-up-buffers-too nil))
+    (dired-do-delete)))
+
 (defun suderman/dired-create-item ()
   "Create a file, or a directory when its name ends in a slash."
   (interactive)
@@ -878,7 +888,9 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
     (keymap-set map ">" #'suderman/dirvish-side-toggle)
     (keymap-set map "C-c B" #'dired-do-byte-compile)
     (keymap-set map "U" #'dired-unmark-all-marks)
-    (keymap-set map "X" #'dired-do-flagged-delete)
+    (keymap-unset map "X" t)
+    (keymap-set map "d" #'dired-do-delete)
+    (keymap-set map "D" #'suderman/dired-delete-without-confirmation)
     (keymap-set map "a" #'suderman/dired-create-item)
     (keymap-set map "c" #'suderman/dired-copy-files)
     (keymap-set map "f" #'dirvish-layout-toggle)

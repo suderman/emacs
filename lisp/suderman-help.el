@@ -67,6 +67,7 @@
     (suderman/dired-open . "visit")
     (suderman/dired-toggle-mark . "mark")
     (suderman/dired-unmark . "unmark")
+    (suderman/dired-delete-without-confirmation . "delete!")
     (suderman/dired-mark-all . "mark all")
     (suderman/dired-create-item . "new item")
     (suderman/dired-copy-files . "copy")
