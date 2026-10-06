@@ -966,6 +966,16 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
                 (derived-mode-p 'dirvish-directory-view-mode))
         (suderman/dired-setup)))))
 
+(defun suderman/kitty-graphics-probe-with-redraw (function &rest arguments)
+  "Call FUNCTION with ARGUMENTS and repaint after a fresh terminal probe."
+  (let ((frame (selected-frame))
+        (cached (terminal-parameter nil 'kitty-graphics-text-sizing)))
+    (unwind-protect
+        (apply function arguments)
+      ;; The probe erases a row and its scaled test space touches the next row.
+      (unless cached
+        (redraw-frame frame)))))
+
 (use-package kitty-graphics
   :ensure nil
   :if (not (eq system-type 'android))
@@ -975,6 +985,10 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
   (setq kitty-graphics-enable-video t
         kitty-graphics-dirvish-video-inline-preview t)
   :config
+  (advice-remove 'kitty-graphics--query-text-sizing-support
+                 #'suderman/kitty-graphics-probe-with-redraw)
+  (advice-add 'kitty-graphics--query-text-sizing-support :around
+              #'suderman/kitty-graphics-probe-with-redraw)
   (kitty-graphics-setup))
 
 (provide 'suderman-files)
