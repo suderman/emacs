@@ -821,90 +821,154 @@ unsaved edits are not discarded or interrupted by buffer-killing prompts."
 (defvar suderman/dired-transfer nil
   "Staged file operation as (METHOD . FILES).")
 
+(declare-function xterm--read-string "term/xterm" (term1 &optional term2))
+
+(defun suderman/dired--kitty-clipboard-types (finish)
+  "Query Kitty's clipboard formats without releasing the terminal.
+Call FINISH with the MIME types after the asynchronous reply completes."
+  (let* ((terminal (frame-terminal))
+         (map input-decode-map)
+         (key "\e]5522;")
+         (previous (lookup-key map key))
+         timer types
+         (cleanup
+          (lambda ()
+            (define-key map key previous)
+            (when timer (cancel-timer timer))
+            (when (terminal-live-p terminal)
+              (set-terminal-parameter terminal 'suderman/kitty-clipboard-query nil)))))
+    (when (terminal-parameter terminal 'suderman/kitty-clipboard-query)
+      (user-error "A Kitty clipboard query is already running"))
+    (define-key map key
+      (lambda (&optional _prompt)
+        (condition-case err
+            (let* ((packet (xterm--read-string ?\e ?\\))
+                   (status (and (string-match "status=\\([^:;]+\\)" packet)
+                                (match-string 1 packet))))
+              (pcase status
+                ("OK")
+                ("DATA"
+                 (setq types
+                       (append types (split-string
+                                      (base64-decode-string
+                                       (substring packet (1+ (string-search ";" packet))))))))
+                ("DONE"
+                 (funcall cleanup)
+                 ;; Leave input decoding before a possible terminal handoff.
+                 (run-at-time 0 nil finish types))
+                (_ (funcall cleanup)
+                   (message "Kitty clipboard format query failed: %s" status))))
+          (error (funcall cleanup)
+                 (message "Kitty clipboard format query failed: %s"
+                          (error-message-string err))))
+        []))
+    (setq timer (run-at-time 5 nil
+                             (lambda ()
+                               (funcall cleanup)
+                               (message "Kitty clipboard format query timed out"))))
+    (set-terminal-parameter terminal 'suderman/kitty-clipboard-query timer)
+    (condition-case err
+        ;; Listing formats requires no permission prompt and transfers no clipboard data.
+        (send-string-to-terminal "\e]5522;type=read;Lg==\e\\" terminal)
+      ((error quit) (funcall cleanup) (signal (car err) (cdr err))))
+    t))
+
 (defun suderman/dired--kitty-paste ()
-  "Read a PNG through Kitty when this frame and optional tools support it."
+  "Read a PNG through Kitty only when its clipboard advertises image/png."
   (when (and (not (display-graphic-p)) (equal (tty-type) "xterm-kitty")
              (not (file-remote-p (dired-current-directory)))
              (executable-find "kitten") (executable-find "script"))
-    (let* ((directory (dired-current-directory))
-           (frame (selected-frame))
-           (temporary (make-temp-file "emacs-kitty-clipboard-" t))
-           (image (expand-file-name "image.png" temporary))
-           (stderr (expand-file-name "error.log" temporary)))
-      (condition-case err
-          (suderman/dired--kitty-command
-           (list "clipboard" "-g" "--mime" "image/png" image)
-           (lambda (process buffer)
-             (unwind-protect
-                 (when (and (frame-live-p frame) (buffer-live-p buffer))
-                   (with-current-buffer buffer
-                     (when (derived-mode-p 'dired-mode)
-                       (let ((default-directory directory)
-                             (diagnostic (with-temp-buffer
-                                           (when (file-exists-p stderr)
-                                             (insert-file-contents stderr))
-                                           (string-trim (buffer-string)))))
-                         (cond
-                          ((and (zerop (process-exit-status process))
-                                (file-exists-p image))
-                           (suderman/dired--write-image
-                            'image/png (with-temp-buffer
-                                         (set-buffer-multibyte nil)
-                                         (insert-file-contents-literally image)
-                                         (buffer-string))))
-                          ;; kitten uses the same exit status for absent data and denied access.
-                          ;; Only explicit absence errors permit the staged-transfer fallback.
-                          ((string-match-p
-                            "not available on the clipboard\\|The clipboard is empty\\|No data for .* with MIME type: image/png"
-                            diagnostic)
-                           (if suderman/dired-transfer
-                               (suderman/dired-paste-files)
-                             (message "Clipboard does not contain files or supported image data")))
-                          (t (message "Kitty clipboard read failed: %s"
-                                      (if (string-empty-p diagnostic)
-                                          (format "status %s" (process-exit-status process))
-                                        diagnostic))))))))
-               (delete-directory temporary t)))
-           stderr)
-        ((error quit)
-         (delete-directory temporary t)
-         (signal (car err) (cdr err)))))))
+    (let ((frame (selected-frame)) (buffer (current-buffer)))
+      (suderman/dired--kitty-clipboard-types
+       (lambda (types)
+         (when (and (frame-live-p frame) (buffer-live-p buffer))
+           (with-selected-frame frame
+             (with-current-buffer buffer
+               (when (derived-mode-p 'dired-mode)
+                 (if (member "image/png" types)
+                     (suderman/dired--kitty-paste-image)
+                   (message "Clipboard does not contain files or supported image data")))))))))))
 
-(defun suderman/dired-paste ()
-  "Import clipboard files or images, falling back to an internal staged transfer."
-  (interactive)
+(defun suderman/dired--kitty-paste-image ()
+  "Read an advertised PNG through Kitty's permission-checked helper."
+  (let* ((directory (dired-current-directory))
+         (frame (selected-frame))
+         (temporary (make-temp-file "emacs-kitty-clipboard-" t))
+         (image (expand-file-name "image.png" temporary))
+         (stderr (expand-file-name "error.log" temporary)))
+    (condition-case err
+        (suderman/dired--kitty-command
+         (list "clipboard" "-g" "--mime" "image/png" image)
+         (lambda (process buffer)
+           (unwind-protect
+               (when (and (frame-live-p frame) (buffer-live-p buffer))
+                 (with-current-buffer buffer
+                   (when (derived-mode-p 'dired-mode)
+                     (let ((default-directory directory)
+                           (diagnostic (with-temp-buffer
+                                         (when (file-exists-p stderr)
+                                           (insert-file-contents stderr))
+                                         (string-trim (buffer-string)))))
+                       (cond
+                        ((and (zerop (process-exit-status process))
+                              (file-exists-p image))
+                         (suderman/dired--write-image
+                          'image/png (with-temp-buffer
+                                       (set-buffer-multibyte nil)
+                                       (insert-file-contents-literally image)
+                                       (buffer-string))))
+                        ;; The clipboard can change after the format query.
+                        ((string-match-p
+                          "not available on the clipboard\\|The clipboard is empty\\|No data for .* with MIME type: image/png"
+                          diagnostic)
+                         (message "Clipboard does not contain files or supported image data"))
+                        (t (message "Kitty clipboard read failed: %s"
+                                    (if (string-empty-p diagnostic)
+                                        (format "status %s" (process-exit-status process))
+                                      diagnostic))))))))
+             (delete-directory temporary t)))
+         stderr)
+      ((error quit)
+       (delete-directory temporary t)
+       (signal (car err) (cdr err))))))
+
+(defun suderman/dired-paste (&optional clipboard-only)
+  "Paste staged files first, otherwise import clipboard files or images.
+With prefix argument CLIPBOARD-ONLY, skip the staged transfer."
+  (interactive "P")
   (unless (derived-mode-p 'dired-mode)
     (user-error "This command requires a Dired buffer"))
-  (pcase-let* ((`(,types . ,reader) (suderman/dired--clipboard-reader))
-               (files
-                (seq-some
-                 (lambda (type)
-                   (when (memq type types)
-                     (suderman/dired--clipboard-files type (funcall reader type))))
-                 '(text/uri-list x-special/gnome-copied-files
-                   x-special/mate-copied-files)))
-               (image-type (seq-find (lambda (type) (memq type types))
-                                     (mapcar #'car suderman/dired--image-extensions))))
-    (cond
-     (files (suderman/dired-import-files files))
-     (image-type (suderman/dired--write-image image-type (funcall reader image-type)))
-     ((setq files
-            (let* ((data (or (and reader
-                                 (seq-some
-                                  (lambda (type)
-                                    (and (memq type types) (funcall reader type)))
-                                  '(text/plain\;charset=utf-8 text/plain)))
-                            (ignore-errors (gui-get-selection 'CLIPBOARD 'UTF8_STRING))
-                            (ignore-errors (gui-get-selection 'CLIPBOARD 'STRING))))
-                   (text (and (stringp data)
-                              (if (multibyte-string-p data) data
-                                (decode-coding-string data 'utf-8)))))
-              (or (suderman/dired--clipboard-files 'text/uri-list text)
-                  (suderman/dired--paste-paths text))))
-      (suderman/dired-import-files files))
-     ((suderman/dired--kitty-paste))
-     (suderman/dired-transfer (suderman/dired-paste-files))
-     (t (message "Clipboard does not contain files or supported image data")))))
+  (if (and suderman/dired-transfer (not clipboard-only))
+      (suderman/dired-paste-files)
+    (pcase-let* ((`(,types . ,reader) (suderman/dired--clipboard-reader))
+                 (files
+                  (seq-some
+                   (lambda (type)
+                     (when (memq type types)
+                       (suderman/dired--clipboard-files type (funcall reader type))))
+                   '(text/uri-list x-special/gnome-copied-files
+                                   x-special/mate-copied-files)))
+                 (image-type (seq-find (lambda (type) (memq type types))
+                                       (mapcar #'car suderman/dired--image-extensions))))
+      (cond
+       (files (suderman/dired-import-files files))
+       (image-type (suderman/dired--write-image image-type (funcall reader image-type)))
+       ((setq files
+              (let* ((data (or (and reader
+                                    (seq-some
+                                     (lambda (type)
+                                       (and (memq type types) (funcall reader type)))
+                                     '(text/plain\;charset=utf-8 text/plain)))
+                               (ignore-errors (gui-get-selection 'CLIPBOARD 'UTF8_STRING))
+                               (ignore-errors (gui-get-selection 'CLIPBOARD 'STRING))))
+                     (text (and (stringp data)
+                                (if (multibyte-string-p data) data
+                                  (decode-coding-string data 'utf-8)))))
+                (or (suderman/dired--clipboard-files 'text/uri-list text)
+                    (suderman/dired--paste-paths text))))
+        (suderman/dired-import-files files))
+       ((suderman/dired--kitty-paste))
+       (t (message "Clipboard does not contain files or supported image data"))))))
 
 (defun suderman/dired-archive ()
   "Move marked items, or the item at point, into sibling archive directories.
@@ -964,7 +1028,7 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
   (suderman/dired--stage-transfer 'move))
 
 (defun suderman/dired-paste-files ()
-  "Copy or move the staged files into the current directory."
+  "Copy or move staged files here, consuming the stage once transfer starts."
   (interactive)
   (pcase suderman/dired-transfer
     (`(,method . ,files)
@@ -977,8 +1041,7 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
        (pcase method
          ('copy (dirvish-yank))
          ('move (dirvish-move))))
-     (when (eq method 'move)
-       (setq suderman/dired-transfer nil)))
+     (setq suderman/dired-transfer nil))
     (_ (user-error "No files staged for copying or moving"))))
 
 (defun suderman/dired-clean-up-after-deletion (function file)

@@ -949,18 +949,22 @@ Hyprland floats the popup at 520 by 400 near the pointer and keeps it inside the
 monitor's usable area.
 
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
-marked. =v= imports external clipboard files or images first, then uses the
-staged transfer if the clipboard has nothing importable. Copies remain staged;
-cuts clear once the move starts. External file-manager cut selections are copied,
-not moved. URI lists and GNOME/MATE file lists use Dired collision prompts and
+marked. =v= pastes staged files before reading any external clipboard data.
+Copy and cut stages clear once the transfer starts. The next =v= imports
+clipboard files or an image. Validation errors, launch failures, and
+cancellation before launch keep the stage available to retry. Use =C-u v= to
+skip a pending stage without clearing it. External file-manager cut selections
+are copied, not moved. URI lists and GNOME/MATE file lists use Dired collision prompts and
 recursive copying. Plain text creates no file.
 
 When those local clipboard paths have no importable data, =v= can read an image
-from the computer running Kitty, including across SSH. It temporarily hands the
-terminal to =kitten clipboard -g --mime image/png=, then saves the returned PNG
-with the same timestamp and collision rules. Kitty's clipboard permission
-prompt remains in place. An empty clipboard or one without an image falls back
-to the staged transfer. Denied access and read errors leave staged files alone.
+from the computer running Kitty, including across SSH. It first queries the
+available MIME types inside Emacs. Plain text and empty clipboards do not open
+a terminal helper or leave the Dirvish screen. When =image/png= is available,
+it temporarily hands the terminal to =kitten clipboard -g --mime image/png=,
+then saves the returned PNG with the same timestamp and collision rules.
+Kitty's clipboard permission prompt remains in place. Denied access and read
+errors leave staged files alone.
 This optional backend needs =kitten= and util-linux =script= on the Emacs host,
 a local destination, and an =xterm-kitty= terminal frame. GUI frames and other
 terminals keep their existing paste behavior.
