@@ -939,6 +939,14 @@ from IBuffer uses the selected buffer or project heading as context.
 | Image   | =r / R=         | Rotate clockwise / counterclockwise          |
 | Image   | =0=             | Reset image transformations                  |
 
+In Dired and Dirvish, =b= opens Ripdrag with the marked files, or the current
+entry when nothing is marked. Drag individual previews or the "Drag All" handle
+into another app. The popup shows basenames and 96-pixel icons and closes after
+a successful drop. Native Dired outbound mouse dragging is disabled. If Ripdrag
+is not installed, =b= silently does nothing, including on Android. On NixOS,
+Hyprland floats the popup at 520 by 400 near the pointer and keeps it inside the
+monitor's usable area.
+
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
 marked. Copies remain staged after =v=; cuts clear once the move starts.
 Dirvish =d= deletes ordinary =m= marks, or the current entry when none are

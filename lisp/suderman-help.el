@@ -65,6 +65,7 @@
     (dired-previous-line . "up")
     (dired-up-directory . "parent")
     (suderman/dired-open . "visit")
+    (suderman/dired-ripdrag . "drag")
     (suderman/dired-toggle-mark . "mark")
     (suderman/dired-unmark . "unmark")
     (suderman/dired-delete-without-confirmation . "delete!")

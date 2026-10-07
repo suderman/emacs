@@ -178,6 +178,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     ("l" . "Open entry")
     ("f" . "Toggle fullscreen")
     ("G" . "Open image gallery")
+    ("b" . "Drag files with Ripdrag")
     ("TAB" . "Toggle subtree")
     ("o" . "Toggle subtree")
     ("M-o" . "Open in other window")
@@ -261,6 +262,17 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   "Search below the current directory for comma-separated PATTERNs."
   (interactive (list (read-string "Search current directory: ")))
   (dirvish-fd nil pattern))
+
+(defun suderman/dired-ripdrag ()
+  "Drag marked files or the current entry with Ripdrag, when installed."
+  (interactive)
+  (when-let* ((program (executable-find "ripdrag")))
+    (make-process
+     :name "ripdrag"
+     :command (append (list program "--and-exit" "--no-click" "--all"
+                            "--basename" "--icon-size" "96" "--resizable")
+                      (dired-get-marked-files))
+     :noquery t)))
 
 (defun suderman/dired-open ()
   "Open the entry at point, delegating EPUB, audio, and video to the system."
@@ -780,7 +792,8 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
 (use-package dirvish
   :demand t
   :init
-  (setq dired-listing-switches
+  (setq dired-mouse-drag-files nil
+        dired-listing-switches
         (if (eq system-type 'android) "-al" "-al --group-directories-first")
         dirvish-attributes
         (append '(vc-state suderman-vc-state subtree-state)
@@ -884,7 +897,7 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
     (keymap-set map "R" #'dirvish-rsync)
     (keymap-unset map "S" t)
     (keymap-set map "B" #'dired-do-byte-compile)
-    (keymap-unset map "b" t)
+    (keymap-set map "b" #'suderman/dired-ripdrag)
     (keymap-set map ">" #'suderman/dirvish-side-toggle)
     (keymap-set map "C-c B" #'dired-do-byte-compile)
     (keymap-set map "U" #'dired-unmark-all-marks)
