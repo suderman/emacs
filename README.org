@@ -919,8 +919,8 @@ from IBuffer uses the selected buffer or project heading as context.
 | Dirvish | =N / E / R=     | Narrow / file groups / rsync                 |
 | Dirvish | =m / M / t=     | Toggle mark / mark all / invert marks        |
 | Dirvish | =u / U=         | Unmark without moving / unmark all           |
-| Dirvish | =c / x / v=     | Stage copy / stage cut / paste               |
-| Dirvish | =V=             | Save Wayland clipboard PNG in this directory |
+| Dirvish | =c / x=         | Stage copy / stage cut                       |
+| Dirvish | =v=             | Import clipboard files or image data         |
 | Dirvish | =d / D=         | Delete with / without confirmation           |
 | Dirvish | =a / r=         | Create / rename                              |
 | Dirvish | =. / ,=         | Close Dirvish / replace it with IBuffer      |
@@ -948,7 +948,17 @@ Hyprland floats the popup at 520 by 400 near the pointer and keeps it inside the
 monitor's usable area.
 
 Dirvish =c= and =x= stage the marked files, or the current file when nothing is
-marked. Copies remain staged after =v=; cuts clear once the move starts.
+marked. =v= imports external clipboard files or images first, then uses the
+staged transfer if the clipboard has nothing importable. Copies remain staged;
+cuts clear once the move starts. External file-manager cut selections are copied,
+not moved. URI lists and GNOME/MATE file lists use Dired collision prompts and
+recursive copying. Plain text creates no file.
+
+Native GUI drops remain unchanged. In terminal Dired/Dirvish, bracketed paste
+imports files only when every newline-separated line is an existing absolute
+local path. Spaces and shell punctuation are literal. One empty trailing line
+is ignored; other text goes to normal terminal paste, including its usual
+read-only-buffer error. Kitty and Herdr need no special configuration.
 Dirvish =d= deletes ordinary =m= marks, or the current entry when none are
 marked, after confirmation. =D= deletes the same selection without confirmation,
 including nonempty directories and their contents. It keeps visiting buffers
@@ -992,8 +1002,13 @@ Dirvish layout and selected file. Ordinary Image mode keeps its separate keys
 listed above.
 
 On Wayland, Image mode's =c= copies image data. GIFs are copied as file URIs so
-receiving apps can use the animation. Dirvish =V= saves a clipboard PNG as
-=screenshot-YYYYMMDD-HHMMSS.png= without overwriting an existing file.
+receiving apps can use the animation. Dirvish =v= saves PNG, JPEG, GIF, WebP,
+TIFF, BMP, or SVG clipboard media as =clipboard-YYYY-MM-DD-HHMMSS.EXT=. A numeric
+suffix avoids collisions, and exclusive creation prevents overwrites. It uses
+Emacs selection APIs when available, with optional =wl-paste= for local Wayland
+terminal sessions. No desktop helper is required to load the configuration;
+remote SSH sessions do not read the host's Wayland clipboard. =V= has no custom
+paste binding.
 
 ** Windows and frames
 

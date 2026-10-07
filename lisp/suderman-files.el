@@ -7,6 +7,8 @@
 
 (require 'dired)
 (require 'dired-x)
+(require 'dired-aux)
+(require 'dnd)
 (require 'dirvish)
 (require 'seq)
 (require 'use-package)
@@ -32,6 +34,7 @@
 (defvar dirvish-directory-view-mode-map)
 (defvar dirvish-misc-mode-map)
 (defvar dirvish-mode-map)
+(declare-function xterm-paste "term/xterm")
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function dirvish--build-layout "dirvish")
 (declare-function dirvish--create-parent-buffer "dirvish")
@@ -196,8 +199,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     ("U" . "Unmark all")
     ("c" . "Stage copy")
     ("x" . "Stage cut")
-    ("v" . "Paste staged files")
-    ("V" . "Paste clipboard PNG")
+    ("v" . "Paste files or clipboard image")
     ("C" . "Copy immediately")
     ("D" . "Delete without confirmation")
     ("d" . "Delete with confirmation")
@@ -593,63 +595,183 @@ unsaved edits are not discarded or interrupted by buffer-killing prompts."
     (revert-buffer)
     (dired-goto-file (if directoryp (directory-file-name path) path))))
 
-(defun suderman/dired-paste-image ()
-  "Save a PNG from the local Wayland clipboard in the current directory."
-  (interactive)
-  (let* ((directory (file-name-as-directory (dired-current-directory)))
-         (wl-paste (let ((default-directory "/"))
-                     (executable-find "wl-paste")))
-         file)
-    (unless wl-paste
-      (user-error "wl-paste is not installed"))
-    (setq file
-          (with-temp-buffer
-            (set-buffer-multibyte nil)
-            (let ((coding-system-for-read 'binary)
-                  (coding-system-for-write 'binary))
-              (let ((default-directory "/"))
-                (let ((status (call-process wl-paste nil t nil "--list-types")))
-                  (unless (eq status 0)
-                    (user-error
-                     "Could not inspect clipboard types (wl-paste status %s)"
-                     status))))
-              (unless (member "image/png"
-                              (split-string (buffer-string) "[\r\n]+" t))
-                (user-error "Clipboard does not contain image/png"))
-              (erase-buffer)
-              (let ((default-directory "/"))
-                (let ((status (call-process wl-paste nil t nil
-                                            "--type" "image/png" "--no-newline")))
-                  (unless (eq status 0)
-                    (user-error
-                     "Could not read PNG image from clipboard (wl-paste status %s)"
-                     status))))
-              (when (zerop (buffer-size))
-                (user-error "Clipboard returned no PNG image data"))
-              (let ((timestamp (format-time-string "%Y%m%d-%H%M%S"))
-                    (attempt 1)
-                    destination)
-                (while (not destination)
-                  (let ((candidate
-                         (expand-file-name
-                          (format "screenshot-%s%s.png"
-                                  timestamp
-                                  (if (= attempt 1) "" (format "-%d" attempt)))
-                          directory)))
-                    (condition-case error-data
-                        (progn
-                          (write-region nil nil candidate nil 'silent nil 'excl)
-                          (setq destination candidate))
-                      (file-already-exists
-                       (setq attempt (1+ attempt)))
-                      (file-error
-                       (user-error "Could not write PNG image to %s: %s"
-                                   directory
-                                   (error-message-string error-data))))))
-                destination))))
-    (revert-buffer)
-    (dired-goto-file file)
+(defun suderman/dired--local-paths (paths)
+  "Return quoted PATHS only when every entry is an existing absolute local path."
+  ;; Quote names before probing so literal colons never invoke a file handler.
+  (when (and paths
+             (seq-every-p (lambda (path)
+                            (and (stringp path)
+                                 (file-name-absolute-p path)
+                                 (not (string-search "\0" path))
+                                 (file-exists-p (file-name-quote path))))
+                          paths))
+    (mapcar #'file-name-quote paths)))
+
+(defun suderman/dired--paste-paths (text)
+  "Recognize newline-separated paths in TEXT without shell parsing or trimming."
+  (when (stringp text)
+    (let ((lines (split-string text "\n")))
+      (when (equal (car (last lines)) "")
+        (setq lines (butlast lines)))
+      (suderman/dired--local-paths lines))))
+
+(defun suderman/dired--refresh-import (&optional file)
+  "Refresh the directory listing and select imported FILE when supplied."
+  (revert-buffer nil t)
+  (when file (dired-goto-file file)))
+
+(defun suderman/dired--copy-file (from to overwrite)
+  "Copy FROM to TO using Dired, respecting declined OVERWRITE requests."
+  (when (or (file-equal-p from to)
+            (and (file-directory-p from)
+                 (file-in-directory-p (file-name-directory to) from)))
+    (signal 'file-error (list "Cannot copy into itself" from to)))
+  ;; Dired's recursive copy ignores OK-FLAG for directories.  Guard it here.
+  (when (and (or (file-exists-p to) (file-symlink-p to)) (not overwrite))
+    (signal 'file-already-exists (list "Not overwriting" to)))
+  (dired-copy-file from
+                   (if (and (file-directory-p from) (file-directory-p to))
+                       (file-name-directory to)
+                     to)
+                   overwrite))
+
+(defun suderman/dired-import-files (files)
+  "Copy FILES into the displayed directory with Dired collision/error handling."
+  (let ((directory (file-name-as-directory (dired-current-directory))))
+    (unwind-protect
+        (dired-create-files
+         #'suderman/dired--copy-file "Copy" files
+         (lambda (from)
+           (expand-file-name (file-name-nondirectory (directory-file-name from))
+                             directory))
+         dired-keep-marker-copy)
+      (suderman/dired--refresh-import))))
+
+(defun suderman/dired-xterm-paste (event)
+  "Import an all-path terminal paste EVENT, otherwise use normal terminal paste."
+  (interactive "e")
+  (if-let* ((files (and (derived-mode-p 'dired-mode)
+                       (suderman/dired--paste-paths (nth 1 event)))))
+      (suderman/dired-import-files files)
+    (xterm-paste event)))
+
+(defconst suderman/dired--image-extensions
+  '((image/png . "png") (image/jpeg . "jpg") (image/gif . "gif")
+    (image/webp . "webp") (image/tiff . "tiff") (image/bmp . "bmp")
+    (image/svg+xml . "svg"))
+  "Clipboard image formats that can be saved without conversion.")
+
+(defun suderman/dired--wl-paste (program &rest arguments)
+  "Read clipboard bytes from PROGRAM with ARGUMENTS, or nil if unavailable."
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (let ((default-directory "/")
+          (coding-system-for-read 'binary))
+      (when (eq 0 (apply #'call-process program nil '(t nil) nil arguments))
+        (buffer-string)))))
+
+(defun suderman/dired--clipboard-reader ()
+  "Return (TYPES . READER) for native selection or optional local wl-paste."
+  (let ((types (ignore-errors (gui-get-selection 'CLIPBOARD 'TARGETS))))
+    (if (seq-some (lambda (type)
+                    (and (symbolp type) (string-search "/" (symbol-name type))))
+                  types)
+        (cons (append types nil)
+              (lambda (type) (gui-get-selection 'CLIPBOARD type)))
+      (let ((default-directory "/"))
+        (when-let* (((getenv "WAYLAND_DISPLAY" (selected-frame)))
+                    ((not (getenv "SSH_CONNECTION" (selected-frame))))
+                    ((not (getenv "SSH_TTY" (selected-frame))))
+                    (program (executable-find "wl-paste"))
+                    (offered (suderman/dired--wl-paste program "--list-types")))
+          (cons (mapcar #'intern (split-string offered "[\r\n]+" t))
+                (lambda (type)
+                  (or (suderman/dired--wl-paste
+                       program "--type" (symbol-name type) "--no-newline")
+                      (user-error "Could not read clipboard type %s" type)))))))))
+
+(defun suderman/dired--clipboard-files (type data)
+  "Decode local clipboard file DATA of MIME TYPE, rejecting mixed invalid lists."
+  (when (stringp data)
+    (let* ((text (if (multibyte-string-p data) data
+                   (decode-coding-string data 'utf-8)))
+           (lines (split-string text "\r?\n" t)))
+      (when (memq type '(x-special/gnome-copied-files x-special/mate-copied-files))
+        (setq lines (and (member (car lines) '("copy" "cut")) (cdr lines))))
+      (setq lines (seq-remove (lambda (line) (string-prefix-p "#" line)) lines))
+      (suderman/dired--local-paths
+       (mapcar (lambda (uri)
+                 (let ((local (or (dnd-get-local-file-uri uri) uri)))
+                   (when (or (string-prefix-p "file:///" local)
+                             (and (string-prefix-p "file:/" local)
+                                  (not (string-prefix-p "file://" local))))
+                     (dnd-get-local-file-name local))))
+               lines)))))
+
+(defun suderman/dired--write-image (type data)
+  "Save clipboard image DATA of TYPE with a timestamp and exclusive creation."
+  (unless (and (stringp data) (> (length data) 0))
+    (user-error "Clipboard returned no %s image data" type))
+  (let ((directory default-directory)
+        (timestamp (format-time-string "%Y-%m-%d-%H%M%S"))
+        (extension (alist-get type suderman/dired--image-extensions))
+        (attempt 1)
+        file)
+    (with-temp-buffer
+      (set-buffer-multibyte nil)
+      (insert (if (multibyte-string-p data) (encode-coding-string data 'utf-8) data))
+      (let ((coding-system-for-write 'binary))
+        (while (not file)
+          (let ((candidate
+                 (expand-file-name
+                  (format "clipboard-%s%s.%s" timestamp
+                          (if (= attempt 1) "" (format "-%d" attempt)) extension)
+                  directory)))
+            (condition-case nil
+                (progn
+                  (write-region nil nil candidate nil 'silent nil 'excl)
+                  (setq file candidate))
+              (file-already-exists (setq attempt (1+ attempt))))))))
+    (suderman/dired--refresh-import file)
     (message "Saved clipboard image to %s" file)))
+
+(defvar suderman/dired-transfer nil
+  "Staged file operation as (METHOD . FILES).")
+
+(defun suderman/dired-paste ()
+  "Import clipboard files or images, falling back to an internal staged transfer."
+  (interactive)
+  (unless (derived-mode-p 'dired-mode)
+    (user-error "This command requires a Dired buffer"))
+  (pcase-let* ((`(,types . ,reader) (suderman/dired--clipboard-reader))
+               (files
+                (seq-some
+                 (lambda (type)
+                   (when (memq type types)
+                     (suderman/dired--clipboard-files type (funcall reader type))))
+                 '(text/uri-list x-special/gnome-copied-files
+                   x-special/mate-copied-files)))
+               (image-type (seq-find (lambda (type) (memq type types))
+                                     (mapcar #'car suderman/dired--image-extensions))))
+    (cond
+     (files (suderman/dired-import-files files))
+     (image-type (suderman/dired--write-image image-type (funcall reader image-type)))
+     ((setq files
+            (let* ((data (or (and reader
+                                 (seq-some
+                                  (lambda (type)
+                                    (and (memq type types) (funcall reader type)))
+                                  '(text/plain\;charset=utf-8 text/plain)))
+                            (ignore-errors (gui-get-selection 'CLIPBOARD 'UTF8_STRING))
+                            (ignore-errors (gui-get-selection 'CLIPBOARD 'STRING))))
+                   (text (and (stringp data)
+                              (if (multibyte-string-p data) data
+                                (decode-coding-string data 'utf-8)))))
+              (or (suderman/dired--clipboard-files 'text/uri-list text)
+                  (suderman/dired--paste-paths text))))
+      (suderman/dired-import-files files))
+     (suderman/dired-transfer (suderman/dired-paste-files))
+     (t (message "Clipboard does not contain files or supported image data")))))
 
 (defun suderman/dired-archive ()
   "Move marked items, or the item at point, into sibling archive directories.
@@ -686,9 +808,6 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
                        destination (concat base "-" (number-to-string number)
                                            extension)))))
            destination))))))
-
-(defvar suderman/dired-transfer nil
-  "Staged file operation as (METHOD . FILES).")
 
 (defun suderman/dired--stage-transfer (method)
   "Stage the marked files for transfer using METHOD."
@@ -921,8 +1040,9 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
     (keymap-set map "r" #'dired-do-rename)
     (keymap-set map "s" #'dirvish-quicksort)
     (keymap-set map "u" #'suderman/dired-unmark)
-    (keymap-set map "v" #'suderman/dired-paste-files)
-    (keymap-set map "V" #'suderman/dired-paste-image)
+    (keymap-set map "v" #'suderman/dired-paste)
+    (keymap-unset map "V" t)
+    (keymap-set map "<xterm-paste>" #'suderman/dired-xterm-paste)
     (keymap-set map "x" #'suderman/dired-cut-files)
     (keymap-set map "z" #'dirvish-quick-access)
     (keymap-set map "M-h" #'edger-left)
