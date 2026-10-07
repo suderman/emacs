@@ -187,6 +187,9 @@
   (keymap-set dashboard-mode-map "SPC" #'meow-keypad)
   (keymap-set dashboard-mode-map "," #'suderman/ibuffer-toggle)
   (keymap-set dashboard-mode-map "." #'suderman/dirvish)
+  (keymap-set dashboard-mode-map "\\" #'suderman/dirvish-side-toggle)
+  (keymap-set dashboard-mode-map "<" #'previous-buffer)
+  (keymap-set dashboard-mode-map ">" #'next-buffer)
   (keymap-set dashboard-mode-map "s" #'scratch-buffer))
 
 (provide 'suderman-dashboard)

@@ -129,8 +129,10 @@ Important parts of the current grammar follow.
   layout when no other window is visible and the selected window otherwise.
   Android always starts with one column and opens files in that window.
 - `b` and `B` move backward by word and symbol in Normal state.
-- `>` toggles the Dirvish sidebar in Normal and Motion states without moving
+- `\` toggles the Dirvish sidebar in Normal and Motion states without moving
   editor focus when it opens. Inside the sidebar, it hides the tree.
+- `<` and `>` cycle to the previous and next buffer in Normal and Motion states,
+  IBuffer, Dirvish, and Agenda. Insert state keeps these characters literal.
 - Backtick opens the Dashboard in Normal and Motion states, IBuffer, and
   Dirvish. Double quote and `~` are intentionally inert in Normal; Motion lets
   those two keys fall through to major-mode maps.
@@ -231,7 +233,7 @@ is no broad hidden-buffer blacklist.
 - `j` and `k` move by row.
 - `l` visits the selected buffer or toggles a group heading.
 - `h` and `,` close IBuffer and restore the previous window.
-- `>` toggles a contextual Dirvish sidebar without leaving IBuffer.
+- `\` toggles a contextual Dirvish sidebar without leaving IBuffer.
 - `SPC` invokes Meow's keypad without enabling Meow in IBuffer.
 - `.` opens Dirvish for the selected buffer or project heading.
 - `m` toggles the current buffer mark without moving. `M` marks every visible
@@ -249,8 +251,8 @@ handles focused file management. `dirvish-side` supplies the persistent project
 tree, and `dirvish-subtree` expands directories in either view. Side follow mode
 tracks the selected file and project and expands parent subtrees.
 
-`>` and `SPC t d` toggle the sidebar without moving editor focus. From inside
-the sidebar, `>` hides it. In IBuffer, `>` derives context from the selected
+`\` and `SPC t d` toggle the sidebar without moving editor focus. From inside
+the sidebar, `\` hides it. In IBuffer, `\` derives context from the selected
 buffer or project heading and leaves IBuffer selected. Comma from the sidebar
 opens IBuffer in the most recently used editor window without removing the
 sidebar. Do not open a sidebar over the full-frame layout; close that layout

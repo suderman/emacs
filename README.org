@@ -537,15 +537,20 @@ documentation. Routine hover text stays on one echo-area line.
 | =C / V=   | Page up / down                                   |
 | =, / .=   | Open IBuffer / open Dirvish or focus its sidebar |
 | =`=       | Open the Dashboard                               |
-| =>=       | Toggle the Dirvish sidebar without moving focus  |
+| =\=       | Toggle the Dirvish sidebar without moving focus  |
+| =< / >=   | Previous / next buffer                          |
 | =q / Q=   | Quit the view / kill the current buffer          |
 
 =meow-purrsist= keeps active selections adjustable by movement, including
 reversed selections and regions made outside Meow. Line selections keep their
 whole-line behavior.
 
-=>= has the same visibility-only behavior in Meow Motion. Inside the sidebar it
+=\= has the same visibility-only behavior in Meow Motion. Inside the sidebar it
 closes the sidebar; in IBuffer it uses the selected buffer or project.
+=< / >= cycle buffers in Normal and Motion states, Dashboard, and Image mode.
+Insert state keeps these characters literal. The former backslash
+prefix commands remain available as =SPC , ,= for the alternate buffer and
+=C-j= for joining lines.
 
 *** Selection and editing
 
@@ -821,7 +826,8 @@ Its own map supplies =j/k= for rows, =l= or Return to visit, =C-SPC= to preview
 without leaving Agenda, =m= to toggle a bulk mark, =M= to clear marks, and =B=
 for native bulk actions. =SPC= still opens the Meow keypad. Comma opens IBuffer,
 period opens Dirvish for the entry's file, and Meta window keys stay available.
-=F= toggles follow mode, =<= filters by category, and =|= clears filters.
+=\= toggles the file sidebar, and =< / >= cycle buffers. =F= toggles follow
+mode, =C-c <= filters by category, and =|= clears filters.
 =r= refreshes the current view and =g= all views, rediscovering files first.
 =SPC ?= draws the current bindings on a keyboard, with preview, date, and
 window keys below it. =q=, =h=, or Escape closes the sheet and returns to Agenda.
@@ -851,6 +857,8 @@ the leader map.
 | =s=     | Open =*scratch*=                                 |
 | =SPC=   | Open the Meow keypad                             |
 | =, / .= | Open IBuffer / Dirvish                           |
+| =\=     | Toggle the file sidebar                         |
+| =< / >= | Previous / next buffer                          |
 | =g=     | Refresh the dashboard                            |
 | =q=     | Close the dashboard                              |
 
@@ -874,7 +882,8 @@ scan the data directory unless explicitly requested.
 | =j / k= | Move by row                                              |
 | =l=     | Visit the selected buffer, or toggle a group heading     |
 | =h / ,= | Close IBuffer and restore the previous window            |
-| =>=     | Toggle a contextual file sidebar without leaving IBuffer |
+| =\=     | Toggle a contextual file sidebar without leaving IBuffer |
+| =< / >= | Previous / next buffer                                  |
 | =SPC=   | Open the Meow keypad without enabling Meow               |
 | =m=     | Toggle the current mark without moving                   |
 | =M=     | Mark every visible buffer                                |
@@ -895,7 +904,8 @@ Dirvish's internal panes and temporary preview buffers stay hidden.
 | =j / k= | Move to the next / previous entry            |
 | =h / l= | Move to the parent / open the selected entry |
 | =TAB=   | Expand or collapse a directory subtree       |
-| => / q= | Close the sidebar                            |
+| =\ / q= | Close the sidebar                            |
+| =< / >= | Previous / next buffer                       |
 | =.=     | Close the sidebar                            |
 | =,=     | Open IBuffer without closing the sidebar     |
 | =i=     | Toggle dotfiles                              |
@@ -903,7 +913,7 @@ Dirvish's internal panes and temporary preview buffers stay hidden.
 | =?=     | Show the effective bindings                  |
 
 The sidebar follows the active file and project and expands its parent
-directories. =>= from an editor toggles visibility without stealing focus. =>=
+directories. =\= from an editor toggles visibility without stealing focus. =\=
 from IBuffer uses the selected buffer or project heading as context.
 
 ** Dirvish and Image mode
@@ -914,7 +924,8 @@ from IBuffer uses the selected buffer or project heading as context.
 | Dirvish | =f=             | Toggle full-frame layout                     |
 | Dirvish | =G=             | Open the image thumbnail gallery             |
 | Dirvish | =TAB=           | Toggle directory subtree                     |
-| Dirvish | =>=             | Toggle file sidebar                          |
+| Dirvish | =\=             | Toggle file sidebar                          |
+| Dirvish | =< / >=         | Previous / next buffer                       |
 | Dirvish | =H / L=         | Directory history backward / forward         |
 | Dirvish | =N / E / R=     | Narrow / file groups / rsync                 |
 | Dirvish | =m / M / t=     | Toggle mark / mark all / invert marks        |
@@ -935,6 +946,8 @@ from IBuffer uses the selected buffer or project heading as context.
 | Image   | =h=             | Move left                                    |
 | Image   | =c=             | Copy image to the Wayland clipboard          |
 | Image   | =, / .=         | Open IBuffer / Dirvish                       |
+| Image   | =\=             | Toggle file sidebar                          |
+| Image   | =< / >=         | Previous / next buffer                       |
 | Image   | =SPC=           | Keep Meow's keypad                           |
 | Image   | =+= / === / =-= | Zoom in / zoom in / zoom out                 |
 | Image   | =r / R=         | Rotate clockwise / counterclockwise          |
@@ -1005,7 +1018,7 @@ shortcut.
 Period opens Dirvish in the selected window on desktop and Android. If a sidebar
 is already visible, Period focuses it instead. Within Dirvish, Period closes
 the view. =f= toggles the full-frame parent/current/preview layout. Close that
-layout before using =>= to open the sidebar. Comma closes a full-frame layout
+layout before using =\= to open the sidebar. Comma closes a full-frame layout
 before opening IBuffer. From the sidebar it opens IBuffer in an editor window
 and leaves the sidebar visible. Closing IBuffer restores the prior editor window.
 Dotfiles start hidden in the parent and current panes, and =i= toggles them

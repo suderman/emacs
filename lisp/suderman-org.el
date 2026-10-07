@@ -709,7 +709,9 @@ Without STATE, open the TODO list outside Org or Agenda."
   (keymap-set org-agenda-mode-map "," #'suderman/ibuffer-toggle)
   (keymap-set org-agenda-mode-map "." #'suderman/org-agenda-dirvish)
   (keymap-set org-agenda-mode-map "`" #'suderman/dashboard)
-  (keymap-set org-agenda-mode-map ">" #'suderman/dirvish-side-toggle)
+  (keymap-set org-agenda-mode-map "\\" #'suderman/dirvish-side-toggle)
+  (keymap-set org-agenda-mode-map "<" #'previous-buffer)
+  (keymap-set org-agenda-mode-map ">" #'next-buffer)
   (keymap-set org-agenda-mode-map "C-c ." #'org-agenda-goto-today)
   ;; Keep displaced native actions reachable without giving up navigation.
   (keymap-set org-agenda-mode-map "C-c j" #'org-agenda-goto-date)
@@ -717,6 +719,7 @@ Without STATE, open the TODO list outside Org or Agenda."
   (keymap-set org-agenda-mode-map "C-c l" #'org-agenda-log-mode)
   (keymap-set org-agenda-mode-map "C-c M" #'org-agenda-phases-of-moon)
   (keymap-set org-agenda-mode-map "C-c >" #'org-agenda-date-prompt)
+  (keymap-set org-agenda-mode-map "C-c <" #'org-agenda-filter-by-category)
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (derived-mode-p 'org-agenda-mode)

@@ -22,6 +22,8 @@
     (meow-keypad . "keypad")
     (delete-other-windows . "maximize")
     (quit-window . "quit")
+    (next-buffer . "next buf")
+    (previous-buffer . "prev buf")
     (revert-buffer . "refresh")
     (ibuffer-forward-line . "down")
     (ibuffer-backward-line . "up")
@@ -356,7 +358,7 @@ Unknown commands use their names without the mode or personal prefix.")
 
 (defvar suderman/cheatsheet-extra-keys
   '("TAB" "RET" "SPC" "C-SPC"
-    "C-c ." "C-c j" "C-c k" "C-c l" "C-c ," "C-c >" "C-c M"
+    "C-c ." "C-c j" "C-c k" "C-c l" "C-c ," "C-c <" "C-c >" "C-c M"
     "M-h" "M-j" "M-k" "M-l" "M-w")
   "Keys shown below the keyboard, resolved in the invoking buffer.")
 
