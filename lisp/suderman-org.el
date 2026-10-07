@@ -693,6 +693,8 @@ Without STATE, open the TODO list outside Org or Agenda."
   (keymap-set org-agenda-mode-map "SPC" #'meow-keypad)
   (keymap-set org-agenda-mode-map "j" #'org-agenda-next-line)
   (keymap-set org-agenda-mode-map "k" #'org-agenda-previous-line)
+  (keymap-set org-agenda-mode-map "n" #'org-agenda-later)
+  (keymap-set org-agenda-mode-map "p" #'org-agenda-earlier)
   (keymap-set org-agenda-mode-map "l" #'org-agenda-switch-to)
   (keymap-set org-agenda-mode-map "h" #'org-agenda-quit)
   (keymap-set org-agenda-mode-map "m" #'org-agenda-bulk-toggle)
