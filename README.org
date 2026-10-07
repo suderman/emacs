@@ -921,6 +921,7 @@ from IBuffer uses the selected buffer or project heading as context.
 | Dirvish | =u / U=         | Unmark without moving / unmark all           |
 | Dirvish | =c / x=         | Stage copy / stage cut                       |
 | Dirvish | =v=             | Import clipboard files or image data         |
+| Dirvish | =V=             | Receive files with Kitty, including over SSH |
 | Dirvish | =d / D=         | Delete with / without confirmation           |
 | Dirvish | =a / r=         | Create / rename                              |
 | Dirvish | =. / ,=         | Close Dirvish / replace it with IBuffer      |
@@ -954,11 +955,44 @@ cuts clear once the move starts. External file-manager cut selections are copied
 not moved. URI lists and GNOME/MATE file lists use Dired collision prompts and
 recursive copying. Plain text creates no file.
 
+When those local clipboard paths have no importable data, =v= can read an image
+from the computer running Kitty, including across SSH. It temporarily hands the
+terminal to =kitten clipboard -g --mime image/png=, then saves the returned PNG
+with the same timestamp and collision rules. Kitty's clipboard permission
+prompt remains in place. An empty clipboard or one without an image falls back
+to the staged transfer. Denied access and read errors leave staged files alone.
+This optional backend needs =kitten= and util-linux =script= on the Emacs host,
+a local destination, and an =xterm-kitty= terminal frame. GUI frames and other
+terminals keep their existing paste behavior.
+
 Native GUI drops remain unchanged. In terminal Dired/Dirvish, bracketed paste
 imports files only when every newline-separated line is an existing absolute
 local path. Spaces and shell punctuation are literal. One empty trailing line
 is ignored; other text goes to normal terminal paste, including its usual
-read-only-buffer error. Kitty and Herdr need no special configuration.
+read-only-buffer error. Kitty and Herdr need no special configuration for local
+path drops. A path pasted over SSH still names a file on the Emacs host, not a
+file on the computer running Kitty.
+
+For actual file transfer over SSH, press =V= in terminal Dired/Dirvish inside
+Kitty. This temporarily hands the terminal to
+=kitten dnd --drop-anywhere copy --copy-mode independent --confirm-drop-overwrite=.
+Drop files from a local file manager into that receiver. Files go into the
+currently displayed directory on the Emacs host. Emacs returns and refreshes
+after a successful drop, or when you press Escape. Drop outside Kitty's Move
+box to copy; the Move box remains Kitty's explicit move action. Copies have
+independent file data, and conflicting files require confirmation.
+
+The Emacs host needs a =kitten= version with =dnd= support and util-linux
+=script= for the terminal handoff. Both standalone Emacs and terminal
+=emacsclient= frames can use it. The selected frame must advertise terminal type
+=xterm-kitty=. GUI frames, other terminal types, missing tools, and TRAMP
+directories get a clear error before any terminal handoff. This also keeps the
+command inactive in Android's native GUI and ordinary Termux terminals.
+Kitty must support its drag-and-drop and file-transfer protocols;
+Herdr must pass them through if it sits between Kitty and Emacs. This explicit
+receive mode does not change ordinary local drops, =v= clipboard paste, or
+=b= outbound Ripdrag. No desktop helper is required to load the configuration.
+
 Dirvish =d= deletes ordinary =m= marks, or the current entry when none are
 marked, after confirmation. =D= deletes the same selection without confirmation,
 including nonempty directories and their contents. It keeps visiting buffers
@@ -1007,8 +1041,9 @@ TIFF, BMP, or SVG clipboard media as =clipboard-YYYY-MM-DD-HHMMSS.EXT=. A numeri
 suffix avoids collisions, and exclusive creation prevents overwrites. It uses
 Emacs selection APIs when available, with optional =wl-paste= for local Wayland
 terminal sessions. No desktop helper is required to load the configuration;
-remote SSH sessions do not read the host's Wayland clipboard. =V= has no custom
-paste binding.
+remote SSH sessions do not read the host's Wayland clipboard. The optional
+Kitty backend reads the terminal host's clipboard across SSH and saves PNGs.
+=V= opens the separate Kitty file-drop receiver described above.
 
 ** Windows and frames
 

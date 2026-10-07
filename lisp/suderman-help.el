@@ -74,6 +74,7 @@
     (suderman/dired-copy-files . "copy")
     (suderman/dired-cut-files . "cut")
     (suderman/dired-paste . "paste")
+    (suderman/dired-kitty-receive . "receive")
     (suderman/dirvish . "files")
     (suderman/mail-open . "select")
     (suderman/dirvish-toggle-dotfiles . "dotfiles?")

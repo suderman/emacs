@@ -200,6 +200,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
     ("c" . "Stage copy")
     ("x" . "Stage cut")
     ("v" . "Paste files or clipboard image")
+    ("V" . "Receive files with Kitty")
     ("C" . "Copy immediately")
     ("D" . "Delete without confirmation")
     ("d" . "Delete with confirmation")
@@ -275,6 +276,88 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
                             "--basename" "--icon-size" "96" "--resizable")
                       (dired-get-marked-files))
      :noquery t)))
+
+(defun suderman/dired--kitty-command (arguments finish &optional stderr)
+  "Hand this terminal to kitten with ARGUMENTS in the displayed directory.
+Call FINISH with the process and original buffer after restoring the tty.
+When STDERR is supplied, capture kitten's diagnostics in that file."
+  (unless (derived-mode-p 'dired-mode)
+    (user-error "Open Dired or Dirvish first"))
+  (when (display-graphic-p)
+    (user-error "Kitty receive needs a terminal frame; GUI drops work directly"))
+  (unless (equal (tty-type) "xterm-kitty")
+    (user-error "Kitty receive needs a Kitty terminal frame"))
+  (let* ((default-directory (dired-current-directory))
+         (frame (selected-frame))
+         (terminal (frame-terminal frame))
+         (tty (terminal-name terminal))
+         (buffer (current-buffer))
+         process
+         (close-frame
+          (lambda (deleted-frame)
+            (when (and (eq deleted-frame frame) process (process-live-p process))
+              (signal-process (process-id process) 'SIGTERM))))
+         (process-environment (copy-sequence process-environment)))
+    (when (file-remote-p default-directory)
+      (user-error "Kitty receive needs a local directory on the Emacs host"))
+    ;; Standalone Emacs names its tty /dev/tty, which detached children cannot open.
+    (when (equal tty "/dev/tty")
+      (setq tty (file-truename "/proc/self/fd/0")))
+    (setq tty (shell-quote-argument tty))
+    (let* ((kitten (or (executable-find "kitten")
+                       (user-error "kitten is not installed on the Emacs host")))
+           (script (or (executable-find "script")
+                       (user-error "util-linux script is not installed on the Emacs host")))
+           (command (concat (mapconcat #'shell-quote-argument
+                                       (cons kitten arguments) " ")
+                            (when stderr
+                              (concat " 2> " (shell-quote-argument stderr))))))
+      (setenv "TERM" (tty-type terminal))
+      (setenv "SHELL" shell-file-name)
+      ;; Keep emacsclient running while this frame releases its tty.
+      (let ((suspend-tty-functions
+             (remq 'server-handle-suspend-tty suspend-tty-functions)))
+        (suspend-tty terminal))
+      (condition-case err
+          (progn
+            (setq process
+                  (make-process
+                   :name "kitten-dnd" :buffer nil :connection-type 'pipe :noquery t
+                   ;; script supplies /dev/tty and passes Kitty's protocols unchanged.
+                   :command (list shell-file-name "-c"
+                                  (format "exec %s -q -e -c %s /dev/null < %s > %s 2>&1"
+                                          (shell-quote-argument script)
+                                          (shell-quote-argument command) tty tty))
+                   :sentinel
+                   (lambda (process _event)
+                     (unless (process-live-p process)
+                       (remove-hook 'delete-frame-functions close-frame)
+                       (when (terminal-live-p terminal) (resume-tty terminal))
+                       (when (frame-live-p frame) (redraw-frame frame))
+                       (funcall finish process buffer)))))
+            (add-hook 'delete-frame-functions close-frame)
+            process)
+        ((error quit)
+         (remove-hook 'delete-frame-functions close-frame)
+         (resume-tty terminal)
+         (signal (car err) (cdr err)))))))
+
+(defun suderman/dired-kitty-receive ()
+  "Receive a Kitty file drop in the displayed directory, including over SSH.
+Hand this terminal to kitten dnd until a drop finishes or Escape is pressed.
+Requires kitten with dnd support and util-linux script on the Emacs host."
+  (interactive)
+  (suderman/dired--kitty-command
+   '("dnd" "--drop-anywhere" "copy" "--copy-mode" "independent"
+     "--confirm-drop-overwrite" "--exit-on" "drop-finish,esc-key")
+   (lambda (process buffer)
+     (when (buffer-live-p buffer)
+       (with-current-buffer buffer
+         (when (derived-mode-p 'dired-mode)
+           (suderman/dired--refresh-import))))
+     (unless (zerop (process-exit-status process))
+       (message "Kitty receive exited with status %s; check kitten dnd and util-linux script"
+                (process-exit-status process))))))
 
 (defun suderman/dired-open ()
   "Open the entry at point, delegating EPUB, audio, and video to the system."
@@ -738,6 +821,55 @@ unsaved edits are not discarded or interrupted by buffer-killing prompts."
 (defvar suderman/dired-transfer nil
   "Staged file operation as (METHOD . FILES).")
 
+(defun suderman/dired--kitty-paste ()
+  "Read a PNG through Kitty when this frame and optional tools support it."
+  (when (and (not (display-graphic-p)) (equal (tty-type) "xterm-kitty")
+             (not (file-remote-p (dired-current-directory)))
+             (executable-find "kitten") (executable-find "script"))
+    (let* ((directory (dired-current-directory))
+           (frame (selected-frame))
+           (temporary (make-temp-file "emacs-kitty-clipboard-" t))
+           (image (expand-file-name "image.png" temporary))
+           (stderr (expand-file-name "error.log" temporary)))
+      (condition-case err
+          (suderman/dired--kitty-command
+           (list "clipboard" "-g" "--mime" "image/png" image)
+           (lambda (process buffer)
+             (unwind-protect
+                 (when (and (frame-live-p frame) (buffer-live-p buffer))
+                   (with-current-buffer buffer
+                     (when (derived-mode-p 'dired-mode)
+                       (let ((default-directory directory)
+                             (diagnostic (with-temp-buffer
+                                           (when (file-exists-p stderr)
+                                             (insert-file-contents stderr))
+                                           (string-trim (buffer-string)))))
+                         (cond
+                          ((and (zerop (process-exit-status process))
+                                (file-exists-p image))
+                           (suderman/dired--write-image
+                            'image/png (with-temp-buffer
+                                         (set-buffer-multibyte nil)
+                                         (insert-file-contents-literally image)
+                                         (buffer-string))))
+                          ;; kitten uses the same exit status for absent data and denied access.
+                          ;; Only explicit absence errors permit the staged-transfer fallback.
+                          ((string-match-p
+                            "not available on the clipboard\\|The clipboard is empty\\|No data for .* with MIME type: image/png"
+                            diagnostic)
+                           (if suderman/dired-transfer
+                               (suderman/dired-paste-files)
+                             (message "Clipboard does not contain files or supported image data")))
+                          (t (message "Kitty clipboard read failed: %s"
+                                      (if (string-empty-p diagnostic)
+                                          (format "status %s" (process-exit-status process))
+                                        diagnostic))))))))
+               (delete-directory temporary t)))
+           stderr)
+        ((error quit)
+         (delete-directory temporary t)
+         (signal (car err) (cdr err)))))))
+
 (defun suderman/dired-paste ()
   "Import clipboard files or images, falling back to an internal staged transfer."
   (interactive)
@@ -770,6 +902,7 @@ unsaved edits are not discarded or interrupted by buffer-killing prompts."
               (or (suderman/dired--clipboard-files 'text/uri-list text)
                   (suderman/dired--paste-paths text))))
       (suderman/dired-import-files files))
+     ((suderman/dired--kitty-paste))
      (suderman/dired-transfer (suderman/dired-paste-files))
      (t (message "Clipboard does not contain files or supported image data")))))
 
@@ -1041,7 +1174,7 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
     (keymap-set map "s" #'dirvish-quicksort)
     (keymap-set map "u" #'suderman/dired-unmark)
     (keymap-set map "v" #'suderman/dired-paste)
-    (keymap-unset map "V" t)
+    (keymap-set map "V" #'suderman/dired-kitty-receive)
     (keymap-set map "<xterm-paste>" #'suderman/dired-xterm-paste)
     (keymap-set map "x" #'suderman/dired-cut-files)
     (keymap-set map "z" #'dirvish-quick-access)
