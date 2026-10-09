@@ -1325,6 +1325,37 @@
         (should (equal opened "/tmp/"))
         (should (eq (selected-window) editor))))))
 
+(ert-deftest suderman/dirvish-sidebar-open-survives-layout-refresh ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let* ((editor (selected-window))
+           (directory (make-temp-file "suderman-sidebar-open-" t))
+           (file (expand-file-name "file.txt" directory))
+           sidebar tree)
+      (unwind-protect
+          (progn
+            (write-region "test\n" nil file nil 'silent)
+            (suderman/dirvish-side-toggle directory)
+            (setq sidebar (dirvish-side--session-visible-p)
+                  tree (window-buffer sidebar))
+            (select-window sidebar)
+            (dired-goto-file file)
+            ;; Redisplay can rebuild the sidebar while file hooks are running.
+            (let ((find-file-hook
+                   (cons (lambda () (dirvish-winbuf-change-h sidebar))
+                         find-file-hook)))
+              (suderman/dired-mouse-open
+               (list 'double-mouse-1 (list sidebar (point) '(0 . 0) 0) 2)))
+            (should (= (length (window-list)) 2))
+            (should (eq (selected-window) editor))
+            (should (eq (window-buffer sidebar) tree))
+            (should (window-dedicated-p sidebar))
+            (should (equal (buffer-file-name (window-buffer editor)) file)))
+        (when (window-live-p sidebar)
+          (with-selected-window sidebar (dirvish-quit)))
+        (when-let* ((buffer (get-file-buffer file))) (kill-buffer buffer))
+        (delete-directory directory t)))))
+
 (ert-deftest suderman/dirvish-colors-vc-filenames ()
   (with-temp-buffer
     (let ((dirvish--dir-data (make-hash-table :test #'equal)))

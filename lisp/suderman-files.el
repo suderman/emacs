@@ -134,6 +134,20 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   (set-buffer (window-buffer (selected-window)))
   (suderman/ibuffer-toggle))
 
+(defun suderman/dirvish-side-find-file (file find-function)
+  "Open sidebar FILE in an existing editor before loading it.
+Return non-nil when handling a normal FIND-FUNCTION file visit."
+  (when-let* (((eq find-function 'find-file))
+              ((not (file-directory-p file)))
+              (session (dirvish-curr))
+              ((eq (dv-type session) 'side)))
+    ;; Loading in the sidebar lets layout refreshes restore its dedication.
+    (select-window
+     (or (get-mru-window (selected-frame) nil t t)
+         (user-error "No editor window available")))
+    (find-file file)
+    t))
+
 (defun suderman/dirvish-side-hide-truncation ()
   "Clip sidebar filenames without a terminal truncation indicator."
   (when-let* ((session (dirvish-curr))
@@ -1160,6 +1174,7 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
   (require 'dirvish-yank)
   (require 'dirvish-rsync)
   (require 'dirvish-side)
+  (add-hook 'dirvish-find-entry-hook #'suderman/dirvish-side-find-file)
   (add-hook 'dirvish-setup-hook #'suderman/dirvish-side-hide-truncation)
   (require 'dirvish-peek)
   (require 'dirvish-subtree)
