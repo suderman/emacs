@@ -302,9 +302,6 @@
 
 (setq image-dired-thumbnail-storage 'standard-large)
 
-(dolist (map (list dired-mode-map dirvish-mode-map))
-  (keymap-set map "G" #'suderman/image-dired-gallery))
-
 (dolist (binding '(("h" . image-dired-backward-image)
                    ("j" . image-dired-next-line)
                    ("k" . image-dired-previous-line)

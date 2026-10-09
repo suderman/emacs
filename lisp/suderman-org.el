@@ -102,10 +102,6 @@
   "Muted compact face for property and logbook drawer labels."
   :group 'org-faces)
 
-;; Clean up the former theme-derived drawer faces after a hot reload.
-(remove-hook 'org-mode-hook 'suderman/org-apply-drawer-faces)
-(remove-hook 'enable-theme-functions 'suderman/org-apply-drawer-faces)
-
 (defun suderman/org-apply-block-face-geometry ()
   "Keep folded block openers compact and expanded block endings full-width."
   (when (facep 'org-block-begin-line)

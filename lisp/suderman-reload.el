@@ -3,29 +3,19 @@
 ;;; Commentary:
 ;; Reload the Suderman config modules from a running Emacs session.  This is
 ;; aimed at quick keybinding and command edits; restart-emacs remains the escape
-;; hatch for package, early-init, and process-level changes.
+;; hatch for package, early-init, and process-level changes.  Meow's Normal and
+;; Motion maps are rebuilt from a stock snapshot, so deleted bindings disappear.
+;; Bindings deleted from other packages' maps stay until restart.
 
 ;;; Code:
 
 (require 'subr-x)
 
 (defvar meow-global-mode)
-(defvar meow-motion-state-keymap)
-(defvar meow-normal-state-keymap)
-(defvar suderman/meow-leader-map)
 (declare-function meow-global-mode "meow-core" (&optional arg))
-(declare-function suderman/meow-reset-leader-map "suderman-meow" ())
 
 (defconst suderman/reload-excluded-features '(suderman-reload)
   "Suderman features that `suderman/reload-config' should not unload.")
-
-(defconst suderman/reload-modal-keys
-  '("<f5>" "<f6>" "<f9>"
-    "M-p"
-    "M-h" "M-j" "M-k" "M-l"
-    "M-H" "M-J" "M-K" "M-L"
-    "M-u" "M-i" "M-U" "M-I" "M-w")
-  "Meow modal keys rebuilt by `suderman-keys'.")
 
 (defun suderman/reload--quoted-symbol (form)
   "Return the quoted symbol in FORM, or nil."
@@ -63,26 +53,6 @@
         (end-of-file nil)))
     (nreverse features)))
 
-(defun suderman/reload--clear-keymap (map)
-  "Remove rebuilt modal bindings from MAP."
-  (when (keymapp map)
-    (dolist (key suderman/reload-modal-keys)
-      (define-key map (kbd key) nil))))
-
-(defun suderman/reload--clear-keymap-symbol (map-symbol)
-  "Remove rebuilt modal bindings from MAP-SYMBOL."
-  (when (boundp map-symbol)
-    (suderman/reload--clear-keymap (symbol-value map-symbol))))
-
-(defun suderman/reload--clear-keys ()
-  "Remove rebuilt key prefixes before unloading `suderman-keys'."
-  (dolist (map-symbol '(meow-normal-state-keymap meow-motion-state-keymap))
-    (suderman/reload--clear-keymap-symbol map-symbol))
-  (dolist (key '("<f5>" "<f6>" "<f9>"))
-    (global-set-key (kbd key) nil))
-  (when (fboundp 'suderman/meow-reset-leader-map)
-    (suderman/meow-reset-leader-map)))
-
 ;;;###autoload
 (defun suderman/pull-config ()
   "Run `git pull' asynchronously in `user-emacs-directory'."
@@ -91,9 +61,7 @@
     (async-shell-command "git pull" "*Emacs config pull*")))
 
 (defun suderman/reload--unload-feature (feature)
-  "Unload FEATURE, clearing keymaps first when needed."
-  (when (eq feature 'suderman-keys)
-    (suderman/reload--clear-keys))
+  "Unload FEATURE when it is loaded."
   (when (featurep feature)
     (unload-feature feature t)))
 

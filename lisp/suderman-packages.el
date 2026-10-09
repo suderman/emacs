@@ -1,8 +1,10 @@
 ;;; suderman-packages.el --- package.el and use-package bootstrap -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Mutable package.el setup on top of the XDG paths from suderman-paths.  This stays
-;; small so future package-manager experiments have one obvious replacement file.
+;; `use-package' forms across lisp/ declare every package.  On NixOS the flake
+;; reads those forms and supplies the packages, so `:ensure' finds them
+;; installed.  Android, a brand-new package not yet in Nix, and `:vc' Git
+;; packages fall through to package.el under ~/.local/share/emacs/elpa.
 
 ;;; Code:
 
@@ -10,9 +12,12 @@
 (require 'package-vc)
 
 (defun suderman/package-upgrade-all ()
-  "Upgrade all archive and VC packages without confirmation."
+  "Upgrade mutable packages without confirmation.
+Nix supplies archive packages on Linux, so only Android upgrades them here.
+Git packages such as Edger and meow-purrsist upgrade everywhere."
   (interactive)
-  (package-upgrade-all nil)
+  (when (eq system-type 'android)
+    (package-upgrade-all nil))
   (package-vc-upgrade-all))
 
 (defun suderman/package-import-keyring-from-android-assets
@@ -31,8 +36,6 @@
     (funcall function file)))
 
 (when (eq system-type 'android)
-  (advice-remove 'package-import-keyring
-                 #'suderman/package-import-keyring-from-android-assets)
   (advice-add 'package-import-keyring :around
               #'suderman/package-import-keyring-from-android-assets))
 

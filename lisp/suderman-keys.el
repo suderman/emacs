@@ -1,9 +1,12 @@
-;;; suderman-keys.el --- Global Meow and leader bindings -*- lexical-binding: t; -*-
+;;; suderman-keys.el --- Global keys and the SPC leader -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Load keybindings after commands exist.  Meow owns modal editing; this file
-;; owns personal global shortcuts and the SPC leader groups that do not collide
-;; with Meow's vanilla keypad prefixes.
+;; Load after every command module.  Meow's Normal and Motion maps live in
+;; `suderman-meow'; window keys live in `suderman-windows'.  This file owns
+;; global shortcuts and the SPC leader.
+;;
+;; A ("label" . command) binding shows that label in Which-Key.  After an
+;; edit, evaluate the changed form with C-M-x or reload everything with F5.
 
 ;;; Code:
 
@@ -21,327 +24,212 @@
 (require 'suderman-terminal)
 (require 'suderman-windows)
 
-(defun suderman/keys--define-modal (key command)
-  "Bind KEY to COMMAND in Meow normal and motion states."
-  (meow-normal-define-key (cons key command))
-  (meow-motion-define-key (cons key command)))
-
-(defvar suderman/leader-buffer-map nil
-  "SPC , buffer command keymap.")
-(defvar suderman/leader-file-map nil
-  "SPC . file command keymap.")
-(defvar suderman/leader-git-map nil
-  "SPC g Git command keymap.")
-(defvar suderman/leader-git-conflict-map nil
-  "SPC g c conflict command keymap.")
-(defvar suderman/leader-git-hunk-map nil
-  "SPC g h hunk command keymap.")
-(defvar suderman/leader-org-map nil
-  "SPC o Org command keymap.")
-(defvar suderman/leader-org-view-map nil
-  "SPC o v Org view keymap.")
-(defvar suderman/leader-org-schedule-map nil
-  "SPC o s Org planning keymap.")
-(defvar suderman/leader-search-map nil
-  "SPC / search command keymap.")
-(defvar suderman/leader-toggle-map nil
-  "SPC t toggle command keymap.")
-(defvar suderman/leader-window-map nil
-  "SPC w window command keymap.")
-(defvar suderman/leader-quit-map nil
-  "SPC q quit and configuration command keymap.")
-
-(setq suderman/leader-buffer-map (make-sparse-keymap)
-      suderman/leader-file-map (make-sparse-keymap)
-      suderman/leader-git-map (make-sparse-keymap)
-      suderman/leader-git-conflict-map (make-sparse-keymap)
-      suderman/leader-git-hunk-map (make-sparse-keymap)
-      suderman/leader-org-map (make-sparse-keymap)
-      suderman/leader-org-view-map (make-sparse-keymap)
-      suderman/leader-org-schedule-map (make-sparse-keymap)
-      suderman/leader-search-map (make-sparse-keymap)
-      suderman/leader-toggle-map (make-sparse-keymap)
-      suderman/leader-window-map (make-sparse-keymap)
-      suderman/leader-quit-map (make-sparse-keymap))
-
-;; Buffers
-(keymap-set suderman/leader-buffer-map "/" #'consult-buffer)
-(keymap-set suderman/leader-buffer-map "b" #'ibuffer)
-(keymap-set suderman/leader-buffer-map "k" #'kill-current-buffer)
-(keymap-set suderman/leader-buffer-map "," #'suderman/alternate-buffer)
-(keymap-set suderman/leader-buffer-map "n" #'next-buffer)
-(keymap-set suderman/leader-buffer-map "p" #'previous-buffer)
-(keymap-set suderman/leader-buffer-map "r" #'suderman/revert-buffer-no-confirm)
-(keymap-set suderman/leader-buffer-map "s" #'save-buffer)
-
-;; Files
-(keymap-set suderman/leader-file-map "." #'consult-fd)
-(keymap-set suderman/leader-file-map "/" #'consult-ripgrep)
-(keymap-set suderman/leader-file-map "f" #'suderman/dirvish)
-(keymap-set suderman/leader-file-map "b" #'consult-bookmark)
-(keymap-set suderman/leader-file-map "m" #'bookmark-set)
-(keymap-set suderman/leader-file-map "M" #'bookmark-delete)
-(keymap-set suderman/leader-file-map "," #'consult-recent-file)
-(keymap-set suderman/leader-file-map "s" #'save-buffer)
-(keymap-set suderman/leader-file-map "S" #'write-file)
-(keymap-set suderman/leader-file-map "R" #'tramp-cleanup-this-connection)
-
-;; Git
-(keymap-set suderman/leader-git-map "B" #'magit-blame-addition)
-(keymap-set suderman/leader-git-map "C" #'magit-branch-checkout)
-(keymap-set suderman/leader-git-map "b" #'magit-blame-echo)
-(keymap-set suderman/leader-git-map "c" suderman/leader-git-conflict-map)
-(keymap-set suderman/leader-git-map "d" #'magit-diff-buffer-file)
-(keymap-set suderman/leader-git-map "f" #'magit-file-dispatch)
-(keymap-set suderman/leader-git-map "g" #'magit-status)
-(keymap-set suderman/leader-git-map "h" suderman/leader-git-hunk-map)
-(keymap-set suderman/leader-git-map "l" #'magit-log-buffer-file)
-(keymap-set suderman/leader-git-map "L" #'magit-log-current)
-(keymap-set suderman/leader-git-map "m" #'magit-dispatch)
-(keymap-set suderman/leader-git-map "s" #'magit-stage-files)
-(keymap-set suderman/leader-git-map "u" #'magit-unstage-files)
-
-;; Git hunks
-(keymap-set suderman/leader-git-hunk-map "d" #'diff-hl-diff-goto-hunk)
-(keymap-set suderman/leader-git-hunk-map "n" #'diff-hl-next-hunk)
-(keymap-set suderman/leader-git-hunk-map "p" #'diff-hl-previous-hunk)
-(keymap-set suderman/leader-git-hunk-map "r" #'diff-hl-revert-hunk)
-(keymap-set suderman/leader-git-hunk-map "s" #'diff-hl-stage-current-hunk)
-(keymap-set suderman/leader-git-hunk-map "u" #'diff-hl-unstage-file)
-(keymap-set suderman/leader-git-hunk-map "v" #'diff-hl-show-hunk)
-
-;; Git conflicts
-(keymap-set suderman/leader-git-conflict-map "0" #'smerge-kill-current)
-(keymap-set suderman/leader-git-conflict-map "a" #'smerge-keep-all)
-(keymap-set suderman/leader-git-conflict-map "b" #'smerge-keep-base)
-(keymap-set suderman/leader-git-conflict-map "e" #'smerge-ediff)
-(keymap-set suderman/leader-git-conflict-map "l" #'smerge-keep-lower)
-(keymap-set suderman/leader-git-conflict-map "n" #'smerge-next)
-(keymap-set suderman/leader-git-conflict-map "p" #'smerge-prev)
-(keymap-set suderman/leader-git-conflict-map "r" #'smerge-refine)
-(keymap-set suderman/leader-git-conflict-map "u" #'smerge-keep-upper)
-
-;; Org
-(keymap-set suderman/leader-org-map "TAB" #'org-overview)
-(keymap-set suderman/leader-org-map "a" #'suderman/org-archive)
-(keymap-set suderman/leader-org-map "A" #'suderman/org-archive-done)
-(keymap-set suderman/leader-org-map "c" #'org-capture)
-(keymap-set suderman/leader-org-map "d" #'suderman/org-todo-done)
-(keymap-set suderman/leader-org-map "D" #'suderman/org-delete-subtree)
-(keymap-set suderman/leader-org-map "e" #'suderman/org-todo-eval)
-(keymap-set suderman/leader-org-map "E" #'suderman/org-export)
-(keymap-set suderman/leader-org-map "g" #'suderman/org-heading)
-(keymap-set suderman/leader-org-map "h" #'suderman/org-todo-hold)
-(keymap-set suderman/leader-org-map "i" #'suderman/org-insert-link)
-(keymap-set suderman/leader-org-map "l" #'org-store-link)
-(keymap-set suderman/leader-org-map "n" #'org-toggle-narrow-to-subtree)
-(keymap-set suderman/leader-org-map "o" #'suderman/org-dashboard)
-(keymap-set suderman/leader-org-map "p" #'suderman/org-todo-prog)
-(keymap-set suderman/leader-org-map "r" #'suderman/org-refile)
-(keymap-set suderman/leader-org-map "s" suderman/leader-org-schedule-map)
-(keymap-set suderman/leader-org-map "t" #'suderman/org-todo-todo)
-(keymap-set suderman/leader-org-map "v" suderman/leader-org-view-map)
-(keymap-set suderman/leader-org-map "x" #'suderman/org-toggle-checkbox)
-
-;; Org views and planning
-(keymap-set suderman/leader-org-view-map "a" #'org-agenda)
-(keymap-set suderman/leader-org-view-map "t" #'org-todo-list)
-(keymap-set suderman/leader-org-view-map "d" #'suderman/org-daily)
-(keymap-set suderman/leader-org-view-map "i" #'suderman/org-inbox)
-(keymap-set suderman/leader-org-schedule-map "s" #'suderman/org-schedule)
-(keymap-set suderman/leader-org-schedule-map "d" #'suderman/org-deadline)
-
-;; Search
-(keymap-set suderman/leader-search-map "/" #'consult-ripgrep)
-(keymap-set suderman/leader-search-map "g" #'consult-git-grep)
-(keymap-set suderman/leader-search-map "l" #'consult-line)
-(keymap-set suderman/leader-search-map "L" #'consult-line-multi)
-(keymap-set suderman/leader-search-map "i" #'consult-imenu)
-(keymap-set suderman/leader-search-map "I" #'consult-imenu-multi)
-(keymap-set suderman/leader-search-map "o" #'consult-outline)
-(keymap-set suderman/leader-search-map "m" #'consult-mark)
-(keymap-set suderman/leader-search-map "M" #'consult-global-mark)
-(keymap-set suderman/leader-search-map "r" #'consult-register)
-(keymap-set suderman/leader-search-map "y" #'consult-yank-pop)
-(keymap-set suderman/leader-search-map "e" #'consult-compile-error)
-(keymap-set suderman/leader-search-map "f" #'consult-flymake)
-(keymap-set suderman/leader-search-map "s" #'consult-isearch-history)
-(keymap-set suderman/leader-search-map "c" #'suderman/clear-search)
-
-;; Toggles
-(keymap-set suderman/leader-toggle-map "c" #'display-fill-column-indicator-mode)
-(keymap-set suderman/leader-toggle-map "d" #'suderman/dirvish-side-toggle)
-(keymap-set suderman/leader-toggle-map "h" #'hl-line-mode)
-(keymap-set suderman/leader-toggle-map "m" #'menu-bar-mode)
-(keymap-set suderman/leader-toggle-map "n" #'suderman/toggle-line-numbers)
-(keymap-set suderman/leader-toggle-map "o" #'org-indent-mode)
-(keymap-set suderman/leader-toggle-map "r" #'read-only-mode)
-(when (fboundp 'jinx-mode)
-  (keymap-set suderman/leader-toggle-map "s" #'jinx-mode))
-(keymap-set suderman/leader-toggle-map "v" #'visual-line-mode)
-(keymap-set suderman/leader-toggle-map "w" #'whitespace-mode)
-
-;; Windows
-(keymap-set suderman/leader-window-map "=" #'balance-windows)
-(keymap-set suderman/leader-window-map "h" #'edger-left)
-(keymap-set suderman/leader-window-map "j" #'edger-down)
-(keymap-set suderman/leader-window-map "k" #'edger-up)
-(keymap-set suderman/leader-window-map "l" #'edger-right)
-(keymap-set suderman/leader-window-map "H" #'edger-resize-left)
-(keymap-set suderman/leader-window-map "J" #'edger-resize-down)
-(keymap-set suderman/leader-window-map "K" #'edger-resize-up)
-(keymap-set suderman/leader-window-map "L" #'edger-resize-right)
-(keymap-set suderman/leader-window-map "u" #'edger-horizontal)
-(keymap-set suderman/leader-window-map "i" #'edger-vertical)
-(keymap-set suderman/leader-window-map "o" #'delete-other-windows)
-(keymap-set suderman/leader-window-map "w" #'edger-close)
-
-;; Quit and configuration
-(keymap-set suderman/leader-quit-map "p" #'suderman/pull-config)
-(keymap-set suderman/leader-quit-map "q" #'kill-emacs)
-(keymap-set suderman/leader-quit-map "r" #'suderman/reload-config)
-(keymap-set suderman/leader-quit-map "u" #'suderman/package-upgrade-all)
-
-(setq tab-bar-close-last-tab-choice 'delete-frame)
-
-(global-set-key (kbd "<escape>") #'suderman/meow-escape)
-(global-set-key (kbd "C-<escape>") #'top-level)
-(global-set-key (kbd "C-c C-g") #'top-level)
-(global-set-key (kbd "C-c h") #'suderman/cheatsheet)
-(global-set-key (kbd "C-c m") #'suderman/mail)
-(global-set-key (kbd "<f5>") #'suderman/reload-config)
-(global-set-key (kbd "<f6>") #'suderman/pull-config)
-(global-set-key (kbd "<f9>") #'tool-bar-mode)
-(global-set-key (kbd "s-+") #'suderman/frame-text-scale-increase)
-(global-set-key (kbd "s-=") #'suderman/frame-text-scale-increase)
-(global-set-key (kbd "s--") #'suderman/frame-text-scale-decrease)
-(global-set-key (kbd "s-_") #'suderman/frame-text-scale-decrease)
-(global-set-key (kbd "s-t") #'tab-new)
-(global-set-key (kbd "s-[") #'tab-previous)
-(global-set-key (kbd "s-]") #'tab-next)
-(global-set-key (kbd "s-w") #'tab-close)
-(global-set-key (kbd "M-z") #'suderman/zoom-window-toggle)
-(global-set-key (kbd "M-h") #'edger-left)
-(global-set-key (kbd "M-j") #'edger-down)
-(global-set-key (kbd "M-k") #'edger-up)
-(global-set-key (kbd "M-l") #'edger-right)
-(global-set-key (kbd "M-H") #'edger-resize-left)
-(global-set-key (kbd "M-J") #'edger-resize-down)
-(global-set-key (kbd "M-K") #'edger-resize-up)
-(global-set-key (kbd "M-L") #'edger-resize-right)
-(global-set-key (kbd "M-u") #'edger-horizontal)
-(global-set-key (kbd "M-i") #'edger-vertical)
-(global-set-key (kbd "M-w") #'edger-close)
-(global-set-key (kbd "C-x 0") #'suderman/delete-window-or-tab)
-
-(dolist (binding '(("<f5>" . suderman/reload-config)
-                   ("<f6>" . suderman/pull-config)
-                   ("<f9>" . tool-bar-mode)
-                   ("M-p" . consult-recent-file)
-                   ("M-h" . edger-left)
-                   ("M-j" . edger-down)
-                   ("M-k" . edger-up)
-                   ("M-l" . edger-right)
-                   ("M-H" . edger-resize-left)
-                   ("M-J" . edger-resize-down)
-                   ("M-K" . edger-resize-up)
-                   ("M-L" . edger-resize-right)
-                   ("M-u" . edger-horizontal)
-                   ("M-i" . edger-vertical)
-                   ("M-U" . suderman/split-window-below-and-focus)
-                   ("M-I" . suderman/split-window-right-and-focus)
-                   ("M-w" . edger-close)))
-  (suderman/keys--define-modal (car binding) (cdr binding)))
-
 (use-package which-key
+  :ensure nil
   :demand t
   :init
   (setq which-key-idle-delay 0.35)
   :config
   (which-key-mode 1))
 
-(suderman/meow-reset-leader-map)
-(meow-leader-define-key
- '("1" . meow-digit-argument)
- '("2" . meow-digit-argument)
- '("3" . meow-digit-argument)
- '("4" . meow-digit-argument)
- '("5" . meow-digit-argument)
- '("6" . meow-digit-argument)
- '("7" . meow-digit-argument)
- '("8" . meow-digit-argument)
- '("9" . meow-digit-argument)
- '("0" . meow-digit-argument)
- '("?" . suderman/cheatsheet)
- '("SPC" . execute-extended-command)
- (cons "g" suderman/leader-git-map)
- (cons "," suderman/leader-buffer-map)
- (cons "." suderman/leader-file-map)
- (cons "o" suderman/leader-org-map)
- '("e" . suderman/mail)
- (cons "q" suderman/leader-quit-map)
- (cons "/" suderman/leader-search-map)
- (cons "t" suderman/leader-toggle-map)
- (cons "w" suderman/leader-window-map))
-(when (fboundp 'ghostel-project)
-  (meow-leader-define-key '("RET" . ghostel-project)))
+;;;; Global keys
 
-(which-key-add-keymap-based-replacements
-  suderman/meow-leader-map
-  "g" (cons "git" suderman/leader-git-map)
-  "," (cons "buffers" suderman/leader-buffer-map)
-  "." (cons "files" suderman/leader-file-map)
-  "o" (cons "org" suderman/leader-org-map)
-  "q" (cons "quit/config" suderman/leader-quit-map)
-  "/" (cons "search" suderman/leader-search-map)
-  "t" (cons "toggles" suderman/leader-toggle-map)
-  "w" (cons "windows" suderman/leader-window-map))
+(define-keymap :keymap global-map
+  "<escape>" #'suderman/meow-escape
+  "C-<escape>" #'top-level
+  "C-c C-g" #'top-level
+  "C-c h" #'suderman/cheatsheet
+  "C-c m" #'suderman/mail
+  "<f5>" #'suderman/reload-config
+  "<f6>" #'suderman/pull-config
+  "<f9>" #'tool-bar-mode
+  "s-+" #'suderman/frame-text-scale-increase
+  "s-=" #'suderman/frame-text-scale-increase
+  "s--" #'suderman/frame-text-scale-decrease
+  "s-_" #'suderman/frame-text-scale-decrease
+  "s-t" #'tab-new
+  "s-[" #'tab-previous
+  "s-]" #'tab-next
+  "s-w" #'tab-close
+  "M-z" #'suderman/zoom-window-toggle
+  "C-x 0" #'suderman/delete-window-or-tab)
 
-(which-key-add-keymap-based-replacements
-  suderman/leader-toggle-map
-  "c" "column indicator"
-  "d" "dirvish sidebar"
-  "h" "current line"
-  "m" "menu bar"
-  "n" "line numbers"
-  "o" "org indentation"
-  "r" "read only"
-  "s" "spelling"
-  "v" "visual lines"
-  "w" "whitespace")
+(setq tab-bar-close-last-tab-choice 'delete-frame)
 
-(which-key-add-keymap-based-replacements
-  suderman/leader-org-map
-  "TAB" "collapse all"
-  "t" "TODO"
-  "p" "PROG"
-  "e" "EVAL"
-  "h" "HOLD"
-  "d" "DONE"
-  "a" "archive"
-  "A" "archive completed in buffer"
-  "D" "delete subtree"
-  "o" "dashboard"
-  "E" "export"
-  "v" (cons "views" suderman/leader-org-view-map)
-  "s" (cons "planning" suderman/leader-org-schedule-map))
+;; Meow's state maps outrank major-mode maps, so window keys go there too.
+(dolist (map (list global-map meow-normal-state-keymap meow-motion-state-keymap))
+  (suderman/install-keys map suderman/window-keys))
 
-(which-key-add-keymap-based-replacements
-  suderman/leader-org-view-map
-  "a" "agenda"
-  "t" "TODO list"
-  "d" "daily"
-  "i" "inbox")
+(dolist (map (list meow-normal-state-keymap meow-motion-state-keymap))
+  (define-keymap :keymap map
+    "M-p" #'consult-recent-file
+    "M-U" #'suderman/split-window-below-and-focus
+    "M-I" #'suderman/split-window-right-and-focus))
 
-(which-key-add-keymap-based-replacements
-  suderman/leader-org-schedule-map
-  "s" "schedule"
-  "d" "deadline")
+;;;; SPC leader
 
-(which-key-add-keymap-based-replacements
-  suderman/leader-git-map
-  "c" (cons "conflicts" suderman/leader-git-conflict-map)
-  "h" (cons "hunks" suderman/leader-git-hunk-map))
+;; One form builds the whole leader, so C-M-x anywhere inside applies it.
+(setf
+ (alist-get 'leader meow-keymap-alist)
+ (define-keymap
+   "SPC" #'execute-extended-command
+   "?" #'suderman/cheatsheet
+   "e" '("mail" . suderman/mail)
+   "0" #'meow-digit-argument
+   "1" #'meow-digit-argument
+   "2" #'meow-digit-argument
+   "3" #'meow-digit-argument
+   "4" #'meow-digit-argument
+   "5" #'meow-digit-argument
+   "6" #'meow-digit-argument
+   "7" #'meow-digit-argument
+   "8" #'meow-digit-argument
+   "9" #'meow-digit-argument
+
+   "," (cons "buffers"
+             (define-keymap
+               "/" #'consult-buffer
+               "b" #'ibuffer
+               "k" #'kill-current-buffer
+               "," #'suderman/alternate-buffer
+               "n" #'next-buffer
+               "p" #'previous-buffer
+               "r" #'suderman/revert-buffer-no-confirm
+               "s" #'save-buffer))
+
+   "." (cons "files"
+             (define-keymap
+               "." #'consult-fd
+               "/" #'consult-ripgrep
+               "f" #'suderman/dirvish
+               "b" #'consult-bookmark
+               "m" #'bookmark-set
+               "M" #'bookmark-delete
+               "," #'consult-recent-file
+               "s" #'save-buffer
+               "S" #'write-file
+               "R" #'tramp-cleanup-this-connection))
+
+   "g" (cons "git"
+             (define-keymap
+               "B" #'magit-blame-addition
+               "C" #'magit-branch-checkout
+               "b" #'magit-blame-echo
+               "d" #'magit-diff-buffer-file
+               "f" #'magit-file-dispatch
+               "g" #'magit-status
+               "l" #'magit-log-buffer-file
+               "L" #'magit-log-current
+               "m" #'magit-dispatch
+               "s" #'magit-stage-files
+               "u" #'magit-unstage-files
+               "c" (cons "conflicts"
+                         (define-keymap
+                           "0" #'smerge-kill-current
+                           "a" #'smerge-keep-all
+                           "b" #'smerge-keep-base
+                           "e" #'smerge-ediff
+                           "l" #'smerge-keep-lower
+                           "n" #'smerge-next
+                           "p" #'smerge-prev
+                           "r" #'smerge-refine
+                           "u" #'smerge-keep-upper))
+               "h" (cons "hunks"
+                         (define-keymap
+                           "d" #'diff-hl-diff-goto-hunk
+                           "n" #'diff-hl-next-hunk
+                           "p" #'diff-hl-previous-hunk
+                           "r" #'diff-hl-revert-hunk
+                           "s" #'diff-hl-stage-current-hunk
+                           "u" #'diff-hl-unstage-file
+                           "v" #'diff-hl-show-hunk))))
+
+   "o" (cons "org"
+             (define-keymap
+               "TAB" '("collapse all" . org-overview)
+               "a" '("archive" . suderman/org-archive)
+               "A" '("archive completed in buffer" . suderman/org-archive-done)
+               "c" #'org-capture
+               "d" '("DONE" . suderman/org-todo-done)
+               "D" '("delete subtree" . suderman/org-delete-subtree)
+               "e" '("EVAL" . suderman/org-todo-eval)
+               "E" '("export" . suderman/org-export)
+               "g" #'suderman/org-heading
+               "h" '("HOLD" . suderman/org-todo-hold)
+               "i" #'suderman/org-insert-link
+               "l" #'org-store-link
+               "n" #'org-toggle-narrow-to-subtree
+               "o" '("dashboard" . suderman/org-dashboard)
+               "p" '("PROG" . suderman/org-todo-prog)
+               "r" #'suderman/org-refile
+               "t" '("TODO" . suderman/org-todo-todo)
+               "x" #'suderman/org-toggle-checkbox
+               "s" (cons "planning"
+                         (define-keymap
+                           "s" '("schedule" . suderman/org-schedule)
+                           "d" '("deadline" . suderman/org-deadline)))
+               "v" (cons "views"
+                         (define-keymap
+                           "a" '("agenda" . org-agenda)
+                           "t" '("TODO list" . org-todo-list)
+                           "d" '("daily" . suderman/org-daily)
+                           "i" '("inbox" . suderman/org-inbox)))))
+
+   "q" (cons "quit/config"
+             (define-keymap
+               "p" #'suderman/pull-config
+               "q" #'kill-emacs
+               "r" #'suderman/reload-config
+               "u" #'suderman/package-upgrade-all))
+
+   "/" (cons "search"
+             (define-keymap
+               "/" #'consult-ripgrep
+               "g" #'consult-git-grep
+               "l" #'consult-line
+               "L" #'consult-line-multi
+               "i" #'consult-imenu
+               "I" #'consult-imenu-multi
+               "o" #'consult-outline
+               "m" #'consult-mark
+               "M" #'consult-global-mark
+               "r" #'consult-register
+               "y" #'consult-yank-pop
+               "e" #'consult-compile-error
+               "f" #'consult-flymake
+               "s" #'consult-isearch-history
+               "c" #'suderman/clear-search))
+
+   "t" (cons "toggles"
+             (define-keymap
+               "c" '("column indicator" . display-fill-column-indicator-mode)
+               "d" '("dirvish sidebar" . suderman/dirvish-side-toggle)
+               "h" '("current line" . hl-line-mode)
+               "m" '("menu bar" . menu-bar-mode)
+               "n" '("line numbers" . suderman/toggle-line-numbers)
+               "o" '("org indentation" . org-indent-mode)
+               "r" '("read only" . read-only-mode)
+               "s" (and (fboundp 'jinx-mode) '("spelling" . jinx-mode))
+               "v" '("visual lines" . visual-line-mode)
+               "w" '("whitespace" . whitespace-mode)))
+
+   "w" (cons "windows"
+             (define-keymap
+               "=" #'balance-windows
+               "h" #'edger-left
+               "j" #'edger-down
+               "k" #'edger-up
+               "l" #'edger-right
+               "H" #'edger-resize-left
+               "J" #'edger-resize-down
+               "K" #'edger-resize-up
+               "L" #'edger-resize-right
+               "u" #'edger-horizontal
+               "i" #'edger-vertical
+               "o" #'delete-other-windows
+               "w" #'edger-close))
+
+   "RET" (and (fboundp 'ghostel-project) #'ghostel-project)))
 
 (provide 'suderman-keys)
 ;;; suderman-keys.el ends here

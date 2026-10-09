@@ -38,6 +38,9 @@
   ;; Include the remote login PATH for user-installed tools on NixOS.
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path t))
 
+;; Mouse support in terminal frames; graphical frames ignore it.
+(xterm-mouse-mode 1)
+
 (savehist-mode 1)
 (save-place-mode 1)
 (recentf-mode 1)

@@ -76,10 +76,12 @@
         python3
         wl-clipboard
         vips
-        ffmpeg
+        # Kitty graphics thumbnails and inline video in terminal frames.
+        # Headless variants skip ffplay, yt-dlp, and their GUI stacks.
+        ffmpeg-headless
         ffmpegthumbnailer
         mediainfo
-        mpv
+        mpv-unwrapped
         epubThumbnailer
         poppler-utils
         imagemagick

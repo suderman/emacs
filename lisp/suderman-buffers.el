@@ -143,17 +143,7 @@
   (keymap-set ibuffer-mode-map "M" #'suderman/ibuffer-mark-all)
   (keymap-set ibuffer-mode-map "u" #'suderman/ibuffer-unmark)
   (keymap-set ibuffer-mode-map "U" #'ibuffer-unmark-all-marks)
-  (keymap-set ibuffer-mode-map "M-h" #'edger-left)
-  (keymap-set ibuffer-mode-map "M-j" #'edger-down)
-  (keymap-set ibuffer-mode-map "M-k" #'edger-up)
-  (keymap-set ibuffer-mode-map "M-l" #'edger-right)
-  (keymap-set ibuffer-mode-map "M-H" #'edger-resize-left)
-  (keymap-set ibuffer-mode-map "M-J" #'edger-resize-down)
-  (keymap-set ibuffer-mode-map "M-K" #'edger-resize-up)
-  (keymap-set ibuffer-mode-map "M-L" #'edger-resize-right)
-  (keymap-set ibuffer-mode-map "M-u" #'edger-horizontal)
-  (keymap-set ibuffer-mode-map "M-i" #'edger-vertical)
-  (keymap-set ibuffer-mode-map "M-w" #'edger-close))
+  (suderman/install-keys ibuffer-mode-map suderman/window-keys))
 
 (use-package ibuffer-project
   :after ibuffer

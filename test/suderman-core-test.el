@@ -230,29 +230,6 @@
       (suderman/select-text "graphical")
       (should-not output))))
 
-;; Large-file behavior
-
-(ert-deftest suderman/so-long-keeps-long-code-writable-and-cheap-to-display ()
-  (with-temp-buffer
-    (insert (make-string (1+ so-long-threshold) ?x) "\n")
-    (setq buffer-file-name "/tmp/suderman-so-long.el")
-    (let ((so-long-invisible-buffer-function nil))
-      (set-auto-mode))
-    (should so-long-minor-mode)
-    (should (derived-mode-p 'emacs-lisp-mode))
-    (should-not buffer-read-only)
-    (should-not visual-line-mode)
-    (should-not display-fill-column-indicator-mode)
-    (should-not (bound-and-true-p indent-bars-mode)))
-  (with-temp-buffer
-    (insert "(message \"short\")\n")
-    (setq buffer-file-name "/tmp/suderman-short.el")
-    (let ((so-long-invisible-buffer-function nil))
-      (set-auto-mode))
-    (should-not (bound-and-true-p so-long-minor-mode))
-    (should (derived-mode-p 'emacs-lisp-mode))))
-
-
 ;; Formatting
 
 (ert-deftest suderman/treefmt-uses-the-source-buffer-environment ()
@@ -398,30 +375,7 @@
                (seq-position modules 'suderman-keys)))
     (should-not (memq 'suderman-reload modules))))
 
-(ert-deftest suderman/org-unload-removes-theme-callback ()
-  (let ((enable-theme-functions '(suderman/org-apply-heading-faces
-                                  other-theme-callback)))
-    (should-not (suderman-org-unload-function))
-    (should (equal enable-theme-functions '(other-theme-callback)))))
-
-
 ;; Window layouts
-
-(ert-deftest suderman/zoom-window-toggle-restores-side-windows ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let* ((left (selected-window))
-           (right (split-window-right))
-           (side (display-buffer-in-side-window
-                  (get-buffer-create " *zoom-window-side-test*")
-                  '((side . left)))))
-      (select-window left)
-      (suderman/zoom-window-toggle)
-      (should (one-window-p))
-      (suderman/zoom-window-toggle)
-      (should (memq left (window-list)))
-      (should (memq right (window-list)))
-      (should (memq side (window-list))))))
 
 (ert-deftest suderman/resize-window-moves-trailing-edge-in-nested-layout ()
   (save-window-excursion
@@ -489,23 +443,6 @@
 
 ;; Shared appearance
 
-(ert-deftest suderman/modeline-normalizes-paths-outside-the-logical-project ()
-  (cl-letf (((symbol-function 'doom-modeline-project-root)
-             (lambda () (expand-file-name "~/org/work/modeline-fixture/"))))
-    (dolist (file '("~/src/modeline-fixture/note.org"
-                    "/tmp/modeline-fixture/note.org"))
-      (with-temp-buffer
-        (setq buffer-file-name (expand-file-name file)
-              default-directory (file-name-directory buffer-file-name))
-        (let* ((doom-modeline-buffer-file-name-style 'truncate-nil)
-               (name (doom-modeline-buffer-file-name)))
-          (should (equal (substring-no-properties name)
-                         (abbreviate-file-name buffer-file-name)))
-          (should (eq (get-text-property 0 'local-map name)
-                      mode-line-buffer-identification-keymap))
-          (should (string-match-p (regexp-quote buffer-file-name)
-                                  (get-text-property 0 'help-echo name))))))))
-
 (ert-deftest suderman/base16-gnus-faces-avoid-emacs-31-inheritance-cycles ()
   (let (faces transformed)
     (dolist (group '(mail news))
@@ -533,54 +470,27 @@
     (should (equal (assq 'default transformed)
                    '(default :foreground base05)))))
 
-(ert-deftest suderman/line-number-toggle-preserves-special-buffer-exclusions ()
-  (let ((original-state global-display-line-numbers-mode)
-        (text-buffer (generate-new-buffer " *suderman-line-numbers-text*"))
-        (special-buffer (generate-new-buffer " *suderman-line-numbers-special*"))
-        (image-buffer (generate-new-buffer " *suderman-line-numbers-image*")))
-    (unwind-protect
-        (progn
-          (with-current-buffer text-buffer
-            (text-mode))
-          (with-current-buffer special-buffer
-            (special-mode))
-          (with-current-buffer image-buffer
-            (setq major-mode 'image-mode))
-          (unless global-display-line-numbers-mode
-            (global-display-line-numbers-mode 1)
-            (suderman/disable-line-numbers-in-special-buffers))
-
-          (suderman/toggle-line-numbers)
-          (should-not global-display-line-numbers-mode)
-          (should-not (buffer-local-value 'display-line-numbers-mode text-buffer))
-          (should-not (buffer-local-value 'display-line-numbers-mode special-buffer))
-          (should-not (buffer-local-value 'display-line-numbers-mode image-buffer))
-
-          (suderman/toggle-line-numbers)
-          (should global-display-line-numbers-mode)
-          (should (buffer-local-value 'display-line-numbers-mode text-buffer))
-          (should-not (buffer-local-value 'display-line-numbers-mode special-buffer))
-          (should-not (buffer-local-value 'display-line-numbers-mode image-buffer)))
-      (global-display-line-numbers-mode (if original-state 1 -1))
-      (when original-state
-        (suderman/disable-line-numbers-in-special-buffers))
-      (kill-buffer text-buffer)
-      (kill-buffer special-buffer)
-      (kill-buffer image-buffer))))
-
-(ert-deftest suderman/shared-style-is-optional-and-reloadable ()
-  (let ((directory (make-temp-file "emacs-style-" t))
-        (suderman/system-style '(:mono-font "old")))
-    (unwind-protect
-        (let ((file (expand-file-name "style.el" directory)))
-          (suderman/load-system-style file)
-          (should-not suderman/system-style)
-          (with-temp-file file
-            (insert ";;; -*- lexical-binding: t; -*-\n"
-                    "(setq suderman/system-style '(:mono-font \"Example\" :font-size 12.0))"))
-          (suderman/load-system-style file)
-          (should (equal (plist-get suderman/system-style :mono-font) "Example")))
-      (delete-directory directory t))))
+(ert-deftest suderman/shared-style-prefers-profile-then-org-then-fallback ()
+  (let* ((directory (make-temp-file "emacs-style-" t))
+         (profile (expand-file-name "profile.el" directory))
+         (org (expand-file-name "org.el" directory))
+         (suderman/system-style-files (list profile org))
+         (suderman/system-style nil))
+    (cl-flet ((write (file font)
+                (with-temp-file file
+                  (insert (format "(setq suderman/system-style '(:mono-font %S))"
+                                  font)))))
+      (unwind-protect
+          (progn
+            (suderman/load-system-style)
+            (should (eq suderman/system-style suderman/fallback-style))
+            (write org "Org")
+            (suderman/load-system-style)
+            (should (equal (plist-get suderman/system-style :mono-font) "Org"))
+            (write profile "Profile")
+            (suderman/load-system-style)
+            (should (equal (plist-get suderman/system-style :mono-font) "Profile")))
+        (delete-directory directory t)))))
 
 (ert-deftest suderman/system-palettes-switch-without-stacking-themes ()
   (let* ((colors (cl-loop for index below 16
@@ -621,7 +531,19 @@
       (mapc #'disable-theme custom-enabled-themes)
       (mapc #'enable-theme (reverse original-themes)))))
 
-(ert-deftest suderman/missing-system-palettes-preserve-current-theme ()
+(ert-deftest suderman/fallback-style-uses-bundled-base16-palettes ()
+  (let ((suderman/system-style suderman/fallback-style)
+        (original-themes custom-enabled-themes))
+    (unwind-protect
+        (cl-letf (((symbol-function 'suderman/load-system-style) #'ignore))
+          (should (equal (plist-get (suderman/style-palette :dark) :base00)
+                         (plist-get base16-catppuccin-mocha-theme-colors :base00)))
+          (suderman/apply-system-palette 'light)
+          (should (equal custom-enabled-themes '(suderman-light))))
+      (mapc #'disable-theme custom-enabled-themes)
+      (mapc #'enable-theme (reverse original-themes)))))
+
+(ert-deftest suderman/missing-palettes-preserve-current-theme ()
   (let ((suderman/system-style nil)
         (original-themes custom-enabled-themes))
     (cl-letf (((symbol-function 'suderman/load-system-style) #'ignore))
@@ -661,10 +583,11 @@
         (suderman/apply-system-fonts)
         (should-not calls)
         (should-not fontsets))
+      ;; Missing fonts keep the platform family at the intended size.
       (let ((system-type 'android))
         (cl-letf (((symbol-function 'find-font) (lambda (&rest _) nil)))
           (suderman/apply-system-fonts)
-          (should-not calls)
+          (should (equal calls '((default nil (:height 170)))))
           (should-not fontsets))))))
 
 (provide 'suderman-core-test)

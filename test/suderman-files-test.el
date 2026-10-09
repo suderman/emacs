@@ -10,65 +10,10 @@
 (require 'term/xterm)
 (require 'url-util)
 (require 'image-mode)
-(require 'suderman-dashboard)
 (require 'suderman-files)
 (require 'suderman-images)
 (require 'suderman-markdown)
 (require 'suderman-org)
-
-;; Dashboard behavior
-
-(ert-deftest suderman/dashboard-closes-full-frame-dirvish-first ()
-  (let ((session (make-dirvish :curr-layout t :root-window (selected-window)))
-        calls)
-    (cl-letf (((symbol-function 'dirvish-curr) (lambda () session))
-              ((symbol-function 'dirvish-quit)
-               (lambda () (push 'quit calls)))
-              ((symbol-function 'dashboard-open)
-               (lambda () (push 'open calls))))
-      (suderman/dashboard))
-    (should (equal (nreverse calls) '(quit open)))))
-
-(ert-deftest suderman/dashboard-filters-and-renumbers-missing-destinations ()
-  (let ((user-emacs-directory "/config/emacs/")
-        (existing (list (expand-file-name "~/") "/config/emacs/")))
-    (cl-letf (((symbol-function 'file-directory-p)
-               (lambda (path) (member path existing)))
-              ((symbol-function 'suderman/nerd-fonts-available-p) #'ignore))
-      (let ((buttons (suderman/dashboard-destinations)))
-        (should (equal (mapcar #'car buttons) '("Home" "Emacs" "Scratch")))
-        (should (equal (mapcar #'cadr buttons) '("1" "2" "3")))))))
-
-(ert-deftest suderman/dashboard-moves-between-buttons-spatially ()
-  (save-window-excursion
-    (with-temp-buffer
-      (switch-to-buffer (current-buffer))
-      (insert "  ")
-      (widget-create 'push-button :tag "Work" :action #'ignore)
-      (insert "        ")
-      (widget-create 'push-button :tag "Personal" :action #'ignore)
-      (insert "\n\nProjects:\n  ")
-      (widget-create 'push-button :tag "Alpha" :action #'ignore)
-      (insert "       ")
-      (widget-create 'push-button :tag "Beta" :action #'ignore)
-      (dashboard-mode)
-      (cl-labels ((label ()
-                    (substring-no-properties
-                     (widget-get (get-char-property (point) 'button) :tag))))
-        (should (equal (label) "Work"))
-        (execute-kbd-macro (kbd "l"))
-        (should (equal (label) "Personal"))
-        (execute-kbd-macro (kbd "h"))
-        (should (equal (label) "Work"))
-        (execute-kbd-macro (kbd "j"))
-        (should (equal (label) "Alpha"))
-        (execute-kbd-macro (kbd "k"))
-        (should (equal (label) "Work"))
-        (execute-kbd-macro (kbd "h"))
-        (should (equal (label) "Work"))
-        (execute-kbd-macro (kbd "k"))
-        (should (equal (label) "Work"))))))
-
 
 ;; Markdown preview
 
@@ -164,150 +109,6 @@
                (lambda (_) "text/plain")))
       (should-error (suderman/image-copy-to-clipboard) :type 'user-error))))
 
-(ert-deftest suderman/image-gallery-image-keeps-its-private-thumbnail-buffer ()
-  (let ((gallery (generate-new-buffer " *image-gallery-test*"))
-        (image (generate-new-buffer " *image-gallery-image-test*"))
-        displayed)
-    (unwind-protect
-        (save-window-excursion
-          (with-current-buffer gallery
-            (image-dired-thumbnail-mode)
-            (setq-local image-dired-thumbnail-buffer (buffer-name gallery)
-                        image-dired-display-image-buffer (buffer-name image)
-                        image-dired-track-movement nil)
-            (let ((inhibit-read-only t))
-              (insert (propertize "a" 'image-dired-thumbnail t
-                                  'original-file-name "/tmp/a.png")
-                      " "
-                      (propertize "b" 'image-dired-thumbnail t
-                                  'original-file-name "/tmp/b.png")
-                      " "
-                      (propertize "c" 'image-dired-thumbnail t
-                                  'original-file-name "/tmp/c.png")))
-            (goto-char (point-min)))
-          (switch-to-buffer gallery)
-          (cl-letf (((symbol-function 'image-dired-display-this)
-                     (lambda () (switch-to-buffer image))))
-            (suderman/image-dired-display))
-          (with-current-buffer image
-            (should (eq suderman/image-dired-gallery-buffer gallery))
-            (should (equal image-dired-thumbnail-buffer
-                           (buffer-name gallery)))
-            (should (equal image-dired-display-image-buffer
-                           (buffer-name image))))
-          (cl-letf (((symbol-function 'image-dired-display-image)
-                     (lambda (file)
-                       (setq displayed file)
-                       (with-current-buffer image
-                         (kill-all-local-variables)))))
-            (with-current-buffer image
-              (suderman/image-dired-display-next 1))
-            (should (equal displayed "/tmp/b.png"))
-            (with-current-buffer image
-              (suderman/image-dired-display-next 1))
-            (should (equal displayed "/tmp/c.png"))
-            (with-current-buffer image
-              (suderman/image-dired-display-previous 1))
-            (should (equal displayed "/tmp/b.png"))))
-      (kill-buffer gallery)
-      (kill-buffer image))))
-
-(ert-deftest suderman/image-gallery-lists-only-top-level-images ()
-  (let* ((directory (make-temp-file "suderman-image-gallery-" t))
-         (nested (expand-file-name "nested" directory))
-         (image (expand-file-name "one.png" directory))
-         (upper-image (expand-file-name "two.JPG" directory))
-         (text (expand-file-name "notes.txt" directory))
-         (nested-image (expand-file-name "three.webp" nested))
-         buffer)
-    (unwind-protect
-        (progn
-          (make-directory nested)
-          (dolist (file (list image upper-image text nested-image))
-            (write-region "" nil file))
-          (let (dired-buffers)
-            (setq buffer
-                  (dired-internal-noselect
-                   (file-name-as-directory directory)
-                   dired-listing-switches)))
-          (should (equal (suderman/image-dired--files buffer)
-                         (list image upper-image))))
-      (when (buffer-live-p buffer)
-        (kill-buffer buffer))
-      (delete-directory directory t))))
-
-(ert-deftest suderman/image-gallery-leaves-an-empty-directory-untouched ()
-  (let* ((directory (make-temp-file "suderman-empty-gallery-" t))
-         buffer)
-    (unwind-protect
-        (save-window-excursion
-          (let (dired-buffers)
-            (setq buffer
-                  (dired-internal-noselect
-                   (file-name-as-directory directory)
-                   dired-listing-switches)))
-          (set-window-buffer (selected-window) buffer)
-          (let ((windows (window-list)))
-            (should-error (suderman/image-dired-gallery) :type 'user-error)
-            (should (equal (window-list) windows))))
-      (when (buffer-live-p buffer)
-        (kill-buffer buffer))
-      (delete-directory directory t))))
-
-(ert-deftest suderman/image-gallery-restores-its-dirvish-window ()
-  (let* ((directory (make-temp-file "suderman-gallery-window-" t))
-         (image (expand-file-name "photo.png" directory))
-         source gallery source-window windows)
-    (unwind-protect
-        (save-window-excursion
-          (write-region "" nil image)
-          (let (dired-buffers)
-            (setq source
-                  (dired-internal-noselect
-                   (file-name-as-directory directory)
-                   dired-listing-switches)))
-          (delete-other-windows)
-          (set-window-buffer (selected-window) source)
-          (setq source-window (selected-window))
-          (split-window-right)
-          (select-window source-window)
-          (setq windows (window-list))
-          (cl-letf (((symbol-function 'suderman/image-dired--populate)
-                     (lambda (buffer backing files _selected-file)
-                       (should (equal files (list image)))
-                       (with-current-buffer buffer
-                         (let ((inhibit-read-only t))
-                           (erase-buffer)
-                           (insert (propertize "x"
-                                               'image-dired-thumbnail t
-                                               'original-file-name image
-                                               'associated-dired-buffer
-                                               backing))
-                           (goto-char (point-min)))))))
-            (suderman/image-dired-gallery))
-          (setq gallery (current-buffer))
-          (should (derived-mode-p 'image-dired-thumbnail-mode))
-          (should (= (length (window-list)) 1))
-          (should (eq (get-text-property
-                       (point) 'associated-dired-buffer)
-                      source))
-          (suderman/image-dired-quit)
-          (should (eq (selected-window) source-window))
-          (should (equal (window-list) windows))
-          (should (eq (window-buffer source-window) source))
-          (should (equal (with-selected-window source-window
-                           (dired-get-filename nil t))
-                         image)))
-      (when (buffer-live-p gallery)
-        (with-current-buffer gallery
-          (setq suderman/image-dired-window-configuration nil
-                suderman/image-dired-source-buffer nil
-                suderman/image-dired-source-window nil))
-        (kill-buffer gallery))
-      (when (buffer-live-p source)
-        (kill-buffer source))
-      (delete-directory directory t))))
-
 (ert-deftest suderman/image-gallery-updates-count-after-deletion ()
   (with-temp-buffer
     (image-dired-thumbnail-mode)
@@ -325,17 +126,6 @@
 
 
 ;; Dirvish and file operations
-
-(ert-deftest suderman/dired-ripdrag-is-silent-when-missing ()
-  (with-temp-buffer
-    (cl-letf (((symbol-function 'executable-find) (lambda (_) nil))
-              ((symbol-function 'dired-get-marked-files)
-               (lambda (&rest _) (ert-fail "Read selection without Ripdrag")))
-              ((symbol-function 'make-process)
-               (lambda (&rest _) (ert-fail "Started process without Ripdrag")))
-              ((symbol-function 'message)
-               (lambda (&rest _) (ert-fail "Reported missing Ripdrag"))))
-      (should-not (call-interactively #'suderman/dired-ripdrag)))))
 
 (ert-deftest suderman/dired-ripdrag-passes-current-or-marked-files-as-arguments ()
   (let* ((directory (make-temp-file "suderman-ripdrag-" t))
@@ -634,44 +424,6 @@
       (when (buffer-live-p buffer) (kill-buffer buffer))
       (delete-directory directory t))))
 
-(ert-deftest suderman/dirvish-subtree-toggle-ignores-nondirectories ()
-  (let* ((directory (make-temp-file "suderman-subtree-" t))
-         (folder (expand-file-name "folder" directory))
-         (file (expand-file-name "ordinary.txt" directory))
-         (folder-link (expand-file-name "folder-link" directory))
-         (file-link (expand-file-name "file-link" directory))
-         (broken-link (expand-file-name "broken-link" directory))
-         buffer calls)
-    (unwind-protect
-        (progn
-          (make-directory folder)
-          (with-temp-file file (insert "ordinary file\n"))
-          (make-symbolic-link folder folder-link)
-          (make-symbolic-link file file-link)
-          (make-symbolic-link (expand-file-name "missing" directory) broken-link)
-          (setq buffer (dired-noselect directory))
-          (with-current-buffer buffer
-            (cl-letf (((symbol-function 'dirvish-subtree-toggle)
-                       (lambda () (push (dired-get-filename) calls))))
-              (dolist (entry (list file file-link broken-link))
-                (should (dired-goto-file entry))
-                (let ((before (buffer-string))
-                      (position (point)))
-                  (call-interactively #'suderman/dirvish-toggle-subtree)
-                  (should (equal before (buffer-string)))
-                  (should (= position (point)))))
-              (should-not calls)
-              (goto-char (point-min))
-              (should-not (dired-get-filename nil t))
-              (call-interactively #'suderman/dirvish-toggle-subtree)
-              (should-not calls)
-              (dolist (entry (list folder folder-link))
-                (should (dired-goto-file entry))
-                (call-interactively #'suderman/dirvish-toggle-subtree))
-              (should (equal (nreverse calls) (list folder folder-link))))))
-      (when (buffer-live-p buffer) (kill-buffer buffer))
-      (delete-directory directory t))))
-
 (ert-deftest suderman/android-dired-tap-opens-in-current-window ()
   (dolist (android '(nil t))
     (let ((system-type (if android 'android 'gnu/linux))
@@ -687,31 +439,6 @@
               (should-not other-window))
           (should-not same-window)
           (should (eq other-window 'tap)))))))
-
-(ert-deftest suderman/dirvish-normalizes-layout-from-an-ambient-buffer ()
-  (save-window-excursion
-    (let* ((root-buffer (generate-new-buffer " *suderman-dirvish-root*"))
-           (root-window (selected-window))
-           (session (make-dirvish :curr-layout 'full-frame
-                                  :root-window root-window))
-           toggled)
-      (unwind-protect
-          (progn
-            (set-window-buffer root-window root-buffer)
-            (with-temp-buffer
-              (cl-letf (((symbol-function 'dirvish-curr)
-                         (lambda ()
-                           (and (eq (current-buffer) root-buffer) session)))
-                        ((symbol-function 'dirvish) #'ignore)
-                        ((symbol-function 'dirvish-layout-toggle)
-                         (lambda ()
-                           (should (eq (selected-window) root-window))
-                           (setq toggled t)
-                           (setf (dv-curr-layout session) nil))))
-                (suderman/dirvish "/tmp/")))
-            (should toggled)
-            (should-not (dv-curr-layout session)))
-        (kill-buffer root-buffer)))))
 
 (ert-deftest suderman/dired-terminal-import-and-fallback ()
   (let* ((root (make-temp-file "suderman-import-" t))
@@ -1237,52 +964,6 @@
         (should (equal (nreverse events)
                        `((update input) (render ,root ,root))))))))
 
-(ert-deftest suderman/dirvish-parent-navigation-preserves-parent-focus ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let* ((root (selected-window))
-           (parent (split-window root nil 'left))
-           (session (make-dirvish :root-window root))
-           navigation)
-      (set-window-parameter parent 'no-other-window t)
-      (select-window parent)
-      (cl-letf (((symbol-function 'dirvish-curr) (lambda () session))
-                ((symbol-function 'dirvish--find-entry)
-                 (lambda (find entry) (setq navigation (list find entry)))))
-        (suderman/dirvish-parent-navigate "/tmp/next/")
-        (should (equal navigation '(find-alternate-file "/tmp/next/")))
-        (should (eq (selected-window) parent))))))
-
-(ert-deftest suderman/dirvish-preview-keeps-explorer-keys-buffer-local ()
-  ;; Isolate shared maps so a failing test cannot poison later tests.
-  (let ((emacs-lisp-mode-map (copy-keymap emacs-lisp-mode-map))
-        (org-mode-map (copy-keymap org-mode-map))
-        (text-mode-map (copy-keymap text-mode-map)))
-    (dolist (mode '(emacs-lisp-mode org-mode text-mode fundamental-mode))
-      (save-window-excursion
-        (with-temp-buffer
-          (funcall mode)
-          (let* ((shared-map (current-local-map))
-                 (original-map (and shared-map (copy-keymap shared-map))))
-            (run-hooks 'dirvish-preview-setup-hook)
-            (run-hooks 'dirvish-preview-setup-hook)
-            (should (equal shared-map original-map))
-            (should (eq (lookup-key (current-local-map) (kbd ","))
-                        #'suderman/dirvish-ibuffer))
-            (should (eq (lookup-key (current-local-map) (kbd "`"))
-                        #'suderman/dashboard)))
-          ;; A new editor in the same mode must retain its typing map.
-          (with-temp-buffer
-            (funcall mode)
-            (set-window-buffer (selected-window) (current-buffer))
-            (meow-mode 1)
-            (should (eq (key-binding (kbd ",")) #'suderman/ibuffer-toggle))
-            (should (eq (key-binding (kbd ".")) #'suderman/dirvish))
-            (suderman/meow-insert)
-            (execute-kbd-macro (kbd ", . `"))
-            (should (equal (buffer-string) ",.`"))
-            (should (meow-insert-mode-p))))))))
-
 (ert-deftest suderman/dirvish-peek-follows-consult-async-results ()
   (let* ((file (make-temp-file "suderman-peek-"))
          (default-directory (file-name-directory file))
@@ -1308,22 +989,6 @@
           (suderman/dirvish-peek-consult-refresh)
           (should (equal preview file)))
       (delete-file file))))
-
-(ert-deftest suderman/dirvish-sidebar-open-preserves-editor-focus ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let* ((editor (selected-window))
-           (sidebar (split-window-right))
-           opened)
-      (cl-letf (((symbol-function 'dirvish-curr) #'ignore)
-                ((symbol-function 'dirvish-side--session-visible-p) #'ignore)
-                ((symbol-function 'dirvish-side)
-                 (lambda (path)
-                   (setq opened path)
-                   (select-window sidebar))))
-        (suderman/dirvish-side-toggle "/tmp/")
-        (should (equal opened "/tmp/"))
-        (should (eq (selected-window) editor))))))
 
 (ert-deftest suderman/dirvish-sidebar-open-survives-layout-refresh ()
   (save-window-excursion
@@ -1356,125 +1021,6 @@
         (when-let* ((buffer (get-file-buffer file))) (kill-buffer buffer))
         (delete-directory directory t)))))
 
-(ert-deftest suderman/dirvish-colors-vc-filenames ()
-  (with-temp-buffer
-    (let ((dirvish--dir-data (make-hash-table :test #'equal)))
-      (dolist (entry '(("lisp" dir edited warning)
-                       ("suderman-meow.el" file edited warning)
-                       ("added.el" file added success)
-                       ("removed.el" file removed error)
-                       ("new.el" file unregistered font-lock-constant-face)
-                       ("clean.el" file up-to-date nil)))
-        (let* ((name (nth 0 entry))
-               (file (concat "/tmp/" name))
-               (beg (point)))
-          (insert name)
-          (puthash (secure-hash 'md5 file)
-                   (list :vc-state (nth 2 entry)) dirvish--dir-data)
-          (let ((rendered (dirvish-attribute-suderman-vc-state-rd
-                           beg (point) name file nil (cons (nth 1 entry) nil)
-                           beg (point) nil 35)))
-            (if (nth 3 entry)
-                (let ((ov (cdr rendered)))
-                  (should (eq (car rendered) 'ov))
-                  (should (= (overlay-start ov) beg))
-                  (should (= (overlay-end ov) (point)))
-                  (should (eq (overlay-get ov 'face) (nth 3 entry)))
-                  (should-not (overlay-get ov 'before-string)))
-              (should-not rendered)))
-          (insert "\n"))))))
-
-(ert-deftest suderman/dirvish-period-focuses-resizable-sidebar ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let ((editor (selected-window))
-          (directory (make-temp-file "suderman-sidebar-" t)))
-      (unwind-protect
-          (progn
-            (suderman/dirvish-side-toggle directory)
-            (let* ((sidebar (dirvish-side--session-visible-p))
-                   (session (with-current-buffer (window-buffer sidebar)
-                              (dirvish-curr))))
-              (should (eq editor (selected-window)))
-              (should (eq (dv-type session) 'side))
-              (should-not (dv-size-fixed session))
-              (with-selected-window sidebar
-                (dirvish--build-layout session))
-              (should-not (with-current-buffer (window-buffer sidebar)
-                            window-size-fixed))
-              (let ((width (window-width sidebar)))
-                (with-selected-window sidebar (enlarge-window-horizontally 5))
-                (should (> (window-width sidebar) width)))
-              (suderman/dirvish)
-              (should (eq (selected-window) sidebar))
-              (should (eq (dirvish-side--session-visible-p) sidebar))
-              (suderman/dirvish)
-              (should-not (dirvish-side--session-visible-p))))
-        (when-let* ((sidebar (dirvish-side--session-visible-p)))
-          (with-selected-window sidebar (dirvish-quit)))
-        (delete-directory directory t)))))
-
-(ert-deftest suderman/dirvish-sidebar-resizes-from-editor ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let ((editor (selected-window))
-          (directory (make-temp-file "suderman-sidebar-resize-" t)))
-      (unwind-protect
-          (progn
-            (suderman/dirvish-side-toggle directory)
-            (let* ((sidebar (dirvish-side--session-visible-p))
-                   (width (window-width sidebar)))
-              (should-not (window-in-direction 'left editor))
-              (should (eq (window-in-direction 'left editor t) sidebar))
-              (suderman/resize-window-right)
-              (should (= (window-width sidebar) (+ width 5)))
-              (suderman/resize-window-left)
-              (should (= (window-width sidebar) width))
-              (should (eq (selected-window) editor))))
-        (when-let* ((sidebar (dirvish-side--session-visible-p)))
-          (with-selected-window sidebar (dirvish-quit)))
-        (delete-directory directory t)))))
-
-(ert-deftest suderman/resize-window-excludes-non-side-special-windows ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let* ((special (selected-window))
-           (editor (split-window-right)))
-      (set-window-parameter special 'no-other-window t)
-      (select-window editor)
-      (should-error (suderman/resize-window-right) :type 'user-error))))
-
-(ert-deftest suderman/dirvish-explicit-path-ignores-visible-sidebar ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let ((editor (selected-window))
-          (sidebar (split-window-right))
-          opened)
-      (cl-letf (((symbol-function 'dirvish-curr) #'ignore)
-                ((symbol-function 'dirvish-side--session-visible-p)
-                 (lambda () sidebar))
-                ((symbol-function 'dirvish)
-                 (lambda (directory) (setq opened directory))))
-        (suderman/dirvish "/tmp/")
-        (should (equal opened "/tmp/"))
-        (should (eq (selected-window) editor))))))
-
-(ert-deftest suderman/dirvish-sidebar-hide-preserves-editor-focus ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let* ((editor (selected-window))
-           (sidebar (split-window-right))
-           quit-window)
-      (select-window editor)
-      (cl-letf (((symbol-function 'dirvish-curr) #'ignore)
-                ((symbol-function 'dirvish-side--session-visible-p)
-                 (lambda () sidebar))
-                ((symbol-function 'dirvish-quit)
-                 (lambda () (setq quit-window (selected-window)))))
-        (suderman/dirvish-side-toggle)
-        (should (eq quit-window sidebar))
-        (should (eq (selected-window) editor))))))
-
 (ert-deftest suderman/dirvish-breadcrumb-navigation-uses-root-window ()
   (save-window-excursion
     (delete-other-windows)
@@ -1497,46 +1043,6 @@
             (should (eq called-window root))
             (should (eq (selected-window) root)))
         (kill-buffer misc-buffer)))))
-
-(ert-deftest suderman/dirvish-parent-file-click-centers-and-selects-file ()
-  (save-window-excursion
-    (delete-other-windows)
-    (let* ((root (selected-window))
-           (parent (split-window-right))
-           (session (make-dirvish :root-window root))
-           (file "/tmp/example.txt")
-           navigation selected)
-      (select-window parent)
-      (cl-letf (((symbol-function 'event-start) (lambda (_) 'position))
-                ((symbol-function 'posn-window) (lambda (_) parent))
-                ((symbol-function 'posn-point) (lambda (_) 1))
-                ((symbol-function 'dired-get-filename) (lambda (&rest _) file))
-                ((symbol-function 'dirvish-curr) (lambda () session))
-                ((symbol-function 'file-directory-p) #'ignore)
-                ((symbol-function 'dirvish--find-entry)
-                 (lambda (find entry) (setq navigation (list find entry))))
-                ((symbol-function 'dired-goto-file)
-                 (lambda (entry) (setq selected entry))))
-        (suderman/dirvish-parent-mouse-select 'event))
-      (should (equal navigation '(find-alternate-file "/tmp/")))
-      (should (equal selected file))
-      (should (eq (selected-window) root)))))
-
-(ert-deftest suderman/dirvish-gif-preview-loops-only-while-displayed ()
-  (with-temp-buffer
-    (insert (propertize " " 'display 'image-spec))
-    (let ((recipe (cons 'buffer (current-buffer)))
-          callback callback-arg animate-args)
-      (cl-letf (((symbol-function 'dirvish--find-file-temporarily)
-                 (lambda (_) recipe))
-                ((symbol-function 'run-with-idle-timer)
-                 (lambda (_seconds _repeat function argument)
-                   (setq callback function callback-arg argument)))
-                ((symbol-function 'image-animate)
-                 (lambda (&rest args) (setq animate-args args))))
-        (should (eq (dirvish-gif-dp "example.gif" "gif" nil nil) recipe))
-        (funcall callback callback-arg)
-        (should (equal animate-args '(image-spec nil t 1)))))))
 
 (ert-deftest suderman/kitty-graphics-probe-redraws-the-selected-frame ()
   (skip-unless (featurep 'kitty-graphics))

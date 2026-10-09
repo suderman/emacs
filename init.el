@@ -10,10 +10,7 @@
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
 (require 'suderman-android)
-
-;; Support mouse in terminal Emacs.
-(unless (display-graphic-p)
-  (xterm-mouse-mode 1))
+(require 'suderman-toolbar)
 
 ;; Foundations: paths before packages, packages before use-package forms.
 (require 'suderman-paths)
@@ -29,11 +26,13 @@
 (require 'suderman-completion)
 (require 'suderman-meow)
 (require 'suderman-terminal)
+(require 'suderman-transfer)
 (require 'suderman-files)
 (require 'suderman-images)
 (require 'suderman-dashboard)
 (require 'suderman-markdown)
 (require 'suderman-org)
+(require 'suderman-mail-moves)
 (require 'suderman-mail)
 (require 'suderman-mail-drafts)
 (require 'suderman-languages)

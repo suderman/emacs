@@ -67,7 +67,6 @@
   (dolist (command '(ghostel-copy-mode
                      ghostel-semi-char-mode
                      ghostel-char-mode))
-    (advice-remove command #'suderman/ghostel-sync-meow-state)
     (advice-add command :after #'suderman/ghostel-sync-meow-state)))
 
 (provide 'suderman-terminal)

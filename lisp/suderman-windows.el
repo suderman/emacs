@@ -20,6 +20,30 @@
 
 (setq windmove-allow-all-windows t)
 
+(defvar-keymap suderman/window-keys
+  :doc "Meta window keys shared by editors, IBuffer, Dirvish, and Magit."
+  "M-h" '("window left" . edger-left)
+  "M-j" '("window down" . edger-down)
+  "M-k" '("window up" . edger-up)
+  "M-l" '("window right" . edger-right)
+  "M-H" '("divider left" . edger-resize-left)
+  "M-J" '("divider down" . edger-resize-down)
+  "M-K" '("divider up" . edger-resize-up)
+  "M-L" '("divider right" . edger-resize-right)
+  "M-u" '("split below" . edger-horizontal)
+  "M-i" '("split right" . edger-vertical)
+  "M-w" '("close window" . edger-close))
+
+(defun suderman/install-keys (map keys &optional prefix)
+  "Copy every binding in KEYS into MAP below PREFIX.
+Prefixes such as ESC are merged key by key, so MAP keeps its other bindings."
+  (map-keymap (lambda (event binding)
+                (let ((key (vconcat prefix (vector event))))
+                  (if (keymapp binding)
+                      (suderman/install-keys map binding key)
+                    (define-key map key binding))))
+              keys))
+
 (use-package scroll-on-jump
   :demand t
   :custom

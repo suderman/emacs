@@ -15,18 +15,7 @@
 (declare-function suderman/dirvish-side-toggle "suderman-files")
 (declare-function meow-insert-exit "meow" ())
 
-;;;; Leader integration
-
-(defvar suderman/meow-leader-map (make-sparse-keymap)
-  "Owned keymap for Suderman's Meow SPC leader bindings.")
-
-(defun suderman/meow-reset-leader-map ()
-  "Reset and install Suderman's owned Meow leader map."
-  (setq suderman/meow-leader-map (make-sparse-keymap))
-  (when (boundp 'meow-keymap-alist)
-    (setf (alist-get 'leader meow-keymap-alist)
-          suderman/meow-leader-map))
-  suderman/meow-leader-map)
+;;;; Keypad
 
 (defun suderman/meow-keypad-once ()
   "Run one keypad command without applying it to BEACON cursors."
@@ -474,71 +463,21 @@ An active selection is replaced without modifying the kill ring."
       (format "% 9s" "surround")
     (funcall original command)))
 
+(defun suderman/meow-reset-state-keymap (symbol)
+  "Restore Meow's stock bindings in the keymap held by SYMBOL.
+The first call snapshots the stock map.  Later calls let a reload drop
+bindings that were deleted from source."
+  (let ((stock (or (get symbol 'suderman/stock-keymap)
+                   (put symbol 'suderman/stock-keymap
+                        (copy-keymap (symbol-value symbol))))))
+    (setcdr (symbol-value symbol) (cdr (copy-keymap stock)))))
+
 (defun suderman/meow-setup-qwerty ()
   "Install Suderman's QWERTY Meow bindings."
   (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
   (setf (alist-get ?h meow-keypad-start-keys) ?h)
-  ;; Remove the former backslash prefix before installing its single-key command.
-  (dolist (map (list meow-normal-state-keymap meow-motion-state-keymap))
-    (define-key map (kbd "\\") nil))
-  (dolist (key '("'" "\"" "`" "~"))
-    (define-key meow-motion-state-keymap (kbd key) nil))
-  (keymap-unset meow-motion-state-keymap "S" t)
-  (keymap-unset meow-normal-state-keymap "S" t)
-  (dolist (entry '((nil . "")
-                   (ignore . "")
-                   (suderman/format-buffer . "format")
-                   (suderman/meow-smart-beginning-of-line . "code beg")
-                   (beginning-of-line . "line beg")
-                   (meow-purrsist-back-word . "word back")
-                   (meow-purrsist-back-symbol . "sym back")
-                   (suderman/meow-delete . "delete")
-                   (suderman/meow-delete-line . "del line")
-                   (suderman/meow-smart-end-of-line . "code end")
-                   (end-of-line . "line end")
-                   (execute-extended-command . "M-x")
-                   (evilmi-jump-items-native . "match")
-                   (kill-current-buffer . "kill buf")
-                   (next-buffer . "next buf")
-                   (previous-buffer . "prev buf")
-                   (meow-purrsist-find . "find fwd")
-                   (meow-purrsist-find-backward . "find back")
-                   (suderman/meow-buffer-beginning . "buf beg")
-                   (suderman/meow-buffer-end . "buf end")
-                   (suderman/meow-indent . "indent")
-                   (suderman/meow-insert . "insert")
-                   (suderman/meow-insert-at-indentation . "at indent")
-                   (suderman/meow-insert-at-end-of-line . "at eol")
-                   (meow-purrsist-line-or-rectangle . "line/rect")
-                   (meow-purrsist-next . "down")
-                   (suderman/meow-outdent . "outdent")
-                   (meow-purrsist-prev . "up")
-                   (suderman/meow-start-search . "search")
-                   (suderman/meow-search . "search +")
-                   (suderman/meow-search-backward . "search -")
-                   (suderman/meow-join-line . "join line")
-                   (suderman/move-down . "move down")
-                   (suderman/move-up . "move up")
-                   (suderman/meow-paste . "paste")
-                   (suderman/meow-replace-char . "rep char")
-                   (suderman/meow-repeat . "repeat")
-                   (meow-purrsist-till . "till fwd")
-                   (meow-purrsist-till-backward . "till back")
-                   (meow-purrsist-visual . "select")
-                   (suderman/ibuffer-toggle . "buffers")
-                   (suderman/dashboard . "dashboard")
-                   (suderman/dirvish . "files")
-                   (suderman/dirvish-side-toggle . "sidebar")
-                   (surround-insert . "surround")
-                   (meow-purrsist-next-word . "word fwd")
-                   (meow-purrsist-next-word-start . "word beg")
-                   (meow-purrsist-next-symbol . "sym fwd")
-                   (meow-purrsist-next-symbol-start . "sym beg")
-                   (suderman/meow-kill . "cut")
-                   (suderman/meow-kill-line . "cut line")
-                   (suderman/meow-save . "copy")))
-    (setf (alist-get (car entry) meow-command-to-short-name-list)
-          (cdr entry)))
+  (suderman/meow-reset-state-keymap 'meow-normal-state-keymap)
+  (suderman/meow-reset-state-keymap 'meow-motion-state-keymap)
 
   (meow-define-keys
       'beacon
@@ -728,11 +667,8 @@ An active selection is replaced without modifying the kill ring."
     :ensure nil
     :if t
     :demand t)
-  (advice-remove 'meow--show-indicator #'suderman/meow-show-search-count)
   (advice-add 'meow--show-indicator :override
               #'suderman/meow-show-search-count)
-  (advice-remove 'meow--remove-search-indicator
-                 #'suderman/meow-clear-search-count)
   (advice-add 'meow--remove-search-indicator :after
               #'suderman/meow-clear-search-count)
   (doom-modeline-def-segment suderman-meow-search
@@ -741,27 +677,14 @@ An active selection is replaced without modifying the kill ring."
       (propertize suderman/meow-search-count 'face 'meow-search-indicator)))
   (doom-modeline-remove-segment 'suderman-meow-search)
   (doom-modeline-add-segment 'suderman-meow-search 'matches :after)
-  ;; Drop the old thing advice in sessions upgraded through hot reload.
-  (dolist (command '(meow-beginning-of-thing meow-end-of-thing
-                     meow-inner-of-thing meow-bounds-of-thing))
-    (advice-remove command #'suderman/meow--adopt-surround-selection))
   (meow-purrsist-mode 1)
-  (advice-remove 'touch-screen-hold #'suderman/meow--adopt-touch-selection)
   (advice-add 'touch-screen-hold :after #'suderman/meow--adopt-touch-selection)
-  (advice-remove 'meow--short-command-name
-                 #'suderman/meow--cheatsheet-command-name)
   (advice-add 'meow--short-command-name :around
               #'suderman/meow--cheatsheet-command-name)
-  (remove-hook 'meow-mode-hook 'suderman/android-sync-meow-text-conversion)
-  (remove-hook 'meow-insert-enter-hook
-               'suderman/android-sync-meow-text-conversion)
-  (remove-hook 'meow-insert-exit-hook
-               'suderman/android-sync-meow-text-conversion)
   (add-hook 'meow-mode-hook
             #'suderman/android-initialize-meow-text-conversion)
   (add-hook 'meow-switch-state-hook
             #'suderman/android-meow-text-conversion)
-  (suderman/meow-reset-leader-map)
   (suderman/meow-setup-qwerty)
   (keymap-set meow-keypad-state-keymap "<right>"
               #'suderman/meow-keypad-next-page)

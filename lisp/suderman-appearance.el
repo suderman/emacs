@@ -1,13 +1,15 @@
 ;;; suderman-appearance.el --- Fonts and frame appearance -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; GUI-only appearance that needs to apply to both the first frame and later
-;; daemon/client frames.  early-init.el sets matching frame opacity before this
-;; module loads.
+;; Fonts and Base16 palettes come from a style file that NixOS exports and
+;; Syncthing carries to every machine, including Android.  Without one, the
+;; fallback style keeps the same fonts and Catppuccin colors.  early-init.el
+;; owns frame opacity.
 
 ;;; Code:
 
 (require 'color)
+(require 'seq)
 (require 'use-package)
 
 (defvar base16-theme-256-color-source)
@@ -17,39 +19,55 @@
 (declare-function base16-theme-set-faces "base16-theme" (theme colors faces))
 (declare-function doom-modeline-segment--modals "doom-modeline-segments")
 
-(defconst suderman/font-family "JetBrainsMono Nerd Font Mono")
-(defconst suderman/nerd-symbol-font "Symbols Nerd Font Mono")
-(defconst suderman/background-opacity 90)
+(defvar suderman/system-style-files
+  '("~/profile/apps/emacs/style.el")
+  "Synced appearance files written by NixOS.  The first readable one wins.")
+
+(defvar suderman/fallback-style
+  '(:mono-font "CommitMono"
+    :fallback-font "Ioskeley Mono"
+    :variable-font "Literata"
+    :icon-font "Symbols Nerd Font Mono"
+    :font-size 12.0
+    :palette-themes (:light base16-catppuccin-latte
+                     :dark base16-catppuccin-mocha))
+  "Appearance used when no file in `suderman/system-style-files' is readable.
+Its palettes come from the named themes bundled with base16-theme.")
 
 (defvar suderman/system-style nil
-  "Shared font names, point size, and Base16 palettes from the Org tree.
-The producer owns values; this configuration owns their use on faces.")
+  "Font names, point size, and Base16 palettes in use.
+A synced style file sets this; otherwise it holds `suderman/fallback-style'.")
 (defvar suderman/variable-font-scale 1.12
   "Prose size relative to the default face.")
 (defvar suderman/android-font-scale (/ 17.0 12.0)
   "Android point-size adjustment, preserving the existing 17-point baseline.")
 
 (defun suderman/load-system-style (&optional file)
-  "Read shared appearance FILE, defaulting to the optional synced Org file."
+  "Load FILE or the first readable synced style file.
+Fall back to `suderman/fallback-style' when none can be read."
   (setq suderman/system-style nil)
-  (let ((file (or file (expand-file-name "~/org/.generated/emacs/style.el"))))
-    (when (file-readable-p file)
-      (load file nil 'nomessage))))
+  (when-let* ((file (seq-find #'file-readable-p
+                              (mapcar #'expand-file-name
+                                      (if file (list file) suderman/system-style-files)))))
+    (load file nil 'nomessage))
+  (unless suderman/system-style
+    (setq suderman/system-style suderman/fallback-style)))
 
 (suderman/load-system-style)
 
-(defun suderman/default-font-size ()
-  "Return the platform's default `font-spec' size."
-  ;; A floating-point font size is measured in points; an integer is pixels.
-  (if (eq system-type 'android) 17.0 11))
+(defun suderman/style-palette (key)
+  "Return the Base16 palette for KEY, :light or :dark."
+  (or (plist-get (plist-get suderman/system-style :palettes) key)
+      (when-let* ((theme (plist-get (plist-get suderman/system-style :palette-themes) key))
+                  ((require (intern (format "%s-theme" theme)) nil t)))
+        (symbol-value (intern (format "%s-theme-colors" theme))))))
 
 (defun suderman/nerd-fonts-available-p (&optional frame)
   "Return non-nil when FRAME can display Nerd Font icons."
   (or (not (eq system-type 'android))
       (and (display-graphic-p frame)
-           (find-font (font-spec :family
-                                 (or (plist-get suderman/system-style :icon-font)
-                                     suderman/nerd-symbol-font)) frame))))
+           (find-font (font-spec :family (plist-get suderman/system-style :icon-font))
+                      frame))))
 
 ;; Emacs 31 rejects the Gnus inheritance cycles created by base16-theme
 ;; 20260419.235 and upstream main as of 2026-08-25.  Remove this when the empty
@@ -86,27 +104,8 @@ The producer owns values; this configuration owns their use on faces.")
   ;; Do not trust an SSH client's ANSI palette to match Stylix.  In a
   ;; 256-color terminal, translate the active theme's actual colors instead.
   (setq base16-theme-256-color-source 'colors)
-  (advice-remove 'base16-theme-set-faces
-                 #'suderman/base16-theme-set-faces-without-gnus-cycles)
   (advice-add 'base16-theme-set-faces :around
               #'suderman/base16-theme-set-faces-without-gnus-cycles))
-
-(defun suderman/apply-default-font ()
-  "Apply the platform font fallback unless Stylix already owns it."
-  (unless (memq 'base16-stylix custom-enabled-themes)
-    (if (and (suderman/nerd-fonts-available-p)
-             (or (not (eq system-type 'android))
-                 (find-font (font-spec :family suderman/font-family))))
-        (set-face-attribute 'default nil :font
-                            (font-spec :family suderman/font-family
-                                       :size (suderman/default-font-size)))
-      (when (eq system-type 'android)
-        (set-face-attribute 'default nil
-                            :height (round
-                                     (* 10 (suderman/default-font-size))))))))
-
-;; Shared fonts replace this fallback once a graphical frame is available.
-(suderman/apply-default-font)
 
 (defconst suderman/nerd-font-ranges
   '((#xe000 . #xf8ff) (#xf0001 . #xf1af0))
@@ -115,8 +114,7 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
 
 (defun suderman/set-nerd-font-fallbacks (&optional frame)
   "Teach graphical FRAME where Nerd Font private-use icons live."
-  (let ((family (or (plist-get suderman/system-style :icon-font)
-                    suderman/nerd-symbol-font)))
+  (let ((family (plist-get suderman/system-style :icon-font)))
     (when (and (display-graphic-p frame)
                (find-font (font-spec :family family) frame))
       (dolist (range suderman/nerd-font-ranges)
@@ -128,14 +126,16 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
     (let ((mono (plist-get suderman/system-style :mono-font))
           (fallback (plist-get suderman/system-style :fallback-font))
           (variable (plist-get suderman/system-style :variable-font))
-          (size (plist-get suderman/system-style :font-size)))
-      (when (and mono size (find-font (font-spec :family mono) frame))
+          (points (when-let* ((size (plist-get suderman/system-style :font-size)))
+                    (* (float size) (if (eq system-type 'android)
+                                        suderman/android-font-scale
+                                      1.0)))))
+      ;; A missing font keeps the platform's family at the intended size.
+      (when (and points (not (and mono (find-font (font-spec :family mono) frame))))
+        (set-face-attribute 'default frame :height (round (* 10 points))))
+      (when (and mono points (find-font (font-spec :family mono) frame))
         (set-face-attribute 'default frame :font
-                            (font-spec :family mono :size
-                                       (* (float size)
-                                          (if (eq system-type 'android)
-                                              suderman/android-font-scale
-                                            1.0))))
+                            (font-spec :family mono :size points))
         (set-face-attribute 'fixed-pitch frame :family mono :height 1.0)
         ;; Android does not discover fallbacks for glyphs missing from Literata.
         (when (eq system-type 'android)
@@ -200,27 +200,18 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
 
 (defun suderman/apply-system-palette (&optional appearance)
   "Follow toolkit APPEARANCE using the synced Stylix palette pair.
-PGTK reports GTK changes; Android reports system dark-mode changes.  With no
-synced data, leave the current theme alone.  A later event or manual call
-retries."
+PGTK reports GTK changes; Android reports system dark-mode changes.  Each call
+rereads the style file, so newly synced colors apply without a restart."
   (interactive)
   (suderman/load-system-style)
   (let* ((appearance (or appearance toolkit-theme 'dark))
          (key (pcase appearance ('light :light) ('dark :dark)))
-         (palette (plist-get (plist-get suderman/system-style :palettes) key))
+         (palette (suderman/style-palette key))
          (theme (if (eq appearance 'light) 'suderman-light 'suderman-dark)))
     (when (and palette (require 'base16-theme nil t))
       (suderman/enable-system-theme theme palette))))
 
 (add-hook 'toolkit-theme-set-functions #'suderman/apply-system-palette)
-
-(defun suderman/apply-gui-appearance (&optional frame)
-  "Apply GUI background opacity to FRAME."
-  (let ((target-frame (or frame (selected-frame))))
-    (when (and (display-graphic-p target-frame)
-               (not (eq system-type 'android)))
-      (set-frame-parameter target-frame 'alpha-background
-                           suderman/background-opacity))))
 
 (defun suderman/frame-text-scale-adjust (delta)
   "Adjust the selected graphical frame's text size by DELTA points."
@@ -253,12 +244,6 @@ retries."
   "Increase text size in the selected graphical frame by one point."
   (interactive)
   (suderman/frame-text-scale-adjust 1))
-
-(unless (eq system-type 'android)
-  (add-to-list 'default-frame-alist
-               `(alpha-background . ,suderman/background-opacity))
-  (add-to-list 'initial-frame-alist
-               `(alpha-background . ,suderman/background-opacity)))
 
 (defun suderman/theme-blend (face alpha)
   "Blend FACE's foreground into the theme background by ALPHA."
@@ -423,10 +408,6 @@ retries."
                        'face 'doom-modeline-buffer-file path)
     path))
 
-(with-eval-after-load 'dirvish
-  (advice-remove 'dirvish--setup-mode-line
-                 'suderman/dirvish-use-doom-modeline))
-
 (use-package doom-modeline
   :demand t
   :init
@@ -446,9 +427,8 @@ retries."
     (let ((meow-mode (and (bound-and-true-p meow-mode)
                           (not (bound-and-true-p meow-normal-mode)))))
       (doom-modeline-segment--modals)))
-  ;; Clear old buttons and our replacement before rebuilding live layouts.
-  (dolist (segment '(suderman-dashboard suderman-dirvish suderman-ibuffer
-                    suderman-modals modals))
+  ;; Replace the native modal segment; removing ours first keeps reloads idempotent.
+  (dolist (segment '(suderman-modals modals))
     (doom-modeline-remove-segment segment))
   (doom-modeline-add-segment 'suderman-modals 'window-number :after)
   (doom-modeline-mode 1))
@@ -461,10 +441,8 @@ retries."
 (when (and after-init-time (not noninteractive))
   (suderman/apply-system-palette))
 (suderman/refresh-system-fonts)
-(suderman/apply-gui-appearance)
 (add-hook 'after-make-frame-functions #'suderman/apply-selection-faces)
 (add-hook 'after-make-frame-functions #'suderman/apply-tty-menu-faces)
-(add-hook 'after-make-frame-functions #'suderman/apply-gui-appearance)
 
 (provide 'suderman-appearance)
 ;;; suderman-appearance.el ends here

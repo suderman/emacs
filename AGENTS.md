@@ -14,6 +14,12 @@ packages are taking shape deliberately.
 Prefer a small repair that preserves this direction. Broad rewrites need a
 clear reason and explicit approval.
 
+It runs in three places: PGTK Emacs on NixOS/Hyprland, terminal frames (local,
+over SSH, inside tmux or Herdr), and the native Android APK. Termux terminal
+Emacs is planned. Prefer capability checks such as `display-graphic-p` and
+`executable-find` over platform checks. `(eq system-type 'android)` means the
+Android GUI APK only; Termux Emacs reports `gnu/linux`.
+
 ## Human editability and tests
 
 This is a personal configuration, not a public library. Jon must be able to
@@ -22,254 +28,171 @@ in one obvious place without knowing a test architecture or asking an agent.
 Prefer direct, idiomatic Elisp over wrappers or indirection added for testing.
 Interactive evaluation and Git are normal parts of the safety model.
 
-Tests protect complicated behavior, real regressions, and risky external work.
-They do not freeze configuration choices. Do not add a test because a module
-changed, create one test file per module, or assert literal preferences such as
-keys, fonts, hooks, faces, package options, or enabled modes. Add a focused test
-when custom logic has meaningful branches, a bug is worth preventing, or code
-modifies or deploys external state. Small intentional configuration changes
-should usually require only the source edit.
+Keep each fact in one place. If a change needs the same list edited in two
+files, fix that first. Current single sources:
+
+- `suderman/window-keys` in `suderman-windows.el` holds the Meta window keys.
+  `suderman/install-keys` copies it into the global map, Meow's Normal and
+  Motion maps, IBuffer, Dirvish, and Magit.
+- The whole `SPC` leader is one `define-keymap` form in `suderman-keys.el`.
+  Labels sit beside bindings as `("label" . command)`.
+- `suderman/dirvish-keys` in `suderman-files.el` holds Dired/Dirvish keys and
+  their `?` help labels.
+- `suderman/command-labels` in `suderman-help.el` holds cheatsheet labels for
+  Meow and local-map views.
+
+Tests protect code that changes things outside Emacs (files, mail, clipboards,
+terminals, Android setup), code that hooks into package internals an upgrade
+could silently break, hot reload, and named regressions. They do not freeze
+configuration choices. Do not add a test because a module changed, create one
+test file per module, or assert keys, labels, fonts, faces, hooks, package
+options, enabled modes, or editing feel. Small intentional configuration changes
+should need only the source edit.
 
 ## The NixOS half of the setup
 
-This repository is only the Emacs half of the system. The matching NixOS flake
-lives at `/etc/nixos` and <https://github.com/suderman/nixos>.
+Two Nix places matter. Read both before changing package ownership, daemon
+behavior, fonts, tree-sitter grammars, language servers, or external tools.
 
-Read `/etc/nixos/modules/home/desktop/default/options/emacs.nix` before changing
-package ownership, daemon behavior, fonts, tree-sitter grammars, language
-servers, or external tools.
+- `nix/packages/emacs.nix` in this repository builds Emacs 31 PGTK with every
+  `use-package` package, native modules, tree-sitter grammars, language servers,
+  formatters, and command-line tools. It also bundles the config into the Nix
+  store as a fallback for hosts without a checkout.
+- `/etc/nixos/modules/home/default/options/emacs/default.nix` (also
+  <https://github.com/suderman/nixos>) wraps that package and owns the `em`
+  workspace launcher, `ema`, `emd`, `EDITOR`, persistence, and on desktop
+  hosts the shared daemon, keyd shortcuts, and the style exporter. It lives in
+  the terminal (`default`) layer and guards graphical pieces with
+  `config.desktop.enable`. `modules/home/users/jon/programs.nix` enables it.
 
-The current division is intentional.
+Package ownership:
 
-- Nix supplies Emacs 31 PGTK, the Emacs daemon and client, native or awkward
-  packages, tree-sitter grammars, language modes that are better managed by
-  Nix, language servers, formatters, `fd`, `ripgrep`, Pandoc, and fonts.
-- Stylix supplies typography and both light/dark palettes. Kit exports them as
-  portable data through `~/org/.generated/emacs/style.el`, outside Git. Emacs
-  defines `suderman-light` and `suderman-dark` using the Base16 engine and follows
-  native `toolkit-theme` events on PGTK and Android. The separate Stylix Emacs
+- `use-package` forms are the one list of Elisp packages. On NixOS the flake
+  reads them and supplies each package, so `:ensure` finds it installed.
+- A package added locally installs through package.el into
+  `~/.local/share/emacs/elpa` until the next flake update moves it into Nix.
+- `edger` and `meow-purrsist` install from GitHub through `package-vc` on every
+  platform. `SPC q u` upgrades Git packages everywhere and archive packages
+  only on Android.
+- Use `:ensure nil` for built-ins (Which-Key, Eglot) and for packages Nix adds
+  through `extraEmacsPackages` (PDF Tools, Kitty graphics), so package.el
+  neither fetches nor shadows them.
+- Pure Elisp belongs in a `use-package` form. Add to `extraEmacsPackages` in
+  `nix/packages/emacs.nix` only for native code, grammar data, external
+  programs, or sources outside ELPA and MELPA.
+
+Appearance data:
+
+- Stylix supplies typography and both light/dark palettes. On one desktop host
+  NixOS exports them to `~/profile/apps/emacs/style.el`, which Syncthing
+  carries to other machines. `suderman/system-style-files` lists where Emacs
+  looks. Without a readable file, `suderman/fallback-style`
+  supplies the same fonts and base16-theme's bundled Catppuccin palettes.
+- Emacs defines `suderman-light` and `suderman-dark` with the Base16 engine and
+  follows native `toolkit-theme` events on PGTK and Android. The Stylix Emacs
   target is disabled; do not add a second theme loader.
-- This repository owns mutable Elisp packages, commands, keymaps, and daily
-  editing behavior.
-- `package.el` data lives under `~/.local/share/emacs/elpa`, not in this repo.
-- Emacs state, history, backups, auto-saves, Custom data, and caches follow XDG
-  paths configured in `lisp/suderman-paths.el`.
+- Do not hardcode a palette. When a derived color is needed, calculate it from
+  active semantic faces as `suderman/theme-blend` does.
+- Shared GUI typography uses CommitMono, Literata, and Symbols Nerd Font Mono,
+  with Ioskeley Mono as Android's ordinary-glyph fallback. Nix installs them;
+  `android/install-fonts.sh` copies them to the APK's `~/fonts/`. Keep Nerd Font
+  fallback limited to its private-use ranges.
 
-Use `:ensure nil` for packages supplied by Nix. Before adding a package to Nix,
-ask whether it really needs native dependencies, grammar data, or system-level
-integration. Pure Elisp normally belongs in the mutable `package.el` setup.
-
-Do not hardcode a replacement palette in this repo. Stylix theme changes must
-continue to affect Emacs. When a derived color is needed, calculate it from
-active semantic faces as `lisp/suderman-appearance.el` does for selections.
-
-Shared GUI typography uses `CommitMono`, `Literata`, and `Symbols Nerd Font
-Mono`, with Ioskeley Mono retained as Android's ordinary-glyph fallback. Nix
-installs them; `android/install-fonts.sh` copies a built font bundle
-to the APK's `~/fonts/` without overwriting existing files. Keep Nerd Font
-fallback limited to its PUA ranges, not the entire symbol charset.
+`package.el` data lives under `~/.local/share/emacs/elpa`. Emacs state,
+history, backups, auto-saves, Custom data, and caches follow XDG paths set in
+`suderman-paths.el`.
 
 ## Repository shape
 
-Keep `init.el` boring. It loads modules in dependency order. New behavior
-belongs in the narrowest existing `lisp/suderman-*.el` module, or in a new
-module when a concern has genuinely outgrown its old home.
+Keep `init.el` boring. It requires every module in dependency order, and hot
+reload reloads exactly that list, so every `lisp/suderman-*.el` file must
+appear there. New behavior belongs in the narrowest existing module, or in a
+new one when a concern has genuinely outgrown its home.
 
-The current modules have clear jobs.
+- `suderman-android.el`: Android-only input, the server, and Termux paths.
+- `suderman-toolbar.el`: the touch toolbar shared by Android and desktop.
+- `suderman-paths.el`: XDG paths and mutable state locations.
+- `suderman-packages.el`: package.el and `use-package` defaults.
+- `suderman-defaults.el`: small built-in behavior changes.
+- `suderman-clipboard.el`: terminal copy through Wayland or OSC 52.
+- `suderman-appearance.el`: style file, fonts, theme faces, Doom Modeline,
+  line numbers, and the column guide.
+- `suderman-windows.el`: window helpers, Meta window keys, smooth jumps.
+- `suderman-projects.el`: Org work projects with source and data companions.
+- `suderman-buffers.el`: project-grouped IBuffer.
+- `suderman-completion.el`: Vertico, Orderless, Consult, Marginalia, Embark,
+  Corfu, and Cape.
+- `suderman-meow.el`: personal editing commands and the Normal/Motion maps.
+- `suderman-terminal.el`: Ghostel integration, currently disabled.
+- `suderman-transfer.el`: staged copy/cut/paste, clipboard and terminal file
+  import, Ripdrag, and Kitty transfers.
+- `suderman-files.el`: Dired, Dirvish, the sidebar, previews, and their keys.
+- `suderman-images.el`: Image mode and the Image-Dired gallery.
+- `suderman-dashboard.el`: the on-demand dashboard.
+- `suderman-markdown.el`: Markdown and Pandoc preview.
+- `suderman-org.el`: Org agenda, capture, archive, and refile.
+- `suderman-mail-moves.el`, `suderman-mail.el`, `suderman-mail-drafts.el`:
+  Notmuch reading, folder moves, sending, and Org-authored drafts.
+- `suderman-languages.el`: language associations, tree-sitter, and Eglot.
+- `suderman-nix.el`: embedded-language highlighting in Nix strings.
+- `suderman-git.el`: Magit, diff-hl, and conflict handling.
+- `suderman-formatting.el`: project-aware formatting and environment setup.
+- `suderman-help.el`: keyboard cheatsheets and command labels.
+- `suderman-reload.el`: hot reload.
+- `suderman-keys.el`: global keys and the `SPC` leader, loaded last.
 
-- `suderman-paths.el` owns XDG paths and mutable state locations.
-- `suderman-packages.el` owns `package.el` and `use-package` defaults.
-- `suderman-defaults.el` contains small built-in behavior changes.
-- `suderman-appearance.el` owns fonts, Stylix-derived faces, Doom Modeline,
-  current-line highlighting, line numbers, and the 100-column guide.
-- `suderman-windows.el` owns window helpers and smooth jump animation.
-- `suderman-buffers.el` owns project-grouped IBuffer.
-- `suderman-completion.el` owns Vertico, Orderless, Consult, Marginalia, and
-  Embark.
-- `meow-purrsist` owns generic persistent Meow selection behavior in
-  `~/src/suderman/meow-purrsist`; this repo installs it through `package-vc`
-  on desktop and Android, not through Nix.
-- `suderman-meow.el` owns personal Meow bindings, search, and editing commands.
-- `suderman-images.el` owns Image mode navigation, transforms, animation, and
-  clipboard behavior.
-- `suderman-files.el` owns Dired, Dirvish, its sidebar, previews, and transfers.
-- `suderman-dashboard.el` owns the startup dashboard and common destinations.
-- `suderman-markdown.el` owns Markdown mode behavior and Pandoc preview.
-- `suderman-languages.el` owns broad language associations and tree-sitter use.
-- `suderman-nix.el` owns embedded-language highlighting in Nix strings.
-- `suderman-git.el` owns Magit, diff-hl, and conflict handling.
-- `suderman-org.el` owns Org agenda, capture, and refile behavior.
-- `suderman-formatting.el` owns project-aware formatting and environment setup.
-- `suderman-keys.el` owns global keys and the Meow `SPC` leader maps.
-- `suderman-reload.el` owns hot reload behavior.
+`meow-purrsist` (`~/src/suderman/meow-purrsist`) owns generic persistent Meow
+selection behavior. `edger` (`~/src/suderman/edger`) owns window movement that
+can hand off to the surrounding terminal multiplexer.
 
 Do not put generated files, package trees, caches, or compiled Elisp in the
-repository. The existing `.gitignore` describes those boundaries.
+repository. `.gitignore` describes those boundaries.
 
-## Editing model
+## Keys
 
-Meow is the modal editor, but this is not Meow's sample QWERTY layout. The map
-has been shaped around Jon's habits and borrows some Vim and Neovim ideas
-without trying to emulate either editor exactly.
+The source is the keymap. Do not copy key lists into documentation; the
+cheatsheet (`SPC ?`, `C-c h`), Which-Key, and Dirvish `?` show live bindings.
 
-Read `suderman/meow-setup-qwerty` in `lisp/suderman-meow.el` before changing a
-normal-state key. Read `lisp/suderman-keys.el` before changing `SPC`, Meta
-window keys, or global shortcuts.
+- Meow Normal and Motion: `suderman/meow-setup-qwerty` in `suderman-meow.el`.
+  It restores Meow's stock maps first, so deleting a binding there really
+  deletes it on reload.
+- Global keys and `SPC`: `suderman-keys.el`.
+- Meta window keys: `suderman/window-keys`.
+- Dired/Dirvish: `suderman/dirvish-keys`. IBuffer, Magit, Org Agenda, Image
+  mode, and mail: the `:config` of their `use-package` forms.
 
-Important parts of the current grammar follow.
+Traps that cost real debugging time:
 
-- `hjkl` moves. Active Meow selections expand with movement.
-- `m`, `mm`, and `mmm` select a word, symbol, and enclosing block.
-- `M`, `MM`, and `MMM` select a line, rectangle, and whole buffer.
-- `s` is the full Surround prefix. `s s` inserts a surround.
-- `'` repeats the last Repeat-FU edit, except immediately after `t` or `T`,
-  when it repeats that till motion.
-- `,` opens project-grouped IBuffer and selects the invoking buffer.
-- `.` opens Dirvish for the current file or directory. It uses the full-frame
-  layout when no other window is visible and the selected window otherwise.
-  Android always starts with one column and opens files in that window.
-- `b` and `B` move backward by word and symbol in Normal state.
-- `\` toggles the Dirvish sidebar in Normal and Motion states without moving
-  editor focus when it opens. Inside the sidebar, it hides the tree.
-- `<` and `>` cycle to the previous and next buffer in Normal and Motion states,
-  IBuffer, Dirvish, and Agenda. Insert state keeps these characters literal.
-- Backtick opens the Dashboard in Normal and Motion states, IBuffer, and
-  Dirvish. Double quote and `~` are intentionally inert in Normal; Motion lets
-  those two keys fall through to major-mode maps.
-- Image buffers use Motion state. Their native `n` and `p` browse files in
-  cyclic alphabetical order while `SPC` remains Meow's keypad, `,` opens
-  IBuffer, `.` opens Dirvish, and `h` moves left. `=`/`+` and `-` zoom,
-  `r` and `R` rotate, and `0` resets the image transformations. Animated images
-  autoplay and loop.
-- `c` copies, `v` pastes, `d` deletes without filling the kill ring, and `x`
-  cuts a real multi-character selection before entering insert state.
-- `M-w` closes the current window or tab in Meow, IBuffer, and Dirvish. Meow's
-  internal copy backend calls `kill-ring-save` directly instead of replaying
-  `M-w`.
-- `X` cuts the current line and enters insert state.
-- `/` starts incremental literal search with smartcase: lowercase matches both
-  cases; uppercase requires an exact match. Starting `/` clears an existing
-  selection. Return selects the match so `n` and `p` continue with the same
-  case behavior. In Normal state, Return clears an active selection; a second
-  Return runs the major mode's usual command.
-- `t` and `T` move till a character forward and backward.
-- `y` is redo. `u` is one-way Meow undo. `U` is one-way undo in selection.
-- `C` and `V` page up and down through Meow. Vanilla `C-u`, `C-d`, and `C-v`
-  are deliberately not shadowed by Meow normal bindings.
-- `SPC` is both Meow's keypad and the owned leader map. Its native `h`
-  translation starts a `C-h` key sequence. Numeric arguments are useful, for
-  example `SPC 3 f`.
-- `SPC g` owns Git commands. Status is `SPC g g`, hunks are under `SPC g h`,
-  and conflict resolution is under `SPC g c`.
-- `SPC o` owns the focused Org agenda, capture, scheduling, linking, and refile
-  commands.
+- Meow's emulation maps outrank major-mode maps. A key can look right in a
+  keymap inspection and do something else in a live buffer. Check
+  `key-binding` in the real buffer.
+- IBuffer, Dirvish, Magit, Org Agenda, and the cheatsheet disable Meow locally
+  so their own maps own `hjkl` and single letters. `SPC` there calls
+  `meow-keypad` directly without enabling a Meow state.
+- `SPC` is both Meow's keypad and the leader. Its native `h` translation starts
+  a `C-h` sequence.
+- On Android, a tap on Dired's highlighted filename arrives as `mouse-2`. Do
+  not let native Dired's other-window binding win there.
+- Desktop single click in Dirvish must keep focus in the root pane rather than
+  activating the preview.
+- Dirvish parent and breadcrumb buffers are sparse special modes, not Dired
+  buffers. Preserve the parent navigation bindings, the windmove filter, and
+  the breadcrumb advice. Preview panes stay normal windows because `M-o` can
+  turn one into an editable buffer.
+- Do not open a sidebar over the full-frame Dirvish layout; close it first.
+  Narrowing clears subtree overlays by upstream design, and emerge groups do
+  not coexist with active subtrees.
+- `M-w` closes a window. Meow's internal copy backend calls `kill-ring-save`
+  directly instead of replaying `M-w`.
+- An isolated `<escape>` quits one Transient level without replacing raw `ESC`
+  as the Meta prefix.
+- Conflict commands use upper/lower because ours/theirs swap during a rebase.
+- IBuffer relies on native `quit-window` restoration. Do not add a custom
+  window stack unless native restoration has been shown to fail.
 
-The full map is the source of truth. Do not duplicate every binding here.
-
-IBuffer and Dirvish disable Meow locally. Their major-mode maps own `hjkl` and
-related keys. Meow's emulation maps outrank ordinary major-mode maps, so
-forgetting this causes keys to appear correct in a keymap inspection while
-doing something else in a live buffer.
-
-Dirvish also disables Meow locally so Dired's map can own `hjkl`, marking, and
-file operations. `SPC` invokes Meow's keypad directly without enabling a Meow
-state. Its optional full-frame layout follows Yazi's parent/current/preview
-proportions, but its commands remain Dired commands rather than a second Yazi
-emulation. Android starts in the selected-window layout because its screen is
-too narrow for useful parent and preview panes. `f` toggles between the
-selected-window and full-frame layouts.
-Meta window navigation, resizing, splitting, and closing remain available.
-Comma closes a full-frame layout before opening IBuffer, period closes Dirvish,
-and dotfiles start hidden in the parent and current panes while `i`
-toggles them together without messages. The preview remains unfiltered. `c`,
-`x`, and `v` stage copy, stage cut, and paste operations through Dirvish's
-transfer engine. Deleting a file automatically kills its unmodified visiting
-buffer; modified buffers remain protected by a confirmation. Slash searches
-below the current directory. Question mark shows a compact Which-Key view
-generated from the effective bindings; semicolon opens the upstream Dirvish
-dispatcher. `TAB` and `o` toggle subtrees, `N` narrows, `E` manages emerge
-groups, and `R` runs rsync. `g` refreshes, `I` shows file information, `u`
-unmarks without moving, and `U` clears all marks. Clicking a directory's
-subtree-state arrow also toggles its subtree without changing ordinary row-click
-behavior.
-
-Android taps open files in the current window because Emacs translates a tap on
-Dired's highlighted filename to `mouse-2`; do not let native Dired's other-window
-binding win there. On desktop, single left click selects a file, double left
-click opens it, and right click opens the native Dired context menu. `l` and
-double-click open PDFs in PDF Tools and delegate EPUB, audio, or video to the
-desktop MIME handler; other files still use normal Emacs mode selection. Desktop
-single click must keep focus in the root pane rather than activating the preview.
-In the parent pane, left click changes the root directory or selects the clicked
-file in its directory. Its `j/k` bindings move between sibling directories and
-update the root, `h` moves both panes up a level, and `l` returns focus to the
-root. Breadcrumb clicks run in the root pane, while Meta window movement excludes
-breadcrumb and footer windows. Preview panes remain normal windows because `M-o`
-can deliberately turn one into an editable file buffer.
-
-Magit disables Meow locally because its single-letter commands and Transient
-menus are the interface. `j/k` move between visible sections, while native
-`n/p` remain equivalent alternatives. Keep Magit's native `h/l`, `TAB`, `RET`,
-and `^` bindings for dispatch, logs, expansion, visiting, and parent movement.
-The displaced jump and discard commands remain under `h j` and `h k`. Period
-buries Magit, while Meta window commands and `M-z` remain available. An isolated
-`<escape>` quits one Transient level without replacing raw `ESC` as the Meta
-prefix. Conflict commands use upper/lower terminology because ours/theirs
-changes meaning during a rebase.
-
-## Buffer and explorer workflow
-
-The buffer list and file tree overlap on purpose, but each has a different job.
-
-### IBuffer
-
-IBuffer is the project-oriented overview. It uses built-in `project.el`,
-`ibuffer-project`, and Nerd Icon columns. Non-project image buffers get their
-own group; other non-project buffers remain visible in the default group. There
-is no broad hidden-buffer blacklist.
-
-- Normal-state `,` opens it and highlights the invoking buffer.
-- IBuffer `,` closes it and restores the prior buffer and window.
-- `j` and `k` move by row.
-- `l` visits the selected buffer or toggles a group heading.
-- `h` and `,` close IBuffer and restore the previous window.
-- `\` toggles a contextual Dirvish sidebar without leaving IBuffer.
-- `SPC` invokes Meow's keypad without enabling Meow in IBuffer.
-- `.` opens Dirvish for the selected buffer or project heading.
-- `m` toggles the current buffer mark without moving. `M` marks every visible
-  buffer and `t` inverts the marks, so `M t` clears them all.
-- `u` unmarks the current buffer without moving and `U` clears all marks.
-- Meta window navigation, resizing, splitting, and closing mirror editor buffers.
-
-IBuffer relies on native `quit-window` restoration. Do not add a custom window
-stack unless native restoration has been shown to fail.
-
-### Dirvish sidebar and subtrees
-
-Dirvish is the only file explorer. Its full-frame parent/current/preview layout
-handles focused file management. `dirvish-side` supplies the persistent project
-tree, and `dirvish-subtree` expands directories in either view. Side follow mode
-tracks the selected file and project and expands parent subtrees.
-
-`\` and `SPC t d` toggle the sidebar without moving editor focus. From inside
-the sidebar, `\` hides it. In IBuffer, `\` derives context from the selected
-buffer or project heading and leaves IBuffer selected. Comma from the sidebar
-opens IBuffer in the most recently used editor window without removing the
-sidebar. Do not open a sidebar over the full-frame layout; close that layout
-first.
-
-Subtree, collapse, and ordinary directory views can coexist. Narrowing clears
-active subtree overlays in that buffer by upstream design. Emerge groups are
-also local, on-demand views rather than a global mode because their overlays do
-not safely coexist with active subtrees. Keep `dirvish-side-follow-mode` and
-`dirvish-peek-mode` idempotently enabled.
-
-Dirvish's parent and breadcrumb buffers are sparse special modes, not ordinary
-Dired buffers. Preserve the parent navigation bindings, windmove filter, and
-breadcrumb advice when changing mouse or window behavior. Test contextual
-IBuffer transitions, breadcrumb clicks, parent clicks and keyboard navigation,
-and sidebar toggling with real windows rather than calling commands in an
-arbitrary temporary buffer.
+Test explorer changes with real windows: contextual IBuffer transitions,
+breadcrumb clicks, parent clicks and keyboard navigation, and sidebar toggling.
+Calling commands in an arbitrary temporary buffer proves little.
 
 ## Package choices that already have a reason
 
@@ -278,24 +201,23 @@ These choices are not immutable, but replacing one needs a concrete benefit.
 - Built-in `project.el` is the project API. Do not add Projectile alongside it.
 - Vertico, Orderless, Consult, Marginalia, and Embark form the minibuffer stack.
 - Meow owns modal editing.
-- Repeat-FU owns edit repeat on apostrophe. Its Meow preset records edits across
+- Repeat-FU owns edit repeat on `;`. Its Meow preset records edits across
   insert-state transitions and keeps history across buffers.
 - `surround` owns pair insertion, deletion, change, and pair selection.
 - `scroll-on-jump` animates keyboard pages and selected jumps. Built-in
-  pixel-scroll precision mode remains off because it is a different feature
-  and interfered with cursor-preserving keyboard paging.
+  pixel-scroll precision mode stays off because it interfered with
+  cursor-preserving keyboard paging.
 - Doom Modeline supplies the modeline and native Meow state segment.
 - Nerd Icons packages decorate Doom Modeline, IBuffer, and Dirvish.
-- Dirvish owns both focused file management and the persistent project tree.
-  Its official extensions supply subtrees, collapse, narrowing, groups, rsync,
-  minibuffer previews, history, search, sorting, quick access, and file details.
+- Dirvish owns both focused file management and the persistent project tree,
+  with its official extensions.
 - PDF Tools renders PDFs inside Emacs. EPUB, audio, and video opened from
-  Dirvish use the desktop MIME handler, which NixOS currently maps to Zathura
-  and mpv.
+  Dirvish use the desktop MIME handler. Kitty graphics and `mpv` preview images
+  and video inside terminal frames.
 - Magit owns repository operations, diff-hl owns live hunk indicators, and
   built-in smerge-mode plus Ediff resolve conflicts. Forge is intentionally
-  absent until hosting issues and pull requests need to live in Emacs.
-- Tree-sitter modes are preferred where the NixOS flake supplies grammars.
+  absent.
+- Tree-sitter modes are preferred where the Nix package supplies grammars.
 - Markdown preview uses Pandoc and a small local HTTP server. It refreshes only
   after save and preserves browser scroll position.
 - Emacs 31 supplies `markdown-ts-mode`; do not install the incompatible
@@ -306,35 +228,35 @@ the request. This config has enough moving pieces.
 
 ## Hot reload is useful and imperfect
 
-`suderman/reload-config` unloads and reloads the ordered modules from `init.el`.
-It is intended for command, keymap, face, and ordinary module edits.
+`suderman/reload-config` (F5) unloads and reloads the modules listed in
+`init.el`. It is intended for command, keymap, face, and ordinary module edits.
 
-Several real bugs have come from reload behavior.
-
-- Removing a binding from source does not necessarily clear a stale binding
-  from a live keymap. Explicit cleanup may be needed.
+- Meow's Normal and Motion maps are restored from a stock snapshot on each
+  load, and the leader is rebuilt whole, so deleted bindings disappear.
+  Bindings deleted from other packages' maps (IBuffer, Dired, Magit, global)
+  stay live until restart.
 - Re-enabling global Meow unnecessarily can leak a Meow state into buffers
   where Meow was disabled locally.
 - `unload-feature` can demote live buffers to `fundamental-mode`. The reload
   code snapshots and restores major modes to prevent this.
-- Advice, hooks, global minor modes, and frame callbacks must remain
-  idempotent. Reloading twice should not duplicate or toggle them.
+- Advice, hooks, global minor modes, and frame callbacks must stay idempotent.
+  `advice-add` and `add-hook` already replace an existing entry of the same
+  function, so no `advice-remove` is needed first.
+- Do not add one-off cleanup for code that no longer exists. A restart clears
+  it; the cleanup would live forever.
 
 `suderman-reload.el` excludes itself from hot unloading. When changing the
 reload implementation, load that file explicitly before testing the full
 reload command.
 
 Restart Emacs for changes to `early-init.el`, package initialization, native
-modules, daemon options, or process-level state. A restart is also the right
-escape hatch when a live keymap or package has accumulated stale state.
+modules, daemon options, or process-level state.
 
 ## How to investigate bugs
 
 Reproduce before editing. This config combines package internals, global minor
 modes, emulation maps, side windows, daemon frames, and hot reload. The obvious
 caller is often not the cause.
-
-Use this order when it applies.
 
 1. Inspect the effective command with `key-binding`, not only the declared
    major-mode map.
@@ -352,8 +274,8 @@ state. Use one macro for one sequence.
 
 Batch Emacs differs from an interactive session. `transient-mark-mode`, the
 selected window, active regions, graphical face resolution, and daemon frame
-state have all produced misleading test results. Treat a failing harness as
-evidence to inspect, not automatic proof that the implementation is wrong.
+state have all produced misleading test results. Meow also prints cursor-shape
+escapes in batch; that noise is harmless.
 
 When a command should follow the user's visible editor context, prefer the
 selected window's buffer over ambient `current-buffer`. Sidebars and package
@@ -361,16 +283,12 @@ callbacks can leave `current-buffer` somewhere surprising.
 
 ## Verification
 
-Use the smallest checks that match the change. Add a focused automated test
-only for nontrivial behavior, a meaningful regression, or risky external work.
-Ordinary preference edits do not need a new or updated test.
-
-At minimum:
+Use the smallest checks that match the change.
 
 - Run the safety suite with `./test/run.sh`.
 - Load the full config with `emacs --batch -l init.el`.
-- Byte-compile every changed module, sending `.elc` output to `/tmp/opencode`
-  rather than the repository.
+- Byte-compile every changed module, sending `.elc` output outside the
+  repository.
 - Run `git diff --check`.
 - Inspect the relevant diff and keep it limited to the task.
 
@@ -379,16 +297,13 @@ real key sequence. Check GUI and terminal frames when frame handling or Nerd
 Font rendering changes. Check two frames when changing frame-local explorer or
 sidebar behavior.
 
-Known warnings are not a reason to ignore new warnings. Existing warnings have
-included obsolete `when-let`, upstream package compatibility helpers, and Org
-movement functions that are unknown at compile time. Confirm that a warning is
-pre-existing before calling it harmless.
+Known warnings are not a reason to ignore new warnings. Confirm that a warning
+is pre-existing before calling it harmless.
 
 ## Git and generated state
 
 The ignored `projects` file is mutable Emacs project history. The running
-editor rewrites it. Treat it as user-owned runtime state. Do not delete,
-reformat, or add it back to Git unless Jon explicitly asks.
+editor rewrites it. Treat it as user-owned runtime state.
 
 Other agents or the user may change the worktree while work is in progress.
 Do not undo unrelated changes. If a concurrent change conflicts with the same

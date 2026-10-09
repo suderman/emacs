@@ -154,8 +154,6 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
   (when (and (bound-and-true-p meow-global-mode)
              (not (bound-and-true-p meow-mode)))
     (meow-mode 1))
-  ;; Remove the first slice's blocker from buffers already open during reload.
-  (remove-hook 'message-send-hook 'suderman/mail-send-pending t)
   (setq-local message-signature #'suderman/mail-signature
               message-confirm-send t)
   (add-hook 'message-send-hook #'suderman/mail-prepare-send -90 t))
@@ -236,7 +234,6 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
     (add-hook hook #'suderman/mail-buffer-setup))
   (add-hook 'notmuch-hello-refresh-hook #'suderman/mail-overview-field-setup)
   (add-hook 'notmuch-message-mode-hook #'suderman/mail-compose-setup)
-  (remove-hook 'notmuch-mua-send-hook 'suderman/mail-send-pending)
   (add-hook 'notmuch-mua-send-hook #'suderman/mail-prepare-send -90)
   ;; Native Notmuch hides drafts before SMTP.  Wait for successful transport.
   (remove-hook 'message-send-hook #'notmuch-draft--mark-deleted)
