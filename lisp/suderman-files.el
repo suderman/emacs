@@ -10,6 +10,10 @@
 (require 'dired-x)
 (require 'dired-aux)
 (require 'dnd)
+;; Its use-package form is below, after code that needs it loaded.
+(unless (package-installed-p 'dirvish)
+  (package-refresh-contents)
+  (package-install 'dirvish))
 (require 'dirvish)
 (require 'seq)
 (require 'use-package)
@@ -281,7 +285,7 @@ Return non-nil when handling a normal FIND-FUNCTION file visit."
         (if (and mime-type
                  (or (equal mime-type "application/epub+zip")
                      (string-match-p "\\`\\(?:audio\\|video\\)/" mime-type)))
-            (if (eq system-type 'android)
+            (if (featurep 'android)
                 (progn
                   (require 'browse-url)
                   (android-browse-url (browse-url-file-url file)))
@@ -318,7 +322,7 @@ Return non-nil when handling a normal FIND-FUNCTION file visit."
 (defun suderman/dired-mouse-secondary-open (event)
   "Open the Dired entry in place on Android, or in another window elsewhere."
   (interactive "e")
-  (if (eq system-type 'android)
+  (if (featurep 'android)
       (suderman/dired-mouse-open event)
     (dired-mouse-find-file-other-window event)))
 
@@ -680,7 +684,6 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
 
 (use-package pdf-loader
   :ensure nil
-  :if (not (eq system-type 'android))
   :demand t
   :config
   (pdf-loader-install))
@@ -690,7 +693,7 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
   :init
   (setq dired-mouse-drag-files nil
         dired-listing-switches
-        (if (eq system-type 'android) "-al" "-al --group-directories-first")
+        (if (featurep 'android) "-al" "-al --group-directories-first")
         dirvish-attributes
         (append '(vc-state suderman-vc-state subtree-state)
                 (when (suderman/nerd-fonts-available-p) '(nerd-icons))
@@ -846,7 +849,6 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
 
 (use-package kitty-graphics
   :ensure nil
-  :if (not (eq system-type 'android))
   :after dirvish
   :demand t
   :init

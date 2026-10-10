@@ -571,7 +571,7 @@
       (should (equal (plist-get (caddr (assq 'fixed-pitch calls)) :family) "Mono"))
       (should (equal (plist-get (caddr (assq 'variable-pitch calls)) :family) "Prose"))
       (setq calls nil)
-      (let ((system-type 'android))
+      (dlet ((features (cons 'android features)))
         (suderman/apply-system-fonts)
         (should (= (font-get (plist-get (caddr (assq 'default calls)) :font) :size)
                    17.0))
@@ -584,7 +584,7 @@
         (should-not calls)
         (should-not fontsets))
       ;; Missing fonts keep the platform family at the intended size.
-      (let ((system-type 'android))
+      (dlet ((features (cons 'android features)))
         (cl-letf (((symbol-function 'find-font) (lambda (&rest _) nil)))
           (suderman/apply-system-fonts)
           (should (equal calls '((default nil (:height 170)))))

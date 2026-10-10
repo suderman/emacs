@@ -220,7 +220,7 @@
     (treesit-font-lock-recompute-features)
     (font-lock-flush)))
 
-(unless (eq system-type 'android)
+(unless (featurep 'android)
   (use-package nix-ts-mode
     :mode "\\.nix\\'"
     :hook (nix-ts-mode . suderman/nix-embedded-languages-setup)))

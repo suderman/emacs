@@ -32,7 +32,7 @@
   "Return platform-appropriate state images for toolbar item NAME."
   ;; GTK rejects the four-image state vectors supported by Android, so select
   ;; one image dynamically before GTK validates it.
-  (if (not (eq system-type 'android))
+  (if (not (featurep 'android))
       `(if (memq ',(intern name) modifier-bar-modifier-list)
            ,(suderman/tool-bar-image (concat name "-active"))
          ,(suderman/tool-bar-image name))
@@ -44,7 +44,7 @@
 (defun suderman/tool-bar-refresh ()
   "Rebuild the toolbar after its dynamic modifier state changes."
   (let ((tool-bar-map (default-value 'tool-bar-map)))
-    (unless (eq system-type 'android)
+    (unless (featurep 'android)
       (dolist (button '((control "Ctrl") (meta "Meta")))
         (when-let* ((binding (assq (car button) (cdr tool-bar-map))))
           (setcar (nthcdr 2 binding)
@@ -112,8 +112,8 @@ THEME is non-nil when refreshing the toolbar after a theme change."
                       :foreground (face-foreground 'default nil t)
                       :background (face-background 'default nil t))
   (setq secondary-tool-bar-map nil
-        tool-bar-button-margin (if (eq system-type 'android) '(48 . 20) 4)
-        tool-bar-style (if (eq system-type 'android) 'image 'text)
+        tool-bar-button-margin (if (featurep 'android) '(48 . 20) 4)
+        tool-bar-style (if (featurep 'android) 'image 'text)
         tool-bar-always-show-default t)
   (let ((map (make-sparse-keymap)))
     (define-key-after map [control]
@@ -130,7 +130,7 @@ THEME is non-nil when refreshing the toolbar after a theme change."
                   :help "Apply Meta to the next key")
       'control)
     (define-key-after map [suderman-buffers]
-      `(menu-item ,(if (eq system-type 'android)
+      `(menu-item ,(if (featurep 'android)
                        "BUFFERS"
                      (string #xF018F))
                   suderman/ibuffer-toggle
@@ -138,7 +138,7 @@ THEME is non-nil when refreshing the toolbar after a theme change."
                   :help "Open IBuffer")
       'meta)
     (define-key-after map [suderman-keyboard]
-      `(menu-item ,(if (eq system-type 'android)
+      `(menu-item ,(if (featurep 'android)
                        "KEYBOARD"
                      (string #xF097B))
                   suderman/android-toggle-keyboard
@@ -146,7 +146,7 @@ THEME is non-nil when refreshing the toolbar after a theme change."
                   :help "Show or hide the software keyboard")
       'suderman-buffers)
     (define-key-after map [suderman-files]
-      `(menu-item ,(if (eq system-type 'android)
+      `(menu-item ,(if (featurep 'android)
                        "FILES"
                      (string #xF0256))
                   suderman/dirvish
@@ -175,8 +175,10 @@ THEME is non-nil when refreshing the toolbar after a theme change."
     (tool-bar-mode 1))
   (force-mode-line-update t))
 
-(add-hook 'enable-theme-functions #'suderman/setup-tool-bar t)
-(suderman/setup-tool-bar)
+;; Terminal-only builds such as Termux have no tool bar or images.
+(when (fboundp 'tool-bar-mode)
+  (add-hook 'enable-theme-functions #'suderman/setup-tool-bar t)
+  (suderman/setup-tool-bar))
 
 (provide 'suderman-toolbar)
 ;;; suderman-toolbar.el ends here

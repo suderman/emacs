@@ -64,7 +64,7 @@ Fall back to `suderman/fallback-style' when none can be read."
 
 (defun suderman/nerd-fonts-available-p (&optional frame)
   "Return non-nil when FRAME can display Nerd Font icons."
-  (or (not (eq system-type 'android))
+  (or (not (featurep 'android))
       (and (display-graphic-p frame)
            (find-font (font-spec :family (plist-get suderman/system-style :icon-font))
                       frame))))
@@ -127,7 +127,7 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
           (fallback (plist-get suderman/system-style :fallback-font))
           (variable (plist-get suderman/system-style :variable-font))
           (points (when-let* ((size (plist-get suderman/system-style :font-size)))
-                    (* (float size) (if (eq system-type 'android)
+                    (* (float size) (if (featurep 'android)
                                         suderman/android-font-scale
                                       1.0)))))
       ;; A missing font keeps the platform's family at the intended size.
@@ -138,7 +138,7 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
                             (font-spec :family mono :size points))
         (set-face-attribute 'fixed-pitch frame :family mono :height 1.0)
         ;; Android does not discover fallbacks for glyphs missing from Literata.
-        (when (eq system-type 'android)
+        (when (featurep 'android)
           (set-fontset-font t nil (font-spec :family mono) frame 'append)
           (when (and fallback (find-font (font-spec :family fallback) frame))
             (set-fontset-font t nil (font-spec :family fallback) frame 'append))))
@@ -369,7 +369,7 @@ rereads the style file, so newly synced colors apply without a restart."
 (setq-default hl-line-range-function #'suderman/hl-line-range)
 (add-hook 'special-mode-hook #'suderman/disable-line-numbers-in-special-mode)
 (add-hook 'image-mode-hook #'suderman/disable-line-numbers-in-special-mode)
-(let ((enabled (if (eq system-type 'android) -1 1)))
+(let ((enabled (if (featurep 'android) -1 1)))
   (global-hl-line-mode enabled)
   (global-display-line-numbers-mode enabled))
 (suderman/disable-line-numbers-in-special-buffers)
@@ -382,10 +382,10 @@ rereads the style file, so newly synced colors apply without a restart."
 
 (setq-default display-fill-column-indicator-column 100)
 (global-display-fill-column-indicator-mode
- (if (eq system-type 'android) -1 1))
+ (if (featurep 'android) -1 1))
 
 (use-package indent-bars
-  :if (not (eq system-type 'android))
+  :if (not (featurep 'android))
   :hook ((prog-mode conf-mode toml-ts-mode yaml-ts-mode html-ts-mode)
          . indent-bars-mode)
   :custom
@@ -411,7 +411,7 @@ rereads the style file, so newly synced colors apply without a restart."
 (use-package doom-modeline
   :demand t
   :init
-  (when (and (eq system-type 'android)
+  (when (and (featurep 'android)
              (not (suderman/nerd-fonts-available-p)))
     (setq doom-modeline-icon nil))
   (setq doom-modeline-modal-icon nil

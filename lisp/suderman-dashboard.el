@@ -120,7 +120,7 @@
              "Open home directory" "~/")
             (nerd-icons-sucicon "nf-custom-orgmode" "Org"
              "Open Org directory" "~/org/"))
-          (if (eq system-type 'android)
+          (if (featurep 'android)
               '((nerd-icons-mdicon "nf-md-code_braces" "Source"
                  "Open source directory" "~/src/"))
             '((nerd-icons-mdicon "nf-md-account" "Personal"
@@ -140,7 +140,7 @@
       (lambda (entry)
         (let ((target (nth 4 entry)))
           (when (or (eq target 'scratch)
-                    (and (eq system-type 'android)
+                    (and (featurep 'android)
                          (member target '("~/org/" "~/src/")))
                     (file-directory-p (expand-file-name target)))
             (setq index (1+ index))

@@ -77,7 +77,7 @@ CALLBACK follows the formatter function protocol used by Apheleia."
         (apheleia-format-buffer formatters)
       (user-error "No formatter configured for %s" major-mode))))
 
-(unless (eq system-type 'android)
+(unless (featurep 'android)
   (use-package apheleia
     :demand t
     :custom

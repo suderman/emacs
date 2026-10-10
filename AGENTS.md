@@ -14,11 +14,13 @@ packages are taking shape deliberately.
 Prefer a small repair that preserves this direction. Broad rewrites need a
 clear reason and explicit approval.
 
-It runs in three places: PGTK Emacs on NixOS/Hyprland, terminal frames (local,
-over SSH, inside tmux or Herdr), and the native Android APK. Termux terminal
-Emacs is planned. Prefer capability checks such as `display-graphic-p` and
-`executable-find` over platform checks. `(eq system-type 'android)` means the
-Android GUI APK only; Termux Emacs reports `gnu/linux`.
+It runs in four places: PGTK Emacs on NixOS/Hyprland, terminal frames (local,
+over SSH, inside tmux or Herdr), the native Android APK, and terminal Emacs in
+Termux. Prefer capability checks such as `display-graphic-p` and
+`executable-find` over platform checks. `(featurep 'android)` means the Android
+GUI APK only. Termux Emacs also reports `system-type` as `android`, so keep
+`(eq system-type 'android)` for what both share, such as packages coming from
+package.el rather than Nix.
 
 ## Human editability and tests
 

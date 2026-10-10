@@ -426,19 +426,19 @@
 
 (ert-deftest suderman/android-dired-tap-opens-in-current-window ()
   (dolist (android '(nil t))
-    (let ((system-type (if android 'android 'gnu/linux))
-          same-window other-window)
-      (cl-letf (((symbol-function 'suderman/dired-mouse-open)
-                 (lambda (event) (setq same-window event)))
-                ((symbol-function 'dired-mouse-find-file-other-window)
-                 (lambda (event) (setq other-window event))))
-        (suderman/dired-mouse-secondary-open 'tap)
-        (if android
-            (progn
-              (should (eq same-window 'tap))
-              (should-not other-window))
-          (should-not same-window)
-          (should (eq other-window 'tap)))))))
+    (dlet ((features (if android (cons 'android features) features)))
+      (let (same-window other-window)
+        (cl-letf (((symbol-function 'suderman/dired-mouse-open)
+                   (lambda (event) (setq same-window event)))
+                  ((symbol-function 'dired-mouse-find-file-other-window)
+                   (lambda (event) (setq other-window event))))
+          (suderman/dired-mouse-secondary-open 'tap)
+          (if android
+              (progn
+                (should (eq same-window 'tap))
+                (should-not other-window))
+            (should-not same-window)
+            (should (eq other-window 'tap))))))))
 
 (ert-deftest suderman/dired-terminal-import-and-fallback ()
   (let* ((root (make-temp-file "suderman-import-" t))

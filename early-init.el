@@ -17,13 +17,13 @@
 (when (boundp 'native-comp-async-report-warnings-errors)
   (setq native-comp-async-report-warnings-errors 'silent))
 
-;; Basic UI cleanup.
-(menu-bar-mode -1)
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
+;; Basic UI cleanup. Terminal-only builds such as Termux lack these bars.
+(dolist (mode '(menu-bar-mode tool-bar-mode scroll-bar-mode))
+  (when (fboundp mode)
+    (funcall mode -1)))
 
 ;; GUI frame opacity needs to be available before the first frame is built.
-(unless (eq system-type 'android)
+(unless (featurep 'android)
   (add-to-list 'default-frame-alist '(alpha-background . 90))
   (add-to-list 'initial-frame-alist '(alpha-background . 90)))
 

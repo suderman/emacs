@@ -97,7 +97,7 @@
   :init
   (vertico-mode 1))
 
-(when (eq system-type 'android)
+(when (featurep 'android)
   (with-eval-after-load 'vertico
     (suderman/vertico-setup-touchscreen)))
 

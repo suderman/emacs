@@ -68,7 +68,7 @@
 
 (defun suderman/meow--adopt-touch-selection (&rest _)
   "Adopt an Android touch region for normal Meow motion."
-  (when (and (eq system-type 'android)
+  (when (and (featurep 'android)
              (bound-and-true-p meow-normal-mode))
     (meow-purrsist-adopt-region)))
 
@@ -601,7 +601,7 @@ bindings that were deleted from source."
 ;; conversion so IME text cannot bypass Meow's command keymaps.
 (defun suderman/android-meow-text-conversion (state)
   "Set Android text conversion appropriately for Meow STATE."
-  (when (eq system-type 'android)
+  (when (featurep 'android)
     (let ((style (eq state 'insert)))
       (unless (eq text-conversion-style style)
         (set-text-conversion-style style)))))

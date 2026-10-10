@@ -107,7 +107,7 @@ resize can therefore be mistaken for the keyboard."
   (advice-add 'touch-screen-handle-touch :before
               #'suderman/android-start-touch-momentum))
 
-(when (eq system-type 'android)
+(when (featurep 'android)
   (require 'server)
   (unless (server-running-p)
     (server-start))

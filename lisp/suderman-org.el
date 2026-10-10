@@ -626,7 +626,7 @@ Without STATE, open the TODO list outside Org or Agenda."
 (use-package org
   :ensure nil
   :init
-  (setq auto-save-visited-interval (if (eq system-type 'android) 10 3)
+  (setq auto-save-visited-interval (if (featurep 'android) 10 3)
         auto-save-visited-predicate #'suderman/org-auto-save-visited-p
         org-M-RET-may-split-line '((default . nil))
         org-insert-heading-respect-content t
