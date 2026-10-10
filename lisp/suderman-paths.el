@@ -33,6 +33,7 @@
 
 (setq custom-file (expand-file-name "custom.el" suderman/state-dir)
       package-user-dir (expand-file-name "elpa" suderman/data-dir)
+      package-quickstart-file (expand-file-name "package-quickstart.el" suderman/data-dir)
       gamegrid-user-score-file-directory (expand-file-name "games" suderman/state-dir)
       image-dired-dir (expand-file-name "image-dired/" suderman/cache-dir)
       image-dired-tags-db-file (expand-file-name "image-dired/tags" suderman/state-dir)

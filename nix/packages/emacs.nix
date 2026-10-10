@@ -1,6 +1,9 @@
 {
   inputs,
   pkgs,
+  # Terminal-only build for headless hosts: no GUI toolkit, PDF rendering,
+  # video previews, C/C++ tooling, or Pandoc.
+  tty ? false,
   ...
 }: let
   inherit (pkgs) lib;
@@ -22,9 +25,14 @@
       (file: lib.hasSuffix ".el" (toString file))
       (lib.filesystem.listFilesRecursive ../../lisp));
 
-  emacsBase = pkgs.emacs31-pgtk.overrideAttrs (old: {
-    patches = (old.patches or []) ++ [./emacs-tty-menu-restore.patch];
-  });
+  emacsBase =
+    (
+      if tty
+      then pkgs.emacs31-nox
+      else pkgs.emacs31-pgtk
+    ).overrideAttrs (old: {
+      patches = (old.patches or []) ++ [./emacs-tty-menu-restore.patch];
+    });
   # Preserve package compilation when Home Manager wraps Emacs again.
   emacsSetupHook =
     pkgs.makeSetupHook {
@@ -64,24 +72,30 @@
       in
         (with epkgs; [
           kitty-graphics
-          pdf-tools
           jinx
           treesit-grammars.with-all-grammars
         ])
+      ++ lib.optionals (!tty) (
+        [epkgs.pdf-tools]
+        ++ (with pkgs; [
+          wl-clipboard
+          # Kitty graphics inline video and video thumbnails in terminal frames.
+          # Headless variants skip ffplay, yt-dlp, and their GUI stacks.
+          ffmpeg-headless
+          ffmpegthumbnailer
+          mpv-unwrapped
+          clang-tools
+          pandoc
+        ])
+      )
       ++ (with pkgs; [
         fd
         ripgrep
         git
         rsync
         python3
-        wl-clipboard
         vips
-        # Kitty graphics thumbnails and inline video in terminal frames.
-        # Headless variants skip ffplay, yt-dlp, and their GUI stacks.
-        ffmpeg-headless
-        ffmpegthumbnailer
         mediainfo
-        mpv-unwrapped
         epubThumbnailer
         poppler-utils
         imagemagick
@@ -91,7 +105,6 @@
         hunspellDicts.en_US
         bash-language-server
         basedpyright
-        clang-tools
         gopls
         lua-language-server
         marksman
@@ -114,7 +127,6 @@
         stylua
         treefmt
         yamlfmt
-        pandoc
       ]);
   };
 in
