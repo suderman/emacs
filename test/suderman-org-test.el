@@ -301,6 +301,53 @@
           (kill-buffer buffer)))
       (delete-directory directory t))))
 
+(ert-deftest suderman/org-bulk-archive-honors-minimum-age-and-dry-run ()
+  (let* ((directory (make-temp-file "suderman-org-age-" t))
+         (source (expand-file-name "tasks.org" directory))
+         (archive (expand-file-name "archive.org" directory))
+         (org-agenda-files (list source))
+         (org-archive-location "archive.org::")
+         (org-archive-file-header-format nil)
+         (closed (lambda (days)
+                   (format-time-string
+                    "CLOSED: [%Y-%m-%d %a %H:%M]"
+                    (time-subtract nil (days-to-time days)))))
+         original)
+    (unwind-protect
+        (progn
+          (with-temp-file source
+            (insert "* DONE Old\n" (funcall closed 30) "\n"
+                    "* DONE Recent\n" (funcall closed 2) "\n"
+                    "* DONE Never closed\n"
+                    "* DONE Recent parent\n" (funcall closed 2) "\n"
+                    "** DONE Old child\n" (funcall closed 30) "\n"))
+          (setq original (with-temp-buffer
+                           (insert-file-contents source)
+                           (buffer-string)))
+          (with-current-buffer (find-file-noselect source)
+            (let ((report (with-output-to-string
+                            (should (= (suderman/org-archive-done t 14 t) 1)))))
+              (should (string-match-p ": Old$" report))
+              (should-not (string-match-p "Recent\\|Never" report)))
+            (should-not (file-exists-p archive))
+            (should (equal (buffer-string) original))
+            (should (= (suderman/org-archive-done t 14) 1)))
+          (with-temp-buffer
+            (insert-file-contents source)
+            (should-not (search-forward "* DONE Old\n" nil t))
+            (dolist (kept '("Recent" "Never closed" "Recent parent" "Old child"))
+              (goto-char (point-min))
+              (should (search-forward kept nil t))))
+          (with-temp-buffer
+            (insert-file-contents archive)
+            (should (search-forward "Old" nil t))
+            (should-not (search-forward "Recent" nil t))))
+      (dolist (file (list source archive))
+        (when-let* ((buffer (find-buffer-visiting file)))
+          (with-current-buffer buffer (set-buffer-modified-p nil))
+          (kill-buffer buffer)))
+      (delete-directory directory t))))
+
 (ert-deftest suderman/org-auto-saves-only-safe-files-under-org-directory ()
   (let* ((org-directory (make-temp-file "suderman-org-" t))
          (inside (expand-file-name "todo.org" org-directory))

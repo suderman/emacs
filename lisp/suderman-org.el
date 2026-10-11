@@ -43,6 +43,10 @@
 (declare-function org-todo "org" (&optional arg))
 (declare-function org-mouse-todo-menu "org-mouse" (state))
 (declare-function org-link-set-parameters "ol" (type &rest parameters))
+(declare-function org-agenda-files "org" (&optional unrestricted archives))
+(declare-function org-entry-get "org" (epom property &optional inherit literal-nil))
+(declare-function org-get-heading "org" (&optional no-tags no-todo no-priority no-comment))
+(declare-function org-time-string-to-time "org" (s))
 
 (defun suderman/org-apply-heading-faces (&optional _theme)
   "Scale Org headings and give tags a separate neutral color."
@@ -430,10 +434,21 @@
     (suderman/org--call-contextually
      #'suderman/org--archive-task #'suderman/org--agenda-archive-task)))
 
-(defun suderman/org-archive-done (&optional no-confirm)
+(defun suderman/org--closed-days-ago (days)
+  "Return non-nil when the heading at point was closed at least DAYS ago.
+Headings without a CLOSED timestamp never qualify."
+  (let ((closed (org-entry-get nil "CLOSED")))
+    (and closed
+         (>= (float-time (time-subtract nil (org-time-string-to-time closed)))
+             (* days 86400)))))
+
+(defun suderman/org-archive-done (&optional no-confirm min-days dry-run)
   "Archive completed headings in this buffer, keeping unfinished descendants.
 Ask for confirmation in Emacs, unless given a prefix argument or NO-CONFIRM.
-Batch calls do not prompt.  Save changed files before returning."
+Batch calls do not prompt.  Save changed files before returning.
+With MIN-DAYS, archive only headings closed at least that many days ago; a
+more recent completed heading keeps its whole subtree.  With DRY-RUN, print
+the headings that would be archived and return their count."
   (interactive "P")
   (unless (derived-mode-p 'org-mode)
     (user-error "This command requires an Org buffer"))
@@ -455,13 +470,20 @@ Batch calls do not prompt.  Save changed files before returning."
                                                        org-not-done-keywords)
                                                t))
                                         nil 'tree))))
-                   (push (point-marker) headings)
+                   (when (or (null min-days)
+                             (suderman/org--closed-days-ago min-days))
+                     (push (point-marker) headings))
                    (setq org-map-continue-from
                          (save-excursion (org-end-of-subtree t t))))))
              nil nil 'archive 'comment)
             (setq headings (nreverse headings))
+            (when dry-run
+              (dolist (heading headings)
+                (goto-char heading)
+                (princ (format "%s: %s\n" (abbreviate-file-name buffer-file-name)
+                               (org-get-heading t t t t)))))
             (let ((count (length headings))
-                  (archive-p (and headings
+                  (archive-p (and headings (not dry-run)
                                   (or no-confirm noninteractive
                                       (yes-or-no-p
                                        (format "Archive %d completed Org headings? "
@@ -478,9 +500,23 @@ Batch calls do not prompt.  Save changed files before returning."
               (unless headings
                 (when (called-interactively-p 'interactive)
                   (message "No completed Org headings to archive")))
-              (if archive-p count 0)))
+              (cond (archive-p count)
+                    (dry-run count)
+                    (t 0))))
         (dolist (heading headings)
           (set-marker heading nil))))))
+
+(defun suderman/org-archive-old-done (days &optional dry-run)
+  "Archive headings closed at least DAYS ago in every Agenda file.
+With DRY-RUN, only print what would be archived.  Meant for batch runs, such
+as the nightly archive timer; return the number of headings."
+  (let ((total 0))
+    (dolist (file (org-agenda-files))
+      (with-current-buffer (find-file-noselect file)
+        (setq total (+ total (suderman/org-archive-done t days dry-run)))))
+    (princ (format "%s %d completed Org headings closed %d+ days ago\n"
+                   (if dry-run "Would archive" "Archived") total days))
+    total))
 
 (defun suderman/org-agenda-dirvish ()
   "Open Dirvish at the file for the selected Agenda entry."
