@@ -42,6 +42,7 @@
 (declare-function org-get-todo-state "org" ())
 (declare-function org-todo "org" (&optional arg))
 (declare-function org-mouse-todo-menu "org-mouse" (state))
+(declare-function org-link-set-parameters "ol" (type &rest parameters))
 
 (defun suderman/org-apply-heading-faces (&optional _theme)
   "Scale Org headings and give tags a separate neutral color."
@@ -623,6 +624,22 @@ Without STATE, open the TODO list outside Org or Agenda."
     (advice-add 'org-mouse-todo-menu :around
                 #'suderman/org-mouse-todo-menu-with-clear)))
 
+(defun suderman/org-herdr-follow (path _arg)
+  "Jump to the Herdr pane for the agent session in herdr: link PATH."
+  (unless (executable-find "herdr-link")
+    (user-error "herdr-link is not available here"))
+  (let ((buffer (generate-new-buffer " *herdr-link*")))
+    (make-process
+     :name "herdr-link"
+     :buffer buffer
+     :command (list "herdr-link" "jump" path)
+     :sentinel (lambda (process _event)
+                 (unless (process-live-p process)
+                   (unless (zerop (process-exit-status process))
+                     (message "%s" (with-current-buffer buffer
+                                     (string-trim (buffer-string)))))
+                   (kill-buffer buffer))))))
+
 (use-package org
   :ensure nil
   :init
@@ -678,7 +695,9 @@ Without STATE, open the TODO list outside Org or Agenda."
             (todo "PROG" ((org-agenda-overriding-header "In progress")))))
           ("w" "Monday-based week" agenda ""
            ((org-agenda-span 7) (org-agenda-start-on-weekday 1)))))
-  (auto-save-visited-mode 1))
+  (auto-save-visited-mode 1)
+  :config
+  (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow))
 
 (use-package org-agenda
   :ensure nil
