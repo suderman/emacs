@@ -1,8 +1,7 @@
 name: Update flake.lock
 
 on:
-  schedule:
-    - cron: '0 9 * * *'  # daily at 02:00 MST (UTC-7)
+  # Started nightly by suderman/nixos's update-flake-lock workflow.
   workflow_dispatch:
 
 jobs:
