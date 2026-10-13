@@ -647,6 +647,20 @@ Without STATE, open the TODO list outside Org or Agenda."
   (interactive)
   (suderman/org--call-contextually #'org-toggle-checkbox))
 
+(defun suderman/org-cycle-adjacent-heading ()
+  "Move from a folded subtree's trailing blank line to its visible heading.
+Return nil so Org continues its normal TAB action."
+  (when (and (not current-prefix-arg)
+             (not (org-invisible-p))
+             (save-excursion
+               (beginning-of-line)
+               (and (not (bobp))
+                    (looking-at-p "[ \t]*$")
+                    (org-fold-folded-p (1- (point)) 'outline))))
+    ;; Ignore hidden child headings between point and the visible parent.
+    (org-back-to-heading))
+  nil)
+
 (defun suderman/org-mouse-todo-menu-with-clear (original state)
   "Add a menu item that clears the current TODO state."
   (append (funcall original state)
@@ -733,7 +747,8 @@ Without STATE, open the TODO list outside Org or Agenda."
            ((org-agenda-span 7) (org-agenda-start-on-weekday 1)))))
   (auto-save-visited-mode 1)
   :config
-  (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow))
+  (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow)
+  (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading))
 
 (use-package org-agenda
   :ensure nil

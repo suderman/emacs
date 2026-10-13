@@ -465,6 +465,32 @@
           (should-error (call-interactively (nth 1 case))
                         :type 'user-error))))))
 
+;; Mouse clicks beside a folded heading can land after its hidden subtree.
+
+(ert-deftest suderman/org-cycle-from-folded-trailing-blank-line ()
+  (dolist (text '("* Parent\nBody\n\n* Next\n"
+                  "* Parent\nBody\n** Child\nChild body\n\n* Next\n"
+                  "* Parent\nBody\n\n"))
+    (with-temp-buffer
+      (insert text)
+      (org-mode)
+      (org-fold-show-all)
+      (goto-char (point-min))
+      (org-fold-hide-subtree)
+      (goto-char (point-max))
+      (when (search-backward "* Next" nil t)
+        (forward-line -1))
+      (should-not (org-invisible-p))
+      (should (org-fold-folded-p (1- (point)) 'outline))
+      (let ((org-cycle-emulate-tab t)
+            (last-command nil))
+        (call-interactively #'org-cycle))
+      (should (org-at-heading-p))
+      (should (equal (org-get-heading t t t t) "Parent"))
+      (should-not (org-fold-folded-p (line-end-position) 'outline))
+      (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                     text)))))
+
 ;; Font-lock regressions
 
 (ert-deftest suderman/org-drawer-blocks-preserve-content-and-folding ()
