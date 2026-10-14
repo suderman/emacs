@@ -297,6 +297,22 @@
 
 (add-hook 'org-mode-hook #'suderman/org-enable-mouse-todo-cycling)
 
+(defun suderman/org-return ()
+  "Continue a list item at end of line, otherwise use normal Org Return.
+Return on an empty item removes it and ends the list.  A prefix
+argument keeps Org's normal newline behavior."
+  (interactive)
+  (if (and (not current-prefix-arg) (eolp) (org-at-item-p)
+           (org-match-line org-list-full-item-re))
+      (if (= (point) (match-end 0))
+          (progn
+            (delete-region (line-beginning-position) (point))
+            ;; Electric indentation would put point back inside the list.
+            (insert "\n")
+            (org-update-checkbox-count-maybe))
+        (org-insert-item (match-beginning 3)))
+    (call-interactively #'org-return)))
+
 (defun suderman/org-inhibit-electric-angle-pairing ()
   "Keep Org structure-template shortcuts from gaining a closing angle bracket."
   (let ((inhibit-predicate electric-pair-inhibit-predicate))
@@ -756,6 +772,7 @@ Return nil so Org continues its normal TAB action."
   (auto-save-visited-mode 1)
   :config
   (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow)
+  (keymap-set org-mode-map "RET" #'suderman/org-return)
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading))
 
 (use-package org-agenda
