@@ -534,16 +534,21 @@
 (ert-deftest suderman/org-cycle-from-folded-trailing-blank-line ()
   (dolist (text '("* Parent\nBody\n\n* Next\n"
                   "* Parent\nBody\n** Child\nChild body\n\n* Next\n"
-                  "* Parent\nBody\n\n"))
+                  "* Parent\nBody\n\n"
+                  "* Parent\nBody\n"
+                  "* Parent\nBody"
+                  "* Parent\nBody\n** Child\nChild body\n"))
     (with-temp-buffer
       (insert text)
       (org-mode)
       (org-fold-show-all)
       (goto-char (point-min))
-      (org-fold-hide-subtree)
+      (org-fold-hide-sublevels 1)
       (goto-char (point-max))
-      (when (search-backward "* Next" nil t)
-        (forward-line -1))
+      (if (search-backward "* Next" nil t)
+          (forward-line -1)
+        ;; A mouse click past the last ellipsis lands before the final newline.
+        (when (bolp) (backward-char)))
       (should-not (org-invisible-p))
       (should (org-fold-folded-p (1- (point)) 'outline))
       (let ((org-cycle-emulate-tab t)

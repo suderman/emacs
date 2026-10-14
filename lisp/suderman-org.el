@@ -31,6 +31,7 @@
 (declare-function meow--disable "meow")
 (declare-function meow-mode "meow")
 (declare-function meow-keypad "meow-keypad")
+(declare-function meow-open-below "meow-command" ())
 (declare-function org-agenda-deadline "org-agenda" (arg &optional time))
 (declare-function org-agenda-goto-today "org-agenda" ())
 (declare-function org-agenda-maybe-redo "org-agenda" ())
@@ -62,7 +63,9 @@
   (set-face-attribute 'org-tag nil :foreground 'unspecified
                       :inherit 'font-lock-doc-face)
   (set-face-attribute 'org-checkbox nil :foreground 'unspecified
-                      :inherit '(font-lock-type-face bold)))
+                      :inherit '(font-lock-type-face bold))
+  (set-face-attribute 'org-ellipsis nil :foreground 'unspecified
+                      :inherit 'font-lock-keyword-face :underline nil))
 
 (add-hook 'org-mode-hook #'suderman/org-apply-heading-faces)
 (add-hook 'enable-theme-functions #'suderman/org-apply-heading-faces)
@@ -757,18 +760,36 @@ Without STATE, open the TODO list outside Org or Agenda."
   (interactive)
   (suderman/org--call-contextually #'org-toggle-checkbox))
 
+(defun suderman/org-goto-adjacent-heading ()
+  "Move to the visible heading when point borders its folded subtree."
+  (when (and (not (org-invisible-p))
+             (or (and (eolp)
+                      (not (bobp))
+                      (org-fold-folded-p (1- (point)) 'outline))
+                 (save-excursion
+                   (beginning-of-line)
+                   (and (not (bobp))
+                        (looking-at-p "[ \t]*$")
+                        (org-fold-folded-p (1- (point)) 'outline)))))
+    ;; At EOF the visible newline can belong to a hidden, nonblank body line.
+    ;; Skip hidden child headings to find the visible parent.
+    (org-back-to-heading)))
+
+(defun suderman/org-open-below ()
+  "Toggle the heading at or beside point, or open a line below with Meow."
+  (interactive)
+  (suderman/org-goto-adjacent-heading)
+  (if (org-at-heading-p)
+      (if (org-fold-folded-p (line-end-position) 'outline)
+          (org-fold-show-subtree)
+        (org-fold-hide-subtree))
+    (call-interactively #'meow-open-below)))
+
 (defun suderman/org-cycle-adjacent-heading ()
-  "Move from a folded subtree's trailing blank line to its visible heading.
+  "Move from a folded subtree's boundary to its visible heading.
 Return nil so Org continues its normal TAB action."
-  (when (and (not current-prefix-arg)
-             (not (org-invisible-p))
-             (save-excursion
-               (beginning-of-line)
-               (and (not (bobp))
-                    (looking-at-p "[ \t]*$")
-                    (org-fold-folded-p (1- (point)) 'outline))))
-    ;; Ignore hidden child headings between point and the visible parent.
-    (org-back-to-heading))
+  (unless current-prefix-arg
+    (suderman/org-goto-adjacent-heading))
   nil)
 
 (defun suderman/org-mouse-todo-menu-with-clear (original state)
@@ -812,6 +833,7 @@ Return nil so Org continues its normal TAB action."
         org-fontify-whole-block-delimiter-line nil
         org-startup-indented t
         org-startup-folded 'fold
+        org-ellipsis " ▾"
         org-hide-drawer-startup t
         org-startup-with-link-previews t
         org-tags-column 0
@@ -862,6 +884,7 @@ Return nil so Org continues its normal TAB action."
   :config
   (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow)
   (keymap-set org-mode-map "RET" #'suderman/org-return)
+  (keymap-set org-mode-map "<remap> <meow-open-below>" #'suderman/org-open-below)
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading))
 
 (use-package org-agenda
