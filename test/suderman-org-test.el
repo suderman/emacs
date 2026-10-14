@@ -95,6 +95,70 @@
           (should (cl-every #'file-regular-p destinations)))
       (delete-directory org-directory t))))
 
+(ert-deftest suderman/org-asana-track-creates-one-project-heading ()
+  (let* ((org-directory (make-temp-file "suderman-org-asana-" t))
+         (asana (expand-file-name "asana.org" org-directory))
+         (project (expand-file-name "work/acme/widget/widget.org" org-directory))
+         (client (expand-file-name "work/acme/acme.org" org-directory))
+         (prompts 0))
+    (unwind-protect
+        (progn
+          (make-directory (file-name-directory project) t)
+          (with-temp-file client)
+          (with-temp-file project
+            (insert "#+TITLE: Widget\n\n* TODO Older task\n"))
+          (with-temp-file asana
+            (insert "* TODO Site > Fix form\n:PROPERTIES:\n:ID: asana-42\n"
+                    ":ASANA_ID: 42\n:END:\nProject: Site\n"))
+          (cl-letf (((symbol-function 'completing-read)
+                     (lambda (_prompt names &rest _)
+                       (setq prompts (1+ prompts))
+                       (should (equal (mapcar #'car names) '("acme/widget/")))
+                       "acme/widget/")))
+            (dotimes (_ 2)
+              (with-current-buffer (find-file-noselect asana)
+                (goto-char (point-min))
+                (suderman/org-asana-track))))
+          (should (= prompts 1))
+          (with-current-buffer (find-buffer-visiting project)
+            (should (looking-at-p "\\* Fix form :asana:$"))
+            (should (equal (buffer-string)
+                           (concat "#+TITLE: Widget\n\n* Fix form :asana:\n"
+                                   "[[id:asana-42][Asana task]]\n\n"
+                                   "* TODO Older task\n")))))
+      (dolist (file (list asana project))
+        (when-let* ((buffer (find-buffer-visiting file)))
+          (with-current-buffer buffer (set-buffer-modified-p nil))
+          (kill-buffer buffer)))
+      (delete-directory org-directory t))))
+
+(ert-deftest suderman/org-asana-delegate-adds-a-todo-step ()
+  (let* ((org-directory (make-temp-file "suderman-org-asana-" t))
+         (asana (expand-file-name "asana.org" org-directory))
+         (project (expand-file-name "work/acme/widget/widget.org" org-directory)))
+    (unwind-protect
+        (progn
+          (make-directory (file-name-directory project) t)
+          (with-temp-file project
+            (insert "#+TITLE: Widget\n\n* Fix form :asana:\n"
+                    "[[id:asana-42][Asana task]]\n\n* TODO Older task\n"))
+          (with-temp-file asana
+            (insert "* TODO Fix form\n:PROPERTIES:\n:ASANA_ID: 42\n:END:\n"))
+          (with-current-buffer (find-file-noselect asana)
+            (suderman/org-asana-delegate))
+          (with-current-buffer (find-buffer-visiting project)
+            (should (looking-at-p "\n\n\\* TODO Older"))
+            (should (equal (buffer-string)
+                           (concat "#+TITLE: Widget\n\n* Fix form :asana:\n"
+                                   "[[id:asana-42][Asana task]]\n\n"
+                                   "** TODO Fix form :kit:\n\n\n"
+                                   "* TODO Older task\n")))))
+      (dolist (file (list asana project))
+        (when-let* ((buffer (find-buffer-visiting file)))
+          (with-current-buffer buffer (set-buffer-modified-p nil))
+          (kill-buffer buffer)))
+      (delete-directory org-directory t))))
+
 (ert-deftest suderman/org-excludes-archive-files-and-directories ()
   (let* ((directory (make-temp-file "suderman-org-files-" t))
          (active (expand-file-name "active.org" directory))

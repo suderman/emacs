@@ -370,7 +370,7 @@ argument keeps Org's normal newline behavior."
   "Return the current Agenda file set without scanning task directories."
   (append
    (mapcar (lambda (file) (expand-file-name file org-directory))
-           '("inbox.org" "todo.org" "routines.org"))
+           '("inbox.org" "todo.org" "routines.org" "asana.org"))
    (suderman/org--direct-org-files (expand-file-name "calendar" org-directory))
    (suderman/org-context-files)))
 
@@ -605,6 +605,95 @@ as the nightly archive timer; return the number of headings."
   (interactive)
   (suderman/org--call-contextually
    #'org-refile #'org-agenda-refile #'org-todo-list))
+
+(defvar suderman/org-asana-project-history nil
+  "Project files chosen by `suderman/org-asana-track'.")
+
+(defun suderman/org--asana-entry ()
+  "Return (GID TITLE) for the Asana heading at point or Agenda line."
+  (let ((marker (and (derived-mode-p 'org-agenda-mode)
+                     (or (org-get-at-bol 'org-hd-marker)
+                         (user-error "No Org entry on this line")))))
+    (org-with-point-at (or marker (point))
+      (org-back-to-heading t)
+      (let ((gid (or (org-entry-get nil "ASANA_ID")
+                     (user-error "Not an asana.org task")))
+            (title (org-get-heading t t t t))
+            (project (save-excursion
+                       (and (re-search-forward
+                             "^Project: \\(.+\\)$"
+                             (save-excursion (outline-next-heading) (point)) t)
+                            (match-string-no-properties 1)))))
+        (when (and project (string-prefix-p (concat project " > ") title))
+          (setq title (substring title (+ (length project) 3))))
+        (list gid title)))))
+
+(defun suderman/org-asana-track ()
+  "Open the project heading that tracks the Asana task at point.
+Create a heading without a TODO keyword in a chosen project file when none
+links to the task yet, so the Agenda lists the Asana task once."
+  (interactive)
+  (pcase-let* ((`(,gid ,title) (suderman/org--asana-entry))
+               (link (format "[[id:asana-%s]" gid))
+               (work (expand-file-name "work" org-directory))
+               ;; Project files sit at DOMAIN/PROJECT/PROJECT.org; client
+               ;; files sit directly in DOMAIN.
+               (projects (seq-filter
+                          (lambda (file)
+                            (= 3 (length (file-name-split
+                                          (file-relative-name file work)))))
+                          (suderman/org-work-agenda-files work)))
+               (existing (seq-find
+                          (lambda (file)
+                            (if-let* ((buffer (find-buffer-visiting file)))
+                                (with-current-buffer buffer
+                                  (org-with-wide-buffer
+                                   (goto-char (point-min))
+                                   (search-forward link nil t)))
+                              (with-temp-buffer
+                                (insert-file-contents file)
+                                (search-forward link nil t))))
+                          projects)))
+    (if existing
+        (progn
+          (pop-to-buffer-same-window (find-file-noselect existing))
+          (widen)
+          (goto-char (point-min))
+          (search-forward link)
+          (org-back-to-heading t))
+      (let* ((names (mapcar (lambda (file)
+                              (cons (file-name-directory
+                                     (file-relative-name file work))
+                                    file))
+                            projects))
+             (file (cdr (assoc (completing-read
+                                (format "Track \"%s\" in project: " title)
+                                names nil t nil
+                                'suderman/org-asana-project-history)
+                               names))))
+        (pop-to-buffer-same-window (find-file-noselect file))
+        (widen)
+        (goto-char (point-min))
+        (if (re-search-forward org-outline-regexp-bol nil t)
+            (goto-char (match-beginning 0))
+          (goto-char (point-max))
+          (unless (bolp) (insert "\n"))
+          (unless (or (bobp) (looking-back "\n\n" nil)) (insert "\n")))
+        (save-excursion
+          (insert (format "* %s :asana:\n%s[Asana task]]\n\n" title link)))))))
+
+(defun suderman/org-asana-delegate ()
+  "Add an agent step under the project heading for the Asana task at point.
+The step starts as TODO so org-dispatch cannot launch it while its
+instructions are being written; set AUTO when they are ready."
+  (interactive)
+  (suderman/org-asana-track)
+  (let ((title (org-get-heading t t t t)))
+    (org-end-of-subtree t t)
+    (unless (bolp) (insert "\n"))
+    (unless (looking-back "\n\n" nil) (insert "\n"))
+    (insert (format "** TODO %s :kit:\n" title))
+    (save-excursion (insert "\n\n"))))
 
 (defun suderman/org-schedule ()
   "Schedule an Org item, or open the TODO list."

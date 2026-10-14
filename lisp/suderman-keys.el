@@ -164,6 +164,8 @@
                "p" '("PROG" . suderman/org-todo-prog)
                "r" #'suderman/org-refile
                "t" '("TODO" . suderman/org-todo-todo)
+               "w" '("track Asana task" . suderman/org-asana-track)
+               "W" '("add agent step to Asana task" . suderman/org-asana-delegate)
                "x" #'suderman/org-toggle-checkbox
                "s" (cons "planning"
                          (define-keymap
