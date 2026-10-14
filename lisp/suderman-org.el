@@ -775,6 +775,33 @@ Without STATE, open the TODO list outside Org or Agenda."
     ;; Skip hidden child headings to find the visible parent.
     (org-back-to-heading)))
 
+(defun suderman/org-mouse-set-point (event)
+  "Set point with EVENT, cycling a clicked outline fold marker."
+  (interactive "e")
+  (mouse-set-point event)
+  (let ((heading
+         (save-excursion
+           (suderman/org-goto-adjacent-heading)
+           (when (and (org-at-heading-p)
+                      (org-fold-folded-p (line-end-position) 'outline))
+             ;; Marker glyphs and nearby whitespace share a buffer position.
+             (let* ((position (event-end event))
+                    (clicked (posn-actual-col-row position))
+                    (marker (posn-actual-col-row
+                             (posn-at-point (line-end-position)
+                                            (posn-window position)))))
+               (when (and clicked marker
+                          (= (cdr clicked) (cdr marker))
+                          (<= (car marker) (car clicked))
+                          (< (car clicked)
+                             (+ (car marker) (length org-ellipsis))))
+                 (line-beginning-position)))))))
+    (when heading
+      (goto-char heading)
+      ;; Continue the same cycle sequence when switching to the leading circle.
+      (setq this-command 'org-open-at-mouse)
+      (org-cycle))))
+
 (defun suderman/org-open-below ()
   "Toggle the heading at or beside point, or open a line below with Meow."
   (interactive)
@@ -885,6 +912,7 @@ Return nil so Org continues its normal TAB action."
   (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow)
   (keymap-set org-mode-map "RET" #'suderman/org-return)
   (keymap-set org-mode-map "<remap> <meow-open-below>" #'suderman/org-open-below)
+  (keymap-set org-mode-map "<mouse-1>" #'suderman/org-mouse-set-point)
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading))
 
 (use-package org-agenda
