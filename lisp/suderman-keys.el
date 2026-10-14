@@ -158,6 +158,7 @@
                "h" '("HOLD" . suderman/org-todo-hold)
                "i" #'suderman/org-insert-link
                "l" #'org-store-link
+               "m" '("AUTO" . suderman/org-todo-auto)
                "n" #'org-toggle-narrow-to-subtree
                "o" '("dashboard" . suderman/org-dashboard)
                "p" '("PROG" . suderman/org-todo-prog)

@@ -627,6 +627,11 @@ Without STATE, open the TODO list outside Org or Agenda."
   (interactive)
   (suderman/org-todo "HOLD"))
 
+(defun suderman/org-todo-auto ()
+  "Set the current Org heading or Agenda entry to AUTO for org-dispatch."
+  (interactive)
+  (suderman/org-todo "AUTO"))
+
 (defun suderman/org-todo-done ()
   "Set the current Org heading or Agenda entry to DONE."
   (interactive)
@@ -708,7 +713,9 @@ Return nil so Org continues its normal TAB action."
         org-auto-align-tags nil
         org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id
         org-todo-keywords
-        '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE"))
+        '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE")
+          ;; Agent work for org-dispatch; its own sequence keeps it out of cycling.
+          (sequence "AUTO" "|"))
         org-directory (expand-file-name "~/org")
         org-attach-id-dir (expand-file-name ".attach/" org-directory)
         org-attach-use-inheritance t
@@ -739,6 +746,7 @@ Return nil so Org continues its normal TAB action."
             (todo "PROG" ((org-agenda-overriding-header "In progress")))
             (todo "EVAL" ((org-agenda-overriding-header "In review")))
             (todo "HOLD" ((org-agenda-overriding-header "On hold")))
+            (todo "AUTO" ((org-agenda-overriding-header "Agents")))
             (todo "TODO" ((org-agenda-overriding-header "Todo")))))
           ("D" "Daily"
            ((agenda "" ((org-agenda-span 1)))
