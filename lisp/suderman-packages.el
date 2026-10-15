@@ -11,6 +11,20 @@
 (require 'package)
 (require 'package-vc)
 
+(defvar suderman/package-vc-specs nil
+  "Package specs from `use-package' :vc forms, keyed by package name.")
+
+(defun suderman/package-vc-remember-spec (arg &optional _local-path)
+  "Remember the package spec in the `use-package' :vc ARG.
+use-package skips installed packages, and package-vc saves a spec only
+on first install, so the config is the reliable source."
+  (pcase-let ((`(,name ,spec ,_rev) arg))
+    (when spec
+      (setf (alist-get name suderman/package-vc-specs) spec))))
+
+(advice-add 'use-package-vc-install :before
+            #'suderman/package-vc-remember-spec)
+
 (defun suderman/package-upgrade-all ()
   "Upgrade mutable packages without confirmation.
 Nix supplies archive packages on Linux, so only Android upgrades them here.
@@ -18,6 +32,10 @@ Git packages such as Edger and meow-purrsist upgrade everywhere."
   (interactive)
   (when (eq system-type 'android)
     (package-upgrade-all nil))
+  ;; The rebuild after each pull reads specs such as Edger's :lisp-dir from
+  ;; this variable, but custom.el may lack them.  Merge without saving.
+  (pcase-dolist (`(,name . ,spec) suderman/package-vc-specs)
+    (setf (alist-get name package-vc-selected-packages) spec))
   (package-vc-upgrade-all))
 
 (defun suderman/package-import-keyring-from-android-assets
