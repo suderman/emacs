@@ -1090,6 +1090,15 @@ Return nil so Org continues its normal TAB action."
   :after org
   :hook (org-mode . org-superstar-mode))
 
+;; Scroll wide tables sideways while the surrounding text keeps wrapping.
+(use-package phscroll
+  :vc (:url "https://github.com/misohena/phscroll" :rev :newest)
+  :ensure nil
+  :if t
+  :after org
+  :demand t
+  :config (require 'org-phscroll))
+
 (use-package org-mouse
   :ensure nil
   :demand t
