@@ -381,8 +381,7 @@ rereads the style file, so newly synced colors apply without a restart."
               #'suderman/meow-describe-keymap-without-line-numbers))
 
 (setq-default display-fill-column-indicator-column 100)
-(global-display-fill-column-indicator-mode
- (if (featurep 'android) -1 1))
+(global-display-fill-column-indicator-mode -1)
 
 (use-package indent-bars
   :if (not (featurep 'android))
