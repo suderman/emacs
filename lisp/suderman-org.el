@@ -215,7 +215,6 @@
 (suderman/org-refresh-drawer-blocks)
 
 (defvar suderman/system-style)
-(defvar suderman/variable-font-scale)
 (defvar-local suderman/org-fixed-pitch-cookies nil)
 
 (defun suderman/org-enable-mixed-pitch ()
@@ -227,18 +226,19 @@
     (variable-pitch-mode 1)
     (mapc #'face-remap-remove-relative suderman/org-fixed-pitch-cookies)
     ;; Base16 gives block delimiters their own faces instead of org-meta-line.
-    ;; Cancel the prose scale so structural text keeps the default font size.
-    ;; Tags are not column-aligned here.  Links and TODO colors stay theme-owned.
-    (setq suderman/org-fixed-pitch-cookies
-          (mapcar (lambda (face)
-                    (face-remap-add-relative
-                     face 'fixed-pitch
-                     :height (/ 1.0 suderman/variable-font-scale)))
-                  '(org-block org-block-begin-line suderman/org-drawer-label
-                    org-code org-verbatim org-table org-meta-line
-                    org-special-keyword org-document-info-keyword
-                    org-property-value org-drawer org-checkbox org-date
-                    org-todo org-done org-tag org-indent)))))
+    ;; An absolute height undoes the prose scale without compounding when
+    ;; faces nest, such as verbatim inside a table.  Org gives cells starting
+    ;; with = the formula face.  Tags are not column-aligned here.  Links and
+    ;; TODO colors stay theme-owned.
+    (let ((height (face-attribute 'default :height)))
+      (setq suderman/org-fixed-pitch-cookies
+            (mapcar (lambda (face)
+                      (face-remap-add-relative face 'fixed-pitch :height height))
+                    '(org-block org-block-begin-line suderman/org-drawer-label
+                      org-code org-verbatim org-table org-formula org-meta-line
+                      org-special-keyword org-document-info-keyword
+                      org-property-value org-drawer org-checkbox org-date
+                      org-todo org-done org-tag org-indent))))))
 
 (defun suderman/org-refresh-mixed-pitch (&optional frame)
   "Enable mixed typography in existing Org buffers when GUI FRAME is created."
