@@ -74,8 +74,8 @@ Package ownership:
 - A package added locally installs through package.el into
   `~/.local/share/emacs/elpa` until the next flake update moves it into Nix.
 - `edger` and `meow-purrsist` install from GitHub through `package-vc` on every
-  platform. `SPC q u` upgrades Git packages everywhere and archive packages
-  only on Android.
+  platform, and `fling` does on the Android APK. `SPC q u` upgrades Git
+  packages everywhere and archive packages only on Android.
 - Use `:ensure nil` for built-ins (Which-Key, Eglot) and for packages Nix adds
   through `extraEmacsPackages` (PDF Tools, Kitty graphics), so package.el
   neither fetches nor shadows them.
@@ -119,7 +119,8 @@ new one when a concern has genuinely outgrown its home.
 - `suderman-clipboard.el`: terminal copy through Wayland or OSC 52.
 - `suderman-appearance.el`: style file, fonts, theme faces, Doom Modeline,
   line numbers, and the column guide.
-- `suderman-windows.el`: window helpers, Meta window keys, smooth jumps.
+- `suderman-windows.el`: window helpers, Meta window keys, smooth jumps, and
+  Android touch flings.
 - `suderman-projects.el`: Org work projects with source and data companions.
 - `suderman-buffers.el`: project-grouped IBuffer.
 - `suderman-completion.el`: Vertico, Orderless, Consult, Marginalia, Embark,
@@ -145,7 +146,8 @@ new one when a concern has genuinely outgrown its home.
 
 `meow-purrsist` (`~/src/suderman/meow-purrsist`) owns generic persistent Meow
 selection behavior. `edger` (`~/src/suderman/edger`) owns window movement that
-can hand off to the surrounding terminal multiplexer.
+can hand off to the surrounding terminal multiplexer. `fling`
+(`~/src/suderman/fling`) owns kinetic scrolling after a touch swipe.
 
 Do not put generated files, package trees, caches, or compiled Elisp in the
 repository. `.gitignore` describes those boundaries.

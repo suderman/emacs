@@ -44,6 +44,14 @@ Prefixes such as ESC are merged key by key, so MAP keeps its other bindings."
                     (define-key map key binding))))
               keys))
 
+;; Kinetic scrolling after a touch swipe on the Android APK.
+(use-package fling
+  :vc (:url "https://github.com/suderman/fling" :rev :newest)
+  :ensure nil
+  :if (featurep 'android)
+  :demand t
+  :config (fling-mode 1))
+
 (use-package scroll-on-jump
   :demand t
   :custom
