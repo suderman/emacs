@@ -19,8 +19,10 @@
 (defvar org-highlight-links)
 (defvar org-font-lock-extra-keywords)
 (defvar font-lock-beg)
+(defvar jit-lock-start)
 
 (declare-function suderman/dired-archive "suderman-files" ())
+(declare-function suderman/meow-insert "suderman-meow" ())
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
 (declare-function org-agenda "org-agenda" (&optional arg keys restriction))
@@ -305,7 +307,7 @@
 (add-hook 'org-mode-hook #'suderman/org-enable-mouse-todo-cycling)
 
 (defun suderman/org-return ()
-  "Continue a list item at end of line, otherwise use normal Org Return.
+  "Continue a list item or use Org Return, then enter Insert from Normal.
 Return on an empty item removes it and ends the list.  A prefix
 argument keeps Org's normal newline behavior."
   (interactive)
@@ -318,7 +320,23 @@ argument keeps Org's normal newline behavior."
             (insert "\n")
             (org-update-checkbox-count-maybe))
         (org-insert-item (match-beginning 3)))
-    (call-interactively #'org-return)))
+    (call-interactively #'org-return))
+  (when (bound-and-true-p meow-normal-mode)
+    (suderman/meow-insert)))
+
+(defun suderman/org-meta-return ()
+  "Insert a heading or list item using Org, then enter Insert from Normal."
+  (interactive)
+  (call-interactively #'org-meta-return)
+  (when (bound-and-true-p meow-normal-mode)
+    (suderman/meow-insert)))
+
+(defun suderman/org-insert-heading-after-subtree ()
+  "Insert a heading after the subtree, then enter Insert from Normal."
+  (interactive)
+  (call-interactively #'org-insert-heading-respect-content)
+  (when (bound-and-true-p meow-normal-mode)
+    (suderman/meow-insert)))
 
 (defun suderman/org-inhibit-electric-angle-pairing ()
   "Keep Org structure-template shortcuts from gaining a closing angle bracket."
@@ -794,6 +812,11 @@ Without STATE, open the TODO list outside Org or Agenda."
     map)
   "Mouse bindings on trailing heading arrows.")
 
+(defun suderman/org-heading-has-content-p ()
+  "Return non-nil when the heading at point has body text or child headings."
+  (and (org-at-heading-p)
+       (< (line-end-position) (save-excursion (org-end-of-subtree t)))))
+
 (defun suderman/org-fontify-heading-arrows (beg end)
   "Refresh heading arrow displays between BEG and END."
   (save-excursion
@@ -806,36 +829,47 @@ Without STATE, open the TODO list outside Org or Agenda."
     (while (re-search-forward org-outline-regexp-bol end t)
       (let* ((eol (line-end-position))
              (pos (1- eol)))
-        ;; Put the display on visible title text, not the folded newline or
-        ;; hidden link brackets.  After-strings at the newline disappear folded.
-        (while (and (> pos (line-beginning-position))
-                    (invisible-p (get-text-property pos 'invisible)))
-          (setq pos (1- pos)))
-        (let* ((char (buffer-substring pos (1+ pos)))
-               (overlay (make-overlay pos (1+ pos)))
-               (folded '(with-current-buffer object
-                          (save-excursion
-                            (goto-char buffer-position)
-                            (org-fold-folded-p (line-end-position) 'outline)))))
-          (overlay-put overlay 'suderman/org-heading-arrow t)
-          (overlay-put overlay 'evaporate t)
-          (overlay-put
-           overlay 'display
-           (mapcar
-            (lambda (state)
-              `(when ,(if (car state) folded `(not ,folded))
-                 . ,(concat char
-                            (propertize (cdr state)
-                                        'face 'org-ellipsis
-                                        'mouse-face 'highlight
-                                        'pointer 'hand
-                                        'help-echo "Toggle subtree"
-                                        'keymap suderman/org-heading-arrow-map))))
-            '((t . " ▸") (nil . " ▾")))))
+        (when (suderman/org-heading-has-content-p)
+          ;; Put the display on visible title text, not the folded newline or
+          ;; hidden link brackets.  After-strings at the newline disappear folded.
+          (while (and (> pos (line-beginning-position))
+                      (invisible-p (get-text-property pos 'invisible)))
+            (setq pos (1- pos)))
+          (let* ((char (buffer-substring pos (1+ pos)))
+                 (overlay (make-overlay pos (1+ pos)))
+                 (folded '(with-current-buffer object
+                            (save-excursion
+                              (goto-char buffer-position)
+                              (org-fold-folded-p (line-end-position) 'outline)))))
+            (overlay-put overlay 'suderman/org-heading-arrow t)
+            (overlay-put overlay 'evaporate t)
+            (overlay-put
+             overlay 'display
+             (mapcar
+              (lambda (state)
+                `(when ,(if (car state) folded `(not ,folded))
+                   . ,(concat char
+                              (propertize (cdr state)
+                                          'face 'org-ellipsis
+                                          'mouse-face 'highlight
+                                          'pointer 'hand
+                                          'help-echo "Toggle subtree"
+                                          'keymap suderman/org-heading-arrow-map))))
+              '((t . " ▸") (nil . " ▾"))))))
         (goto-char eol)))))
+
+(defun suderman/org-extend-heading-arrow-region (beg _end _old-len)
+  "Refontify the preceding heading when its contents change at BEG."
+  (save-excursion
+    (goto-char beg)
+    (beginning-of-line)
+    (when (re-search-backward org-outline-regexp-bol nil t)
+      (setq jit-lock-start (min jit-lock-start (point))))))
 
 (defun suderman/org-remove-heading-arrows ()
   "Remove heading displays when leaving Org mode."
+  (remove-hook 'jit-lock-after-change-extend-region-functions
+               #'suderman/org-extend-heading-arrow-region t)
   (jit-lock-unregister #'suderman/org-fontify-heading-arrows)
   (save-restriction
     (widen)
@@ -846,16 +880,18 @@ Without STATE, open the TODO list outside Org or Agenda."
   (org-fold-core-set-folding-spec-property
    (org-fold-core-get-folding-spec-from-alias 'outline) :ellipsis nil)
   (jit-lock-register #'suderman/org-fontify-heading-arrows)
+  (add-hook 'jit-lock-after-change-extend-region-functions
+            #'suderman/org-extend-heading-arrow-region nil t)
   (jit-lock-refontify)
   (add-hook 'change-major-mode-hook #'suderman/org-remove-heading-arrows nil t))
 
 (add-hook 'org-mode-hook #'suderman/org-enable-heading-arrows)
 
 (defun suderman/org-open-below ()
-  "Toggle the heading at or beside point, or open a line below with Meow."
+  "Toggle a heading with content, or open a line below with Meow."
   (interactive)
   (suderman/org-goto-adjacent-heading)
-  (if (org-at-heading-p)
+  (if (suderman/org-heading-has-content-p)
       (if (org-fold-folded-p (line-end-position) 'outline)
           (org-fold-show-subtree)
         (org-fold-hide-subtree))
@@ -903,7 +939,7 @@ Return nil so Org continues its normal TAB action."
   (setq auto-save-visited-interval (if (featurep 'android) 10 3)
         auto-save-visited-predicate #'suderman/org-auto-save-visited-p
         org-M-RET-may-split-line '((default . nil))
-        org-insert-heading-respect-content t
+        org-insert-heading-respect-content nil
         org-log-done 'time
         org-log-into-drawer t
         org-fontify-whole-block-delimiter-line nil
@@ -960,6 +996,9 @@ Return nil so Org continues its normal TAB action."
   :config
   (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow)
   (keymap-set org-mode-map "RET" #'suderman/org-return)
+  (keymap-set org-mode-map "<remap> <org-meta-return>" #'suderman/org-meta-return)
+  (keymap-set org-mode-map "<remap> <org-insert-heading-respect-content>"
+              #'suderman/org-insert-heading-after-subtree)
   (keymap-set org-mode-map "<remap> <meow-open-below>" #'suderman/org-open-below)
   (keymap-set org-mode-map "<mouse-1>" #'mouse-set-point)
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading)
