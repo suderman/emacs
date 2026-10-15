@@ -71,9 +71,13 @@
 (add-hook 'enable-theme-functions #'suderman/org-apply-heading-faces)
 
 (defun suderman-org-unload-function ()
-  "Remove theme callbacks before `suderman-org' functions are unloaded."
-  ;; `unload-feature' does not recognize `enable-theme-functions' as a hook.
+  "Remove display callbacks before `suderman-org' functions are unloaded."
+  ;; These callback lists are not ordinary hooks known to `unload-feature'.
   (remove-hook 'enable-theme-functions #'suderman/org-apply-heading-faces)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (derived-mode-p 'org-mode)
+        (suderman/org-remove-heading-arrows))))
   nil)
 
 (defun suderman/org-enable-tag-face ()
@@ -775,32 +779,77 @@ Without STATE, open the TODO list outside Org or Agenda."
     ;; Skip hidden child headings to find the visible parent.
     (org-back-to-heading)))
 
-(defun suderman/org-mouse-set-point (event)
-  "Set point with EVENT, cycling a clicked outline fold marker."
+(defun suderman/org-mouse-toggle-heading (event)
+  "Toggle the subtree whose trailing arrow received EVENT."
   (interactive "e")
   (mouse-set-point event)
-  (let ((heading
-         (save-excursion
-           (suderman/org-goto-adjacent-heading)
-           (when (and (org-at-heading-p)
-                      (org-fold-folded-p (line-end-position) 'outline))
-             ;; Marker glyphs and nearby whitespace share a buffer position.
-             (let* ((position (event-end event))
-                    (clicked (posn-actual-col-row position))
-                    (marker (posn-actual-col-row
-                             (posn-at-point (line-end-position)
-                                            (posn-window position)))))
-               (when (and clicked marker
-                          (= (cdr clicked) (cdr marker))
-                          (<= (car marker) (car clicked))
-                          (< (car clicked)
-                             (+ (car marker) (length org-ellipsis))))
-                 (line-beginning-position)))))))
-    (when heading
-      (goto-char heading)
-      ;; Continue the same cycle sequence when switching to the leading circle.
-      (setq this-command 'org-open-at-mouse)
-      (org-cycle))))
+  (org-back-to-heading t)
+  (suderman/org-open-below))
+
+(defvar suderman/org-heading-arrow-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [down-mouse-1] #'ignore)
+    (define-key map [mouse-1] #'suderman/org-mouse-toggle-heading)
+    (define-key map [mouse-2] #'suderman/org-mouse-toggle-heading)
+    map)
+  "Mouse bindings on trailing heading arrows.")
+
+(defun suderman/org-fontify-heading-arrows (beg end)
+  "Refresh heading arrow displays between BEG and END."
+  (save-excursion
+    (goto-char end)
+    (setq end (min (point-max) (1+ (line-end-position))))
+    (goto-char beg)
+    (setq beg (line-beginning-position))
+    (goto-char beg)
+    (remove-overlays beg end 'suderman/org-heading-arrow t)
+    (while (re-search-forward org-outline-regexp-bol end t)
+      (let* ((eol (line-end-position))
+             (pos (1- eol)))
+        ;; Put the display on visible title text, not the folded newline or
+        ;; hidden link brackets.  After-strings at the newline disappear folded.
+        (while (and (> pos (line-beginning-position))
+                    (invisible-p (get-text-property pos 'invisible)))
+          (setq pos (1- pos)))
+        (let* ((char (buffer-substring pos (1+ pos)))
+               (overlay (make-overlay pos (1+ pos)))
+               (folded '(with-current-buffer object
+                          (save-excursion
+                            (goto-char buffer-position)
+                            (org-fold-folded-p (line-end-position) 'outline)))))
+          (overlay-put overlay 'suderman/org-heading-arrow t)
+          (overlay-put overlay 'evaporate t)
+          (overlay-put
+           overlay 'display
+           (mapcar
+            (lambda (state)
+              `(when ,(if (car state) folded `(not ,folded))
+                 . ,(concat char
+                            (propertize (cdr state)
+                                        'face 'org-ellipsis
+                                        'mouse-face 'highlight
+                                        'pointer 'hand
+                                        'help-echo "Toggle subtree"
+                                        'keymap suderman/org-heading-arrow-map))))
+            '((t . " ▸") (nil . " ▾")))))
+        (goto-char eol)))))
+
+(defun suderman/org-remove-heading-arrows ()
+  "Remove heading displays when leaving Org mode."
+  (jit-lock-unregister #'suderman/org-fontify-heading-arrows)
+  (save-restriction
+    (widen)
+    (remove-overlays (point-min) (point-max) 'suderman/org-heading-arrow t)))
+
+(defun suderman/org-enable-heading-arrows ()
+  "Show clickable heading arrows independently of Org's hidden-text markers."
+  (org-fold-core-set-folding-spec-property
+   (org-fold-core-get-folding-spec-from-alias 'outline) :ellipsis nil)
+  (jit-lock-register #'suderman/org-fontify-heading-arrows)
+  (jit-lock-refontify)
+  (add-hook 'change-major-mode-hook #'suderman/org-remove-heading-arrows nil t))
+
+(add-hook 'org-mode-hook #'suderman/org-enable-heading-arrows)
 
 (defun suderman/org-open-below ()
   "Toggle the heading at or beside point, or open a line below with Meow."
@@ -912,8 +961,12 @@ Return nil so Org continues its normal TAB action."
   (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow)
   (keymap-set org-mode-map "RET" #'suderman/org-return)
   (keymap-set org-mode-map "<remap> <meow-open-below>" #'suderman/org-open-below)
-  (keymap-set org-mode-map "<mouse-1>" #'suderman/org-mouse-set-point)
-  (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading))
+  (keymap-set org-mode-map "<mouse-1>" #'mouse-set-point)
+  (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (derived-mode-p 'org-mode)
+        (suderman/org-enable-heading-arrows)))))
 
 (use-package org-agenda
   :ensure nil
