@@ -120,6 +120,19 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
       (dolist (range suderman/nerd-font-ranges)
         (set-fontset-font t range (font-spec :family family) frame 'prepend)))))
 
+(defface suderman/fixed-pitch-text '((t :inherit fixed-pitch))
+  "Fixed-width text in mixed-pitch buffers, at each frame's default height."
+  :group 'faces)
+
+(defun suderman/sync-fixed-pitch-height (&optional frame)
+  "Match `suderman/fixed-pitch-text' to the default height of FRAME.
+Without FRAME, update every frame."
+  ;; An absolute height ignores the prose scale and cannot compound when
+  ;; fixed-width faces nest, such as verbatim inside an Org table.
+  (dolist (frame (if frame (list frame) (frame-list)))
+    (set-face-attribute 'suderman/fixed-pitch-text frame
+                        :height (face-attribute 'default :height frame))))
+
 (defun suderman/apply-system-fonts (&optional frame)
   "Apply shared typography to graphical FRAME when its fonts are installed."
   (when (display-graphic-p frame)
@@ -145,6 +158,7 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
       (when (and variable (find-font (font-spec :family variable) frame))
         (set-face-attribute 'variable-pitch frame :family variable
                             :height suderman/variable-font-scale)))
+    (suderman/sync-fixed-pitch-height frame)
     (suderman/set-nerd-font-fallbacks frame)))
 
 (defun suderman/refresh-system-fonts (&optional _theme)
@@ -233,7 +247,8 @@ rereads the style file, so newly synced colors apply without a restart."
          (list base-height base-font new-height))
         (if (= new-height base-height)
             (set-frame-font base-font t nil t)
-          (set-face-attribute 'default frame :height new-height))))))
+          (set-face-attribute 'default frame :height new-height))
+        (suderman/sync-fixed-pitch-height frame)))))
 
 (defun suderman/frame-text-scale-decrease ()
   "Decrease text size in the selected graphical frame by one point."

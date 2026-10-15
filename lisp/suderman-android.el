@@ -21,6 +21,7 @@
 (declare-function pixel-scroll-accumulate-velocity "pixel-scroll" (delta))
 (declare-function pixel-scroll-start-momentum "pixel-scroll" (event))
 (declare-function server-running-p "server" (&optional name))
+(declare-function suderman/sync-fixed-pitch-height "suderman-appearance")
 
 (defconst suderman/android-termux-bin
   "/data/data/com.termux/files/usr/bin")
@@ -73,7 +74,8 @@ resize can therefore be mistaken for the keyboard."
         (setq new-height
               (max (car global-text-scale-adjust-limits)
                    (min (cdr global-text-scale-adjust-limits) new-height)))
-        (set-face-attribute 'default nil :height new-height)))))
+        (set-face-attribute 'default nil :height new-height)
+        (suderman/sync-fixed-pitch-height)))))
 
 (defun suderman/android-record-touch-scroll (_dx dy)
   "Record vertical touch movement DY for kinetic scrolling."

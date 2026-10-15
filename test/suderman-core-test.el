@@ -587,7 +587,7 @@
       (dlet ((features (cons 'android features)))
         (cl-letf (((symbol-function 'find-font) (lambda (&rest _) nil)))
           (suderman/apply-system-fonts)
-          (should (equal calls '((default nil (:height 170)))))
+          (should (equal (assq 'default calls) '(default nil (:height 170))))
           (should-not fontsets))))))
 
 (provide 'suderman-core-test)
