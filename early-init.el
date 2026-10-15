@@ -3,6 +3,9 @@
 ;; Keep package.el from initializing before init.el configures XDG paths.
 (setq package-enable-at-startup nil)
 
+;; Load source over stale bytecode, such as an old .elc beside an updated .el.
+(setq load-prefer-newer t)
+
 ;; Reduce startup noise and work. Keep this boring and reversible.
 (setq inhibit-startup-screen t
       inhibit-startup-echo-area-message user-login-name
