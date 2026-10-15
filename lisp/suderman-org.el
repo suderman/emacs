@@ -79,7 +79,7 @@
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (derived-mode-p 'org-mode)
-        (suderman/org-remove-heading-arrows))))
+        (suderman/org-remove-fold-arrows))))
   nil)
 
 (defun suderman/org-enable-tag-face ()
@@ -794,40 +794,48 @@ Without STATE, open the TODO list outside Org or Agenda."
     ;; Skip hidden child headings to find the visible parent.
     (org-back-to-heading)))
 
-(defun suderman/org-mouse-toggle-heading (event)
-  "Toggle the subtree whose trailing arrow received EVENT."
+(defun suderman/org-mouse-toggle-fold (event)
+  "Toggle the heading or drawer whose trailing arrow received EVENT."
   (interactive "e")
   (mouse-set-point event)
-  (org-back-to-heading t)
   (suderman/org-open-below))
 
-(defvar suderman/org-heading-arrow-map
+(defvar suderman/org-fold-arrow-map
   (let ((map (make-sparse-keymap)))
     (define-key map [down-mouse-1] #'ignore)
-    (define-key map [mouse-1] #'suderman/org-mouse-toggle-heading)
-    (define-key map [mouse-2] #'suderman/org-mouse-toggle-heading)
+    (define-key map [mouse-1] #'suderman/org-mouse-toggle-fold)
+    (define-key map [mouse-2] #'suderman/org-mouse-toggle-fold)
     map)
-  "Mouse bindings on trailing heading arrows.")
+  "Mouse bindings on trailing heading and drawer arrows.")
 
 (defun suderman/org-heading-has-content-p ()
   "Return non-nil when the heading at point has body text or child headings."
   (and (org-at-heading-p)
        (< (line-end-position) (save-excursion (org-end-of-subtree t)))))
 
-(defun suderman/org-fontify-heading-arrows (beg end)
-  "Refresh heading arrow displays between BEG and END."
+(defun suderman/org-fontify-fold-arrows (beg end)
+  "Refresh heading and drawer arrow displays between BEG and END."
   (save-excursion
     (goto-char end)
     (setq end (min (point-max) (1+ (line-end-position))))
     (goto-char beg)
     (setq beg (line-beginning-position))
     (goto-char beg)
-    (remove-overlays beg end 'suderman/org-heading-arrow t)
-    (while (re-search-forward org-outline-regexp-bol end t)
+    (remove-overlays beg end 'suderman/org-fold-arrow t)
+    (while (re-search-forward (concat org-outline-regexp-bol "\\|" org-drawer-regexp)
+                             end t)
       (let* ((eol (line-end-position))
-             (pos (1- eol)))
-        (when (suderman/org-heading-has-content-p)
-          ;; Put the display on visible title text, not the folded newline or
+             (pos (1- eol))
+             (kind (if (suderman/org-heading-has-content-p)
+                       'outline
+                     (let ((element (org-element-at-point)))
+                       (when (and (memq (org-element-type element)
+                                        '(drawer property-drawer))
+                                  (= (line-beginning-position)
+                                     (org-element-property :post-affiliated element)))
+                         'drawer)))))
+        (when kind
+          ;; Put the display on visible label text, not the folded newline or
           ;; hidden link brackets.  After-strings at the newline disappear folded.
           (while (and (> pos (line-beginning-position))
                       (invisible-p (get-text-property pos 'invisible)))
@@ -835,11 +843,11 @@ Without STATE, open the TODO list outside Org or Agenda."
           ;; Inherit the face; copying it applies relative heading height twice.
           (let* ((char (buffer-substring-no-properties pos (1+ pos)))
                  (overlay (make-overlay pos (1+ pos)))
-                 (folded '(with-current-buffer object
+                 (folded `(with-current-buffer object
                             (save-excursion
                               (goto-char buffer-position)
-                              (org-fold-folded-p (line-end-position) 'outline)))))
-            (overlay-put overlay 'suderman/org-heading-arrow t)
+                              (org-fold-folded-p (line-end-position) ',kind)))))
+            (overlay-put overlay 'suderman/org-fold-arrow t)
             (overlay-put overlay 'evaporate t)
             (overlay-put
              overlay 'display
@@ -851,49 +859,56 @@ Without STATE, open the TODO list outside Org or Agenda."
                                           'face 'org-ellipsis
                                           'mouse-face 'highlight
                                           'pointer 'hand
-                                          'help-echo "Toggle subtree"
-                                          'keymap suderman/org-heading-arrow-map))))
+                                          'help-echo (if (eq kind 'drawer)
+                                                         "Toggle drawer"
+                                                       "Toggle subtree")
+                                          'keymap suderman/org-fold-arrow-map))))
               '((t . " ▸") (nil . " ▾"))))))
         (goto-char eol)))))
 
-(defun suderman/org-extend-heading-arrow-region (beg _end _old-len)
-  "Refontify the preceding heading when its contents change at BEG."
+(defun suderman/org-extend-fold-arrow-region (beg _end _old-len)
+  "Refontify the preceding heading or drawer when its contents change at BEG."
   (save-excursion
     (goto-char beg)
     (beginning-of-line)
-    (when (re-search-backward org-outline-regexp-bol nil t)
-      (setq jit-lock-start (min jit-lock-start (point))))))
+    (while (and (re-search-backward
+                 (concat org-outline-regexp-bol "\\|" org-drawer-regexp) nil t)
+                (equal (upcase (or (match-string 1) "")) "END")))
+    (setq jit-lock-start (min jit-lock-start (point)))))
 
-(defun suderman/org-remove-heading-arrows ()
-  "Remove heading displays when leaving Org mode."
+(defun suderman/org-remove-fold-arrows ()
+  "Remove heading and drawer displays when leaving Org mode."
   (remove-hook 'jit-lock-after-change-extend-region-functions
-               #'suderman/org-extend-heading-arrow-region t)
-  (jit-lock-unregister #'suderman/org-fontify-heading-arrows)
+               #'suderman/org-extend-fold-arrow-region t)
+  (jit-lock-unregister #'suderman/org-fontify-fold-arrows)
   (save-restriction
     (widen)
-    (remove-overlays (point-min) (point-max) 'suderman/org-heading-arrow t)))
+    (remove-overlays (point-min) (point-max) 'suderman/org-fold-arrow t)))
 
-(defun suderman/org-enable-heading-arrows ()
-  "Show clickable heading arrows independently of Org's hidden-text markers."
-  (org-fold-core-set-folding-spec-property
-   (org-fold-core-get-folding-spec-from-alias 'outline) :ellipsis nil)
-  (jit-lock-register #'suderman/org-fontify-heading-arrows)
+(defun suderman/org-enable-fold-arrows ()
+  "Show clickable heading and drawer arrows independently of hidden text."
+  (dolist (kind '(outline drawer))
+    (org-fold-core-set-folding-spec-property
+     (org-fold-core-get-folding-spec-from-alias kind) :ellipsis nil))
+  (jit-lock-register #'suderman/org-fontify-fold-arrows)
   (add-hook 'jit-lock-after-change-extend-region-functions
-            #'suderman/org-extend-heading-arrow-region nil t)
+            #'suderman/org-extend-fold-arrow-region nil t)
   (jit-lock-refontify)
-  (add-hook 'change-major-mode-hook #'suderman/org-remove-heading-arrows nil t))
+  (add-hook 'change-major-mode-hook #'suderman/org-remove-fold-arrows nil t))
 
-(add-hook 'org-mode-hook #'suderman/org-enable-heading-arrows)
+(add-hook 'org-mode-hook #'suderman/org-enable-fold-arrows)
 
 (defun suderman/org-open-below ()
-  "Toggle a heading with content, or open a line below with Meow."
+  "Toggle a drawer or heading with content, or open a line below with Meow."
   (interactive)
   (suderman/org-goto-adjacent-heading)
-  (if (suderman/org-heading-has-content-p)
-      (if (org-fold-folded-p (line-end-position) 'outline)
-          (org-fold-show-subtree)
-        (org-fold-hide-subtree))
-    (call-interactively #'meow-open-below)))
+  (cond
+   ((org-fold-hide-drawer-toggle nil t))
+   ((suderman/org-heading-has-content-p)
+    (if (org-fold-folded-p (line-end-position) 'outline)
+        (org-fold-show-subtree)
+      (org-fold-hide-subtree)))
+   (t (call-interactively #'meow-open-below))))
 
 (defun suderman/org-cycle-adjacent-heading ()
   "Move from a folded subtree's boundary to its visible heading.
@@ -1003,7 +1018,7 @@ Return nil so Org continues its normal TAB action."
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (derived-mode-p 'org-mode)
-        (suderman/org-enable-heading-arrows)))))
+        (suderman/org-enable-fold-arrows)))))
 
 (use-package org-agenda
   :ensure nil
