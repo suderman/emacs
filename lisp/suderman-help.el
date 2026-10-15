@@ -371,6 +371,7 @@
     (meow-purrsist-find-backward . "find back")
     (suderman/meow-buffer-beginning . "buf beg")
     (suderman/meow-buffer-end . "buf end")
+    (suderman/meow-buffer-end-or-beginning . "buf end/beg")
     (suderman/meow-indent . "indent")
     (suderman/meow-insert . "insert")
     (suderman/meow-insert-at-indentation . "at indent")

@@ -205,6 +205,14 @@ Search backward when BACKWARD is non-nil, otherwise search forward."
   (interactive)
   (meow-purrsist-move-to (point-max)))
 
+(defun suderman/meow-buffer-end-or-beginning ()
+  "Move to buffer end, or beginning when already on the last line.
+Extend an active selection."
+  (interactive)
+  (if (= (line-end-position) (point-max))
+      (suderman/meow-buffer-beginning)
+    (suderman/meow-buffer-end)))
+
 ;;;; Editing
 
 (defun suderman/meow--shift-lines (columns)
@@ -557,11 +565,11 @@ bindings that were deleted from source."
    '("m" . meow-purrsist-visual)
    '("M" . meow-purrsist-line-or-rectangle)
    '("n" . suderman/meow-search)
-   '("N" . suderman/meow-buffer-end)
+   '("N" . meow-page-down)
    '("o" . meow-open-below)
    '("O" . meow-open-above)
    '("p" . suderman/meow-search-backward)
-   '("P" . suderman/meow-buffer-beginning)
+   '("P" . meow-page-up)
    '("q" . meow-quit)
    '("Q" . kill-current-buffer)
    '("r" . suderman/meow-replace-char)
@@ -581,7 +589,7 @@ bindings that were deleted from source."
    '("y" . undo-redo)
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
-   '("Z" . suderman/meow-buffer-end)
+   '("Z" . suderman/meow-buffer-end-or-beginning)
    '(";" . suderman/meow-repeat)
    '("/" . suderman/meow-start-search)
    '("<escape>" . suderman/meow-escape)))
