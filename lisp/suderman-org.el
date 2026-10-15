@@ -835,7 +835,8 @@ Without STATE, open the TODO list outside Org or Agenda."
           (while (and (> pos (line-beginning-position))
                       (invisible-p (get-text-property pos 'invisible)))
             (setq pos (1- pos)))
-          (let* ((char (buffer-substring pos (1+ pos)))
+          ;; Inherit the face; copying it applies relative heading height twice.
+          (let* ((char (buffer-substring-no-properties pos (1+ pos)))
                  (overlay (make-overlay pos (1+ pos)))
                  (folded '(with-current-buffer object
                             (save-excursion
