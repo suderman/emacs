@@ -10,7 +10,6 @@
 (require 'subr-x)
 
 (defvar global-text-scale-adjust-limits)
-(defvar pixel-scroll-precision-use-momentum)
 (defvar touch-screen-current-tool)
 (defvar touch-screen-enable-hscroll)
 (defvar touch-screen-extend-selection)
@@ -18,8 +17,8 @@
 (defvar touch-screen-precision-scroll)
 (defvar touch-screen-word-select)
 
-(declare-function pixel-scroll-accumulate-velocity "pixel-scroll" (delta))
-(declare-function pixel-scroll-start-momentum "pixel-scroll" (event))
+(declare-function pixel-scroll-precision-scroll-down-page "pixel-scroll" (delta))
+(declare-function pixel-scroll-precision-scroll-up-page "pixel-scroll" (delta))
 (declare-function server-running-p "server" (&optional name))
 (declare-function suderman/sync-fixed-pitch-height "suderman-appearance")
 
@@ -77,20 +76,77 @@ resize can therefore be mistaken for the keyboard."
         (set-face-attribute 'default nil :height new-height)
         (suderman/sync-fixed-pitch-height)))))
 
+(defvar suderman/android-fling-time-constant 0.35
+  "Seconds for a touch fling to lose about two thirds of its speed.")
+
+(defvar suderman/android-fling-min-velocity 300
+  "Release speed in pixels per second below which a swipe does not fling.")
+
+(defvar suderman/android-touch-samples nil
+  "Recent vertical touch-scroll movements as (TIME . DY), newest first.")
+
+(defun suderman/android-recent-touch-samples (now)
+  "Return touch samples from the 0.1 seconds before NOW."
+  (seq-take-while (lambda (sample) (< (- now (car sample)) 0.1))
+                  suderman/android-touch-samples))
+
 (defun suderman/android-record-touch-scroll (_dx dy)
-  "Record vertical touch movement DY for kinetic scrolling."
-  (pixel-scroll-accumulate-velocity (- dy)))
+  "Record vertical touch movement DY for flinging."
+  (let ((now (float-time)))
+    (push (cons now dy) suderman/android-touch-samples)
+    (setq suderman/android-touch-samples
+          (suderman/android-recent-touch-samples now))))
+
+(defun suderman/android-touch-velocity ()
+  "Return the vertical swipe speed at release in pixels per second.
+Only the last 0.1 seconds count, so a pause before lifting stops the fling."
+  (let* ((now (float-time))
+         (samples (suderman/android-recent-touch-samples now)))
+    (if (cdr samples)
+        ;; The oldest sample's movement happened before its own timestamp.
+        (/ (apply #'+ (mapcar #'cdr (butlast samples)))
+           (- now (car (car (last samples)))))
+      0)))
+
+(defun suderman/android-fling (window velocity)
+  "Keep scrolling WINDOW at VELOCITY pixels per second, slowing with friction.
+Steps use real elapsed time, so slow redisplay never slows the motion.  Any
+input stops the fling."
+  (let ((last (float-time))
+        (carry 0.0)
+        ;; A collection takes about 0.1 seconds on the phone, long enough to
+        ;; make the fling jump.  Defer it until the fling stops.
+        (gc-cons-threshold most-positive-fixnum))
+    (with-selected-window window
+      (condition-case nil
+          (while (and (> (abs velocity) 30)
+                      (sit-for 0.001))
+            (let* ((now (float-time))
+                   (dt (- now last))
+                   (distance (+ carry (* velocity dt)))
+                   (pixels (truncate distance)))
+              (setq last now
+                    carry (- distance pixels)
+                    velocity (* velocity
+                                (exp (- (/ dt suderman/android-fling-time-constant)))))
+              (cond ((> pixels 0) (pixel-scroll-precision-scroll-down-page pixels))
+                    ((< pixels 0) (pixel-scroll-precision-scroll-up-page
+                                   (- pixels))))))
+        ((beginning-of-buffer end-of-buffer) nil)))))
 
 (defun suderman/android-start-touch-momentum (event &rest _)
-  "Start momentum after a completed touch-scroll EVENT."
+  "Fling after a completed touch-scroll EVENT released at speed."
   (when (and (eq (car event) 'touchscreen-end)
              (eq (caadr event) (car touch-screen-current-tool))
              (eq (nth 3 touch-screen-current-tool) 'scroll)
              (not (caddr event)))
-    (pixel-scroll-start-momentum event)))
+    (let ((velocity (suderman/android-touch-velocity)))
+      (setq suderman/android-touch-samples nil)
+      (when (> (abs velocity) suderman/android-fling-min-velocity)
+        (suderman/android-fling (cadr touch-screen-current-tool) velocity)))))
 
 (defun suderman/android-setup-touch-scrolling ()
-  "Configure Android touch input and momentum idempotently."
+  "Configure Android touch input and flinging idempotently."
   (require 'pixel-scroll)
   (require 'touch-screen)
   ;; Disable horizontal swipes; horizontal scrolling also defeats visual wrapping.
@@ -101,8 +157,7 @@ resize can therefore be mistaken for the keyboard."
         touch-screen-word-select t
         touch-screen-extend-selection t
         touch-screen-delay 0.5
-        echo-keystrokes 0
-        pixel-scroll-precision-use-momentum t)
+        echo-keystrokes 0)
   (setq-default make-cursor-line-fully-visible nil)
   (advice-add 'touch-screen-handle-scroll :before
               #'suderman/android-record-touch-scroll)
