@@ -14,6 +14,7 @@
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/dirvish-side-toggle "suderman-files")
 (declare-function meow-insert-exit "meow" ())
+(declare-function meow-keypad-quit "meow-keypad" ())
 
 ;;;; Keypad
 
@@ -702,6 +703,8 @@ bindings that were deleted from source."
               #'suderman/meow-keypad-previous-page)
   (keymap-set meow-keypad-state-keymap "<up>"
               #'suderman/meow-keypad-previous-page)
+  ;; Toolbar buttons without a keypad key, such as Esc, cancel the keypad.
+  (keymap-set meow-keypad-state-keymap "<tool-bar>" #'meow-keypad-quit)
   (meow-global-mode 1)
   (suderman/android-initialize-meow-text-conversion))
 

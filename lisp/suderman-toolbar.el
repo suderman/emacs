@@ -20,27 +20,28 @@
 (defun suderman/tool-bar-image (name &optional active)
   "Return a theme-aware tool-bar image expression for NAME.
 ACTIVE draws the icon cut out of a filled tile to show a latched modifier."
-  (let ((file (expand-file-name (format "assets/toolbar/%s.svg" name)
-                                user-emacs-directory))
-        (size (if (featurep 'android) 56 24))
-        ;; Android would otherwise scale the pixel size by screen density.
-        (props (append (and (featurep 'android) '(:scale 1))
-                       (list :foreground (face-foreground 'tool-bar nil t)
-                             :background (face-background 'tool-bar nil t)))))
+  ;; Pass data, not a file: GTK loads image files itself and ignores the
+  ;; theme colors.
+  (let ((svg (with-temp-buffer
+               (insert-file-contents
+                (expand-file-name (format "assets/toolbar/%s.svg" name)
+                                  user-emacs-directory))
+               (buffer-string)))
+        (size (if (featurep 'android) 56 24)))
     ;; tool-bar.el masks the background color, so the tile must not reach the
     ;; corners and the cut-out icon must use the background color too.
-    (if active
-        `(create-image
-          ,(format "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" \
+    (when active
+      (setq svg (format "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" \
 height=\"24\"><mask id=\"m\"><rect width=\"24\" height=\"24\" \
 fill=\"white\"/><svg x=\"3\" y=\"3\" width=\"18\" height=\"18\" \
 viewBox=\"0 0 24 24\">%s</svg></mask><rect width=\"24\" height=\"24\" \
 rx=\"5\" fill=\"currentColor\" mask=\"url(#m)\"/></svg>"
-                   (with-temp-buffer
-                     (insert-file-contents file)
-                     (string-replace "currentColor" "black" (buffer-string))))
-          'svg t :width ,size :height ,size ,@props)
-      `(create-image ,file 'svg nil :width ,size :height ,size ,@props))))
+                        (string-replace "currentColor" "black" svg))))
+    `(create-image ,svg 'svg t :width ,size :height ,size
+                   ;; Android would otherwise scale the size by screen density.
+                   ,@(and (featurep 'android) '(:scale 1))
+                   :foreground ,(face-foreground 'tool-bar nil t)
+                   :background ,(face-background 'tool-bar nil t))))
 
 (defun suderman/tool-bar-state-images (name)
   "Return platform-appropriate state images for toolbar item NAME."

@@ -32,6 +32,9 @@
 
 (setq bookmark-save-flag 1)
 
+;; Emacs-drawn tooltip frames make PGTK flash the whole frame white.
+(setq use-system-tooltips t)
+
 (setq tramp-default-method "ssh"
       tramp-copy-size-limit (* 1024 1024))
 (with-eval-after-load 'tramp
