@@ -24,7 +24,8 @@
       large-file-warning-threshold (* 100 1024 1024)
       enable-recursive-minibuffers t
       scroll-preserve-screen-position 'always
-      scroll-error-top-bottom t)
+      scroll-error-top-bottom t
+      isearch-wrap-pause 'no-ding)
 
 (setq-default indent-tabs-mode nil
               tab-width 2
