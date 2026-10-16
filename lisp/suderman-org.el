@@ -1183,10 +1183,6 @@ Return nil so Org continues its normal TAB action."
   :after org
   :demand t
   :config
-  ;; Compiled phscroll loses the interactive specs of its starred scroll
-  ;; commands, because its macro reads them before the targets exist.
-  ;; Loading the source again rebuilds them as commands.
-  (load (locate-library "phscroll.el" t) nil t)
   (require 'org-phscroll))
 
 (use-package org-mouse
