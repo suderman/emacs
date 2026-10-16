@@ -75,10 +75,15 @@ resize can therefore be mistaken for the keyboard."
 
 (defun suderman/android-touch-hscroll (scroll dx dy)
   "Call SCROLL with DX and DY, swiping sideways only where lines are truncated.
-Such buffers stop following point sideways, so a vertical swipe keeps the
-horizontal position."
-  (let ((touch-screen-enable-hscroll truncate-lines))
-    (when truncate-lines
+Dired, Dirvish, and IBuffer stay vertical-only.  Other truncated buffers
+stop following point sideways, so a vertical swipe keeps the horizontal
+position."
+  (let ((touch-screen-enable-hscroll
+         (and truncate-lines
+              (not (derived-mode-p 'dired-mode 'ibuffer-mode
+                                   'dirvish-directory-view-mode
+                                   'dirvish-special-preview-mode)))))
+    (when touch-screen-enable-hscroll
       (setq-local auto-hscroll-mode nil))
     (funcall scroll dx dy)))
 
@@ -99,8 +104,8 @@ vertical scroll while the start line stays the same."
 The `fling' package continues swipes; see `suderman-windows'."
   (require 'pixel-scroll)
   (require 'touch-screen)
-  ;; Swipe sideways only where lines are truncated, such as Org Agenda and
-  ;; Dired; horizontal scrolling would defeat visual wrapping elsewhere.
+  ;; Swipe sideways only where lines are truncated, such as Org Agenda;
+  ;; horizontal scrolling would defeat visual wrapping elsewhere.
   ;; Keep vertical swipes pixel-precise, and let touch adjust either end of a
   ;; word selection.  Shorten long press and hide drag events in the echo area.
   (advice-add 'touch-screen-handle-scroll :around
