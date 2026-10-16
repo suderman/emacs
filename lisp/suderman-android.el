@@ -73,14 +73,40 @@ resize can therefore be mistaken for the keyboard."
         (set-face-attribute 'default nil :height new-height)
         (suderman/sync-fixed-pitch-height)))))
 
+(defun suderman/android-touch-hscroll (scroll dx dy)
+  "Call SCROLL with DX and DY, swiping sideways only where lines are truncated.
+Such buffers stop following point sideways, so a vertical swipe keeps the
+horizontal position."
+  (let ((touch-screen-enable-hscroll truncate-lines))
+    (when truncate-lines
+      (setq-local auto-hscroll-mode nil))
+    (funcall scroll dx dy)))
+
+(defun suderman/android-hscrolled-scroll-down (scroll delta)
+  "Call SCROLL with DELTA, then fix it for a horizontally scrolled window.
+`pixel-scroll-precision-scroll-down-page' finds the new start at the left
+edge, mid-line once scrolled sideways, and then drops the existing
+vertical scroll while the start line stays the same."
+  (let ((start (window-start))
+        (vscroll (window-vscroll nil t)))
+    (funcall scroll delta)
+    (when (and (> (window-hscroll) 0)
+               (= (window-start) start))
+      (set-window-vscroll nil (+ vscroll delta) t t))))
+
 (defun suderman/android-setup-touch-scrolling ()
   "Configure Android touch input idempotently.
 The `fling' package continues swipes; see `suderman-windows'."
   (require 'pixel-scroll)
   (require 'touch-screen)
-  ;; Disable horizontal swipes; horizontal scrolling also defeats visual wrapping.
+  ;; Swipe sideways only where lines are truncated, such as Org Agenda and
+  ;; Dired; horizontal scrolling would defeat visual wrapping elsewhere.
   ;; Keep vertical swipes pixel-precise, and let touch adjust either end of a
   ;; word selection.  Shorten long press and hide drag events in the echo area.
+  (advice-add 'touch-screen-handle-scroll :around
+              #'suderman/android-touch-hscroll)
+  (advice-add 'pixel-scroll-precision-scroll-down-page :around
+              #'suderman/android-hscrolled-scroll-down)
   (setq touch-screen-enable-hscroll nil
         touch-screen-precision-scroll t
         touch-screen-word-select t
