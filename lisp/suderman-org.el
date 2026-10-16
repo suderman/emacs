@@ -852,9 +852,16 @@ Otherwise a folded last subtree hides the empty line below it."
   (mouse-set-point event)
   (suderman/org-open-below))
 
+(defun suderman/org-fold-arrow-press ()
+  "Ignore a press on a fold arrow; the click toggles it."
+  (interactive))
+
+;; A touch that starts on an arrow still scrolls instead of dragging a region.
+(put 'suderman/org-fold-arrow-press 'ignored-mouse-command t)
+
 (defvar suderman/org-fold-arrow-map
   (let ((map (make-sparse-keymap)))
-    (define-key map [down-mouse-1] #'ignore)
+    (define-key map [down-mouse-1] #'suderman/org-fold-arrow-press)
     (define-key map [mouse-1] #'suderman/org-mouse-toggle-fold)
     (define-key map [mouse-2] #'suderman/org-mouse-toggle-fold)
     map)
