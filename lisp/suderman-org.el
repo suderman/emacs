@@ -835,6 +835,17 @@ and batch state changes pass through untouched."
     ;; Skip hidden child headings to find the visible parent.
     (org-back-to-heading)))
 
+(defun suderman/org-fold-keep-final-newline (args)
+  "Leave the buffer's final newline outside a fold described by ARGS.
+Otherwise a folded last subtree hides the empty line below it."
+  (pcase-let ((`(,from ,to ,flag . ,rest) args))
+    (if (and flag
+             (> to (1+ from))
+             (= to (save-restriction (widen) (point-max)))
+             (eq (char-before to) ?\n))
+        `(,from ,(1- to) ,flag . ,rest)
+      args)))
+
 (defun suderman/org-mouse-toggle-fold (event)
   "Toggle the heading or drawer whose trailing arrow received EVENT."
   (interactive "e")
@@ -1065,6 +1076,8 @@ Return nil so Org continues its normal TAB action."
   (keymap-set org-mode-map "<remap> <meow-open-below>" #'suderman/org-open-below)
   (keymap-set org-mode-map "<mouse-1>" #'mouse-set-point)
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading)
+  (advice-add 'org-fold-core-region :filter-args
+              #'suderman/org-fold-keep-final-newline)
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (derived-mode-p 'org-mode)
