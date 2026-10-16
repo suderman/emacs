@@ -31,7 +31,10 @@
       then pkgs.emacs31-nox
       else pkgs.emacs31-pgtk
     ).overrideAttrs (old: {
-      patches = (old.patches or []) ++ [./emacs-tty-menu-restore.patch];
+      patches =
+        (old.patches or [])
+        ++ [./emacs-tty-menu-restore.patch]
+        ++ lib.optional (!tty) ./emacs-pgtk-toolbar-scale.patch;
     });
   # Preserve package compilation when Home Manager wraps Emacs again.
   emacsSetupHook =

@@ -1,0 +1,40 @@
+diff --git a/src/gtkutil.c b/src/gtkutil.c
+--- a/src/gtkutil.c
++++ b/src/gtkutil.c
+@@ -551,8 +551,36 @@
+     {
+ #ifdef HAVE_GTK3
++#if defined HAVE_PGTK && defined HAVE_RSVG
++      /* SVGs are rendered at the frame scale, so tell GTK about it
++	 rather than displaying them at device size.  Use a copy because
++	 the buffer display draws the same surface.  */
++      double scale = FRAME_SCALE_FACTOR (f);
++      cairo_surface_t *scaled = NULL;
++
++      if (scale != 1
++	  && EQ (image_spec_value (img->spec, QCtype, NULL), Qsvg)
++	  && cairo_surface_get_type (surface) == CAIRO_SURFACE_TYPE_IMAGE)
++	{
++	  scaled = cairo_surface_create_similar_image
++	    (surface, cairo_image_surface_get_format (surface),
++	     cairo_image_surface_get_width (surface),
++	     cairo_image_surface_get_height (surface));
++	  cairo_t *cr = cairo_create (scaled);
++	  cairo_set_source_surface (cr, surface, 0, 0);
++	  cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
++	  cairo_paint (cr);
++	  cairo_destroy (cr);
++	  cairo_surface_set_device_scale (scaled, scale, scale);
++	  surface = scaled;
++	}
++#endif
+       if (! old_widget)
+         old_widget = GTK_IMAGE (gtk_image_new_from_surface (surface));
+       else
+         gtk_image_set_from_surface (old_widget, surface);
++#if defined HAVE_PGTK && defined HAVE_RSVG
++      if (scaled)
++	cairo_surface_destroy (scaled);
++#endif
+ #else  /* !HAVE_GTK3 */
+       GdkPixbuf *icon_buf = xg_get_pixbuf_from_surface (surface);
