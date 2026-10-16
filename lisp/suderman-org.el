@@ -16,6 +16,8 @@
 (defvar org-archive-subtree-save-file-p)
 (defvar org-archive-from-agenda)
 (defvar org-tag-line-re)
+(defvar org-state)
+(defvar org-file-tags)
 (defvar org-highlight-links)
 (defvar org-font-lock-extra-keywords)
 (defvar font-lock-beg)
@@ -50,6 +52,9 @@
 (declare-function org-entry-get "org" (epom property &optional inherit literal-nil))
 (declare-function org-get-heading "org" (&optional no-tags no-todo no-priority no-comment))
 (declare-function org-time-string-to-time "org" (s))
+(declare-function org-get-tags "org" (&optional epom local))
+(declare-function org-set-tags "org" (tags))
+(declare-function org-schedule "org" (arg &optional time))
 
 (defun suderman/org-apply-heading-faces (&optional _theme)
   "Scale Org headings and give tags a separate neutral color."
@@ -759,6 +764,42 @@ Without STATE, open the TODO list outside Org or Agenda."
   (interactive)
   (suderman/org-todo "AUTO"))
 
+(defvar suderman/org-dispatch-hosts '(("kit" . ?k) ("cog" . ?c) ("lux" . ?l))
+  "Host tags org-dispatch recognizes, with their fast-selection keys.
+Keep the names in step with the dispatcher's `org-dispatch-hosts'.")
+
+(defun suderman/org-auto-setup ()
+  "Offer a dispatch host and a schedule when a heading enters AUTO.
+Hosts resolve as org-dispatch does: local tags, then #+FILETAGS, never
+parent headings.  Only user commands prompt; Lisp, timers, emacsclient
+and batch state changes pass through untouched."
+  (when (and (equal org-state "AUTO") this-command (not noninteractive))
+    (condition-case nil
+        (let* ((hosts (mapcar #'car suderman/org-dispatch-hosts))
+               (local (org-get-tags nil t))
+               (found (or (seq-intersection local hosts)
+                          (seq-intersection org-file-tags hosts))))
+          (unless (= (length found) 1)
+            (let* ((prompt (concat "AUTO host: "
+                                   (mapconcat (lambda (h)
+                                                (format "[%c]%s" (cdr h) (substring (car h) 1)))
+                                              suderman/org-dispatch-hosts " ")
+                                   " [RET] skip: "))
+                   (key (read-char-choice
+                         prompt (cons ?\r (mapcar #'cdr suderman/org-dispatch-hosts))))
+                   (host (car (rassq key suderman/org-dispatch-hosts))))
+              (when host
+                (org-set-tags (append (seq-difference local hosts) (list host))))))
+          (unless (org-entry-get nil "SCHEDULED")
+            (when (eq (read-char-choice
+                       "AUTO schedule: [RET] next dispatch, [s] schedule: " '(?\r ?s))
+                      ?s)
+              (org-schedule nil))))
+      ;; Let org-todo finish, so an Agenda line still refreshes.
+      (quit (message "AUTO setup quit")))))
+
+(add-hook 'org-after-todo-state-change-hook #'suderman/org-auto-setup)
+
 (defun suderman/org-todo-done ()
   "Set the current Org heading or Agenda entry to DONE."
   (interactive)
@@ -968,6 +1009,10 @@ Return nil so Org continues its normal TAB action."
         org-startup-with-link-previews t
         org-tags-column 0
         org-auto-align-tags nil
+        ;; Host tags exclude each other; one key toggles one and closes.
+        org-tag-persistent-alist
+        `((:startgroup) ,@suderman/org-dispatch-hosts (:endgroup))
+        org-fast-tag-selection-single-key t
         org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id
         org-todo-keywords
         '((sequence "TODO" "PROG" "EVAL" "HOLD" "|" "DONE")
