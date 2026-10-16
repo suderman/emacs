@@ -856,7 +856,10 @@ Without STATE, open the TODO list outside Org or Agenda."
                 `(when ,(if (car state) folded `(not ,folded))
                    . ,(concat char
                               (propertize (cdr state)
-                                          'face 'org-ellipsis
+                                          ;; Default height, so tags and heading
+                                          ;; scale do not resize the arrow.
+                                          'face '(org-ellipsis
+                                                  suderman/fixed-pitch-text)
                                           'mouse-face 'highlight
                                           'pointer 'hand
                                           'help-echo (if (eq kind 'drawer)

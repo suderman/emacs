@@ -154,7 +154,11 @@ Without FRAME, update every frame."
         (when (featurep 'android)
           (set-fontset-font t nil (font-spec :family mono) frame 'append)
           (when (and fallback (find-font (font-spec :family fallback) frame))
-            (set-fontset-font t nil (font-spec :family fallback) frame 'append))))
+            (set-fontset-font t nil (font-spec :family fallback) frame 'append)))
+        ;; Org fold arrows otherwise fall back to bitmap-like Unifont.
+        (when (and fallback (find-font (font-spec :family fallback) frame))
+          (dolist (char '(?▸ ?▾))
+            (set-fontset-font t char (font-spec :family fallback) frame 'prepend))))
       (when (and variable (find-font (font-spec :family variable) frame))
         (set-face-attribute 'variable-pitch frame :family variable
                             :height suderman/variable-font-scale)))
