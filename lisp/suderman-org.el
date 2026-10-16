@@ -871,13 +871,15 @@ Without STATE, open the TODO list outside Org or Agenda."
 
 (defun suderman/org-extend-fold-arrow-region (beg _end _old-len)
   "Refontify the preceding heading or drawer when its contents change at BEG."
-  (save-excursion
-    (goto-char beg)
-    (beginning-of-line)
-    (while (and (re-search-backward
-                 (concat org-outline-regexp-bol "\\|" org-drawer-regexp) nil t)
-                (equal (upcase (or (match-string 1) "")) "END")))
-    (setq jit-lock-start (min jit-lock-start (point)))))
+  ;; Runs inside `replace-match', which still needs the caller's match data.
+  (save-match-data
+    (save-excursion
+      (goto-char beg)
+      (beginning-of-line)
+      (while (and (re-search-backward
+                   (concat org-outline-regexp-bol "\\|" org-drawer-regexp) nil t)
+                  (equal (upcase (or (match-string 1) "")) "END")))
+      (setq jit-lock-start (min jit-lock-start (point))))))
 
 (defun suderman/org-remove-fold-arrows ()
   "Remove heading and drawer displays when leaving Org mode."

@@ -639,5 +639,17 @@
     (should (memq 'suderman/org-drawer-block
                   (ensure-list (get-text-property (1- (point)) 'face))))))
 
+(ert-deftest suderman/org-todo-change-leaves-previous-heading-alone ()
+  ;; The fold-arrow change hook once clobbered `replace-match' data,
+  ;; upcasing the heading above.
+  (with-temp-buffer
+    (insert "* Servers :kit:\n** TODO Update\n")
+    (org-mode)
+    (goto-char (point-min))
+    (forward-line 1)
+    (org-todo "PROG")
+    (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                   "* Servers :kit:\n** PROG Update\n"))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here
