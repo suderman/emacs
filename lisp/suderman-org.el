@@ -397,7 +397,7 @@ argument keeps Org's normal newline behavior."
   "Return the current Agenda file set without scanning task directories."
   (append
    (mapcar (lambda (file) (expand-file-name file org-directory))
-           '("inbox.org" "todo.org" "routines.org" "asana.org"))
+           '("inbox.org" "todo.org" "asana.org"))
    (suderman/org--direct-org-files (expand-file-name "calendar" org-directory))
    (suderman/org-context-files)))
 
@@ -426,7 +426,7 @@ argument keeps Org's normal newline behavior."
            (not (suderman/org--archived-path-p current))
            (list current))
       (mapcar (lambda (file) (expand-file-name file org-directory))
-              '("todo.org" "routines.org"))
+              '("todo.org"))
       (suderman/org-context-files)))))
 
 (defun suderman/org--call-contextually
