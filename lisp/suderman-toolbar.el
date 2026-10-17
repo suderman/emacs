@@ -2,12 +2,13 @@
 
 ;;; Commentary:
 ;; A bottom toolbar with sticky Ctrl and Meta, previous and next buffer,
-;; IBuffer, Dirvish, search, the software keyboard (the Meow keypad on
-;; desktop), Tab, and Escape.  Both draw the theme-colored SVG icons in
+;; IBuffer, Dirvish, search, the Meow keypad (with the software keyboard on
+;; Android), Tab, and Escape.  Both draw the theme-colored SVG icons in
 ;; assets/toolbar.  F9 toggles it.
 
 ;;; Code:
 
+(defvar meow-keypad-state-keymap)
 (defvar meow-normal-state-keymap)
 (defvar modifier-bar-modifier-list)
 (defvar overriding-text-conversion-style)
@@ -16,6 +17,7 @@
 (declare-function set-text-conversion-style "textconv.c"
                   (style &optional keep-selection))
 (declare-function tool-bar-apply-modifiers "tool-bar" (event modifiers))
+(declare-function suderman/android-keyboard-visible-p "suderman-android" (frame))
 
 (defun suderman/tool-bar-image (name &optional active)
   "Return a theme-aware tool-bar image expression for NAME.
@@ -115,6 +117,27 @@ rx=\"5\" fill=\"currentColor\" mask=\"url(#m)\"/></svg>"
       (where-is-internal (nth 3 (assq button (cdr (default-value 'tool-bar-map))))
                          meow-normal-state-keymap t))))
 
+(defun suderman/tool-bar-keypad ()
+  "Open the Meow keypad, and on Android the software keyboard with it.
+On Android, a press while the keyboard shows only hides the keyboard."
+  (interactive)
+  (if (and (featurep 'android)
+           (suderman/android-keyboard-visible-p (selected-frame)))
+      (frame-toggle-on-screen-keyboard nil t)
+    (when (featurep 'android)
+      (frame-toggle-on-screen-keyboard nil nil))
+    (meow-keypad)))
+
+(defun suderman/tool-bar-keypad-quit (_prompt)
+  "Make a second keypad button press quit the open Meow keypad.
+On Android, a press while the software keyboard is hidden shows it instead."
+  (when (bound-and-true-p meow-keypad-mode)
+    (if (and (featurep 'android)
+             (not (suderman/android-keyboard-visible-p (selected-frame))))
+        (progn (frame-toggle-on-screen-keyboard nil nil) [])
+      ;; [escape] would reach the keypad as an undefined ESC.
+      [suderman-keypad-quit])))
+
 (defun suderman/setup-tool-bar (&optional theme)
   "Configure the touch-friendly input toolbar idempotently.
 THEME is non-nil when refreshing the toolbar after a theme change."
@@ -167,15 +190,10 @@ THEME is non-nil when refreshing the toolbar after a theme change."
                   :image ,(suderman/tool-bar-image "search")
                   :help "Search the buffer")
       'suderman-files)
-    ;; Desktop has no software keyboard, so the slot opens the keypad instead.
     (define-key-after map [suderman-keyboard]
-      (if (featurep 'android)
-          `(menu-item "Keyboard" suderman/android-toggle-keyboard
-                      :image ,(suderman/tool-bar-image "keyboard")
-                      :help "Show or hide the software keyboard")
-        `(menu-item "Keypad" meow-keypad
-                    :image ,(suderman/tool-bar-image "keypad")
-                    :help "Open the Meow keypad (SPC)"))
+      `(menu-item "Keypad" suderman/tool-bar-keypad
+                  :image ,(suderman/tool-bar-image "keypad")
+                  :help "Open the Meow keypad (SPC)")
       'suderman-search)
     (define-key-after map [suderman-tab]
       `(menu-item "Tab" ignore
@@ -190,6 +208,8 @@ THEME is non-nil when refreshing the toolbar after a theme change."
     (set-default 'tool-bar-map map))
   (define-key input-decode-map [tool-bar suderman-escape] nil)
   (define-key input-decode-map [tool-bar suderman-tab] [tab])
+  (define-key input-decode-map [tool-bar suderman-keyboard]
+              #'suderman/tool-bar-keypad-quit)
   (dolist (button '(suderman-buffers suderman-files suderman-search
                     suderman-previous suderman-next))
     (define-key input-decode-map (vector 'tool-bar button)
@@ -202,6 +222,10 @@ THEME is non-nil when refreshing the toolbar after a theme change."
   (unless theme
     (tool-bar-mode 1))
   (force-mode-line-update t))
+
+(with-eval-after-load 'meow
+  (define-key meow-keypad-state-keymap [suderman-keypad-quit]
+              #'meow-keypad-quit))
 
 ;; Terminal-only builds such as Termux have no tool bar or images.
 (when (fboundp 'tool-bar-mode)
