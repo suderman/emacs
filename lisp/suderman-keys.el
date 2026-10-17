@@ -233,7 +233,7 @@
                "L" #'edger-resize-right
                "u" #'edger-horizontal
                "i" #'edger-vertical
-               "n" '("new frame" . make-frame-command)
+               "n" '("new frame" . suderman/new-frame)
                "o" #'delete-other-windows
                "w" #'edger-close))
 
