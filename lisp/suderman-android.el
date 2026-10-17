@@ -112,8 +112,11 @@ The first toggle reverses the buffer's default; the next restores it."
   "Call SCROLL with DX and DY, swiping sideways where `suderman/sideways-scroll-p'.
 Those buffers stop following point sideways, so a vertical swipe keeps
 the horizontal position, and scroll both ways at once: touch-screen.el
-otherwise ignores sideways movement once a swipe has scrolled vertically."
-  (let ((touch-screen-enable-hscroll (suderman/sideways-scroll-p)))
+otherwise ignores sideways movement once a swipe has scrolled vertically.
+Hide the beginning or end of buffer message SCROLL shows on each drag."
+  (let ((touch-screen-enable-hscroll (suderman/sideways-scroll-p))
+        (inhibit-message t)
+        (message-log-max nil))
     (when touch-screen-enable-hscroll
       (setq-local auto-hscroll-mode nil)
       ;; A nonzero count of sideways steps lifts the lock.
