@@ -155,6 +155,28 @@ The `fling' package continues swipes; see `suderman-windows'."
         echo-keystrokes 0)
   (setq-default make-cursor-line-fully-visible nil))
 
+(defun suderman/android-mark-main-frame ()
+  "Mark the startup frame, which owns the launcher's Android window."
+  (set-frame-parameter nil 'suderman/android-main t))
+
+(defun suderman/android-delete-frame (delete &optional frame force)
+  "Call DELETE on FRAME and FORCE, but keep the launcher's Android window.
+Once the startup frame is gone, the launcher icon cannot reopen Emacs.
+Instead that frame takes another frame's windows, and the other closes."
+  (let* ((frame (window-normalize-frame frame))
+         (other (and (frame-parameter frame 'suderman/android-main)
+                     (seq-find (lambda (f)
+                                 (and (not (eq f frame))
+                                      (not (frame-parent f))
+                                      (eq (frame-terminal f) (frame-terminal frame))))
+                               (frame-list)))))
+    (if (not other)
+        (funcall delete frame force)
+      (window-state-put (window-state-get (frame-root-window other) t)
+                        (frame-root-window frame) 'safe)
+      (funcall delete other force)
+      (select-frame-set-input-focus frame))))
+
 (when (featurep 'android)
   (require 'server)
   (unless (server-running-p)
@@ -169,6 +191,8 @@ The `fling' package continues swipes; see `suderman-windows'."
   (global-set-key [touchscreen-pinch] #'suderman/android-global-pinch)
   (suderman/android-setup-touch-scrolling)
   (suderman/android-keyboard-visible-p (selected-frame))
+  (add-hook 'window-setup-hook #'suderman/android-mark-main-frame)
+  (advice-add 'delete-frame :around #'suderman/android-delete-frame)
   (define-key function-key-map [volume-down] #'suderman/android-volume-control)
   (define-key function-key-map [volume-up] #'suderman/android-volume-meta))
 
