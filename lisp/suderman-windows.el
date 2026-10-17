@@ -32,6 +32,7 @@
   "M-L" '("divider right" . edger-resize-right)
   "M-u" '("split below" . edger-horizontal)
   "M-i" '("split right" . edger-vertical)
+  "M-n" '("new frame" . make-frame-command)
   "M-w" '("close window" . edger-close))
 
 (defun suderman/install-keys (map keys &optional prefix)
