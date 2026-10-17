@@ -125,6 +125,15 @@ Hide the beginning or end of buffer message SCROLL shows on each drag."
           (setcar hscrolled 1))))
     (funcall scroll dx dy)))
 
+(defun suderman/android-touch-lift-point (&rest _)
+  "Move point up from a bottom line that hangs below the window.
+`pixel-scroll-precision-scroll-up-page' leaves point on such a line, as
+on a large Org heading, and redisplay then recenters the window."
+  (when-let* ((pos (pos-visible-in-window-p (point) nil t))
+              ((> (+ (cadr pos) (line-pixel-height))
+                  (window-body-height nil t))))
+    (vertical-motion -1)))
+
 (defun suderman/android-setup-touch-scrolling ()
   "Configure Android touch input idempotently.
 The `fling' package continues swipes; see `suderman-windows'."
@@ -136,6 +145,8 @@ The `fling' package continues swipes; see `suderman-windows'."
   ;; word selection.  Shorten long press and hide drag events in the echo area.
   (advice-add 'touch-screen-handle-scroll :around
               #'suderman/android-touch-hscroll)
+  (advice-add 'pixel-scroll-precision-scroll-up-page :after
+              #'suderman/android-touch-lift-point)
   (setq touch-screen-enable-hscroll nil
         touch-screen-precision-scroll t
         touch-screen-word-select t
