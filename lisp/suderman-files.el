@@ -688,6 +688,15 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
   :config
   (pdf-loader-install))
 
+(defvar server-buffer-clients)
+
+(defun suderman/dirvish-release-client-buffer ()
+  "Detach a directory that emacsclient opened from its client.
+Emacs 31 segfaults when that Dirvish buffer shows in a second tab.  The
+client's frame, not this buffer, keeps a terminal client alive."
+  (when (derived-mode-p 'dired-mode)
+    (setq server-buffer-clients nil)))
+
 (use-package dirvish
   :demand t
   :init
@@ -737,6 +746,7 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
         (overlay-put ov 'priority 1)
         `(ov . ,ov))))
   (dirvish-override-dired-mode 1)
+  (add-hook 'server-switch-hook #'suderman/dirvish-release-client-buffer)
   (require 'dirvish-yank)
   (require 'dirvish-rsync)
   (require 'dirvish-side)
