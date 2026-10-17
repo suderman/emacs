@@ -19,6 +19,7 @@
                   (style &optional keep-selection))
 (declare-function tool-bar-apply-modifiers "tool-bar" (event modifiers))
 (declare-function suderman/android-keyboard-visible-p "suderman-android" (frame))
+(declare-function suderman/android-volume-up "suderman-android")
 
 (defun suderman/tool-bar-image (name &optional active)
   "Return a theme-aware tool-bar image expression for NAME.
@@ -119,18 +120,11 @@ rx=\"5\" fill=\"currentColor\" mask=\"url(#m)\"/></svg>"
                          meow-normal-state-keymap t))))
 
 (defun suderman/tool-bar-keypad ()
-  "Open the Meow keypad, and on Android the software keyboard with it.
-On Android, a press while the keyboard shows only hides the keyboard."
+  "Open the Meow keypad.
+On Android, act like Volume Up: show a hidden software keyboard first."
   (interactive)
-  (if (and (featurep 'android)
-           (suderman/android-keyboard-visible-p (selected-frame)))
-      (frame-toggle-on-screen-keyboard nil t)
-    (when (featurep 'android)
-      (frame-toggle-on-screen-keyboard nil nil)
-      ;; The keyboard shrinks the frame, which erases a key list drawn first.
-      (with-timeout (0.6)
-        (while (not (suderman/android-keyboard-visible-p (selected-frame)))
-          (sit-for 0.02))))
+  (if (featurep 'android)
+      (suderman/android-volume-up)
     ;; A touch has no quick next key to wait for, so describe keys at once.
     (let ((meow-keypad-describe-delay 0))
       (meow-keypad))))
