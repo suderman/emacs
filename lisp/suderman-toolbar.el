@@ -8,6 +8,7 @@
 
 ;;; Code:
 
+(defvar meow-keypad-describe-delay)
 (defvar meow-keypad-state-keymap)
 (defvar meow-normal-state-keymap)
 (defvar modifier-bar-modifier-list)
@@ -125,8 +126,14 @@ On Android, a press while the keyboard shows only hides the keyboard."
            (suderman/android-keyboard-visible-p (selected-frame)))
       (frame-toggle-on-screen-keyboard nil t)
     (when (featurep 'android)
-      (frame-toggle-on-screen-keyboard nil nil))
-    (meow-keypad)))
+      (frame-toggle-on-screen-keyboard nil nil)
+      ;; The keyboard shrinks the frame, which erases a key list drawn first.
+      (with-timeout (0.6)
+        (while (not (suderman/android-keyboard-visible-p (selected-frame)))
+          (sit-for 0.02))))
+    ;; A touch has no quick next key to wait for, so describe keys at once.
+    (let ((meow-keypad-describe-delay 0))
+      (meow-keypad))))
 
 (defun suderman/tool-bar-keypad-quit (_prompt)
   "Make a second keypad button press quit the open Meow keypad.
