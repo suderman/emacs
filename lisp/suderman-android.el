@@ -10,6 +10,7 @@
 (require 'subr-x)
 
 (defvar global-text-scale-adjust-limits)
+(defvar meow-keypad-describe-delay)
 (defvar touch-screen-enable-hscroll)
 (defvar touch-screen-extend-selection)
 (defvar touch-screen-delay)
@@ -53,6 +54,27 @@ resize can therefore be mistaken for the keyboard."
   (let ((frame (selected-frame)))
     (frame-toggle-on-screen-keyboard
      frame (suderman/android-keyboard-visible-p frame))))
+
+(defun suderman/android-volume-up ()
+  "Show the software keyboard, or with it showing, open the Meow keypad."
+  (interactive)
+  (if (not (suderman/android-keyboard-visible-p (selected-frame)))
+      (suderman/android-show-keyboard)
+    (let ((meow-keypad-describe-delay 0))
+      (meow-keypad))))
+
+;; The open Meow keypad reads keys itself, so decode its volume keys.
+(defun suderman/android-keypad-volume-up (_prompt)
+  "Show the hidden software keyboard without leaving the Meow keypad."
+  (when (bound-and-true-p meow-keypad-mode)
+    (unless (suderman/android-keyboard-visible-p (selected-frame))
+      (suderman/android-show-keyboard))
+    []))
+
+(defun suderman/android-keypad-volume-down (_prompt)
+  "Quit the Meow keypad and keep the software keyboard."
+  (when (bound-and-true-p meow-keypad-mode)
+    [suderman-keypad-quit]))
 
 (defun suderman/android-global-pinch (event)
   "Use Android pinch EVENT to scale the default face globally."
@@ -188,8 +210,11 @@ Instead that frame takes another frame's windows, and the other closes."
   (suderman/android-keyboard-visible-p (selected-frame))
   (add-hook 'window-setup-hook #'suderman/android-mark-main-frame)
   (advice-add 'delete-frame :around #'suderman/android-delete-frame)
-  (global-set-key [volume-up] #'suderman/android-show-keyboard)
-  (global-set-key [volume-down] #'suderman/android-hide-keyboard))
+  (global-set-key [volume-up] #'suderman/android-volume-up)
+  (global-set-key [volume-down] #'suderman/android-hide-keyboard)
+  (define-key input-decode-map [volume-up] #'suderman/android-keypad-volume-up)
+  (define-key input-decode-map [volume-down]
+              #'suderman/android-keypad-volume-down))
 
 (provide 'suderman-android)
 ;;; suderman-android.el ends here
