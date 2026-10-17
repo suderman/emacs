@@ -627,6 +627,30 @@ as the nightly archive timer; return the number of headings."
   (interactive)
   (suderman/org--call-contextually #'org-insert-link))
 
+(defun suderman/org-collapse-all ()
+  "Collapse all headings, keeping a lone top-level heading open as a title."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "This command requires an Org buffer"))
+  (org-overview)
+  (let ((top (org-map-entries #'point "LEVEL=1")))
+    (when (length= top 1)
+      (save-excursion
+        (goto-char (car top))
+        (org-fold-show-entry)
+        (org-fold-show-children)))))
+
+(defun suderman/org-expand-or-collapse-all ()
+  "Expand all headings, drawers, and blocks, or collapse when none is folded."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "This command requires an Org buffer"))
+  (if (< (org-fold-core-next-folding-state-change
+          '(headline drawer block) (point-min))
+         (point-max))
+      (org-fold-show-all)
+    (suderman/org-collapse-all)))
+
 (defun suderman/org-refile ()
   "Refile an Org item, or open the TODO list."
   (interactive)

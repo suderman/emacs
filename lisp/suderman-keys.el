@@ -74,6 +74,7 @@
  (define-keymap
    "SPC" #'execute-extended-command
    "?" #'suderman/cheatsheet
+   "TAB" '("expand/collapse all" . suderman/org-expand-or-collapse-all)
    "e" '("mail" . suderman/mail)
    "0" #'meow-digit-argument
    "1" #'meow-digit-argument
@@ -146,7 +147,6 @@
 
    "o" (cons "org"
              (define-keymap
-               "TAB" '("collapse all" . org-overview)
                "a" '("archive" . suderman/org-archive)
                "A" '("archive completed in buffer" . suderman/org-archive-done)
                "c" #'org-capture
@@ -156,8 +156,10 @@
                "E" '("export" . suderman/org-export)
                "g" #'suderman/org-heading
                "h" '("HOLD" . suderman/org-todo-hold)
-               "i" #'suderman/org-insert-link
+               "i" '("expand/collapse all" . suderman/org-expand-or-collapse-all)
+               "I" '("collapse all" . suderman/org-collapse-all)
                "l" #'org-store-link
+               "L" #'suderman/org-insert-link
                "m" '("AUTO" . suderman/org-todo-auto)
                "n" #'org-toggle-narrow-to-subtree
                "o" '("dashboard" . suderman/org-dashboard)
