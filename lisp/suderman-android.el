@@ -77,27 +77,20 @@ resize can therefore be mistaken for the keyboard."
   "Call SCROLL with DX and DY, swiping sideways only where lines are truncated.
 Dired, Dirvish, and IBuffer stay vertical-only.  Other truncated buffers
 stop following point sideways, so a vertical swipe keeps the horizontal
-position."
+position, and scroll both ways at once: touch-screen.el otherwise ignores
+sideways movement once a swipe has scrolled vertically."
   (let ((touch-screen-enable-hscroll
          (and truncate-lines
               (not (derived-mode-p 'dired-mode 'ibuffer-mode
                                    'dirvish-directory-view-mode
                                    'dirvish-special-preview-mode)))))
     (when touch-screen-enable-hscroll
-      (setq-local auto-hscroll-mode nil))
+      (setq-local auto-hscroll-mode nil)
+      ;; A nonzero count of sideways steps lifts the lock.
+      (let ((hscrolled (nthcdr 8 touch-screen-current-tool)))
+        (when (and hscrolled (memq (car hscrolled) '(nil 0)))
+          (setcar hscrolled 1))))
     (funcall scroll dx dy)))
-
-(defun suderman/android-hscrolled-scroll-down (scroll delta)
-  "Call SCROLL with DELTA, then fix it for a horizontally scrolled window.
-`pixel-scroll-precision-scroll-down-page' finds the new start at the left
-edge, mid-line once scrolled sideways, and then drops the existing
-vertical scroll while the start line stays the same."
-  (let ((start (window-start))
-        (vscroll (window-vscroll nil t)))
-    (funcall scroll delta)
-    (when (and (> (window-hscroll) 0)
-               (= (window-start) start))
-      (set-window-vscroll nil (+ vscroll delta) t t))))
 
 (defun suderman/android-setup-touch-scrolling ()
   "Configure Android touch input idempotently.
@@ -110,8 +103,6 @@ The `fling' package continues swipes; see `suderman-windows'."
   ;; word selection.  Shorten long press and hide drag events in the echo area.
   (advice-add 'touch-screen-handle-scroll :around
               #'suderman/android-touch-hscroll)
-  (advice-add 'pixel-scroll-precision-scroll-down-page :around
-              #'suderman/android-hscrolled-scroll-down)
   (setq touch-screen-enable-hscroll nil
         touch-screen-precision-scroll t
         touch-screen-word-select t
