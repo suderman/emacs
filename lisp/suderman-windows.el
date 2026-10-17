@@ -33,6 +33,7 @@
   "M-u" '("split below" . edger-horizontal)
   "M-i" '("split right" . edger-vertical)
   "M-n" '("new frame" . suderman/new-frame)
+  "M-N" '("new tab" . tab-bar-new-tab)
   "M-w" '("close window" . edger-close))
 
 (defun suderman/install-keys (map keys &optional prefix)
@@ -105,13 +106,13 @@ Prefixes such as ESC are merged key by key, so MAP keeps its other bindings."
     (user-error "Cannot delete the only window in the only tab"))))
 
 (defun suderman/new-frame ()
-  "Open a new graphical frame.
+  "Open a new graphical frame, or a new tab in a terminal.
 A terminal frame would only hide the current one; the multiplexer owns
 new windows there."
   (interactive)
   (if (display-graphic-p)
       (make-frame-command)
-    (user-error "New frames need a graphical display")))
+    (tab-bar-new-tab)))
 
 (defun suderman/shrink-window-width ()
   "Shrink the selected window horizontally."

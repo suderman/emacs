@@ -54,7 +54,8 @@
   "M-z" #'suderman/zoom-window-toggle
   "C-x 0" #'suderman/delete-window-or-tab)
 
-(setq tab-bar-close-last-tab-choice 'delete-frame)
+(setq tab-bar-close-last-tab-choice 'delete-frame
+      tab-bar-show 1)
 
 ;; Meow's state maps outrank major-mode maps, so window keys go there too.
 (dolist (map (list global-map meow-normal-state-keymap meow-motion-state-keymap))
@@ -234,6 +235,7 @@
                "u" #'edger-horizontal
                "i" #'edger-vertical
                "n" '("new frame" . suderman/new-frame)
+               "N" '("new tab" . tab-bar-new-tab)
                "o" #'delete-other-windows
                "w" #'edger-close))
 
