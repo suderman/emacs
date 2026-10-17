@@ -214,6 +214,7 @@
                "o" '("org indentation" . org-indent-mode)
                "r" '("read only" . read-only-mode)
                "s" (and (fboundp 'jinx-mode) '("spelling" . jinx-mode))
+               "t" '("sideways scroll" . suderman/toggle-sideways-scroll)
                "v" '("visual lines" . visual-line-mode)
                "w" '("whitespace" . whitespace-mode)))
 

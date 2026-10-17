@@ -73,17 +73,47 @@ resize can therefore be mistaken for the keyboard."
         (set-face-attribute 'default nil :height new-height)
         (suderman/sync-fixed-pitch-height)))))
 
+(defvar-local suderman/sideways-scroll nil
+  "How `suderman/toggle-sideways-scroll' overrode this buffer, or nil.
+The value is (ON VISUAL-LINE TRUNCATE): whether sideways scrolling is
+on, and the `visual-line-mode' and `truncate-lines' to restore.")
+
+(defun suderman/sideways-scroll-p ()
+  "Return non-nil when touch may scroll the current buffer sideways.
+By default that is where lines are truncated, except Dired, Dirvish, and
+IBuffer, which stay vertical-only."
+  (if suderman/sideways-scroll
+      (car suderman/sideways-scroll)
+    (and truncate-lines
+         (not (derived-mode-p 'dired-mode 'ibuffer-mode
+                              'dirvish-directory-view-mode
+                              'dirvish-special-preview-mode)))))
+
+(defun suderman/toggle-sideways-scroll ()
+  "Toggle wrapping and sideways scrolling in the current buffer.
+The first toggle reverses the buffer's default; the next restores it."
+  (interactive)
+  (if-let* ((saved suderman/sideways-scroll))
+      (progn
+        (setq suderman/sideways-scroll nil)
+        (visual-line-mode (if (nth 1 saved) 1 -1))
+        (setq truncate-lines (nth 2 saved)))
+    (let ((on (not (suderman/sideways-scroll-p))))
+      (setq suderman/sideways-scroll (list on visual-line-mode truncate-lines))
+      (when on (visual-line-mode -1))
+      (setq truncate-lines on)))
+  (unless (suderman/sideways-scroll-p)
+    (kill-local-variable 'auto-hscroll-mode)
+    (dolist (window (get-buffer-window-list nil nil t))
+      (set-window-hscroll window 0)))
+  (message "Sideways scrolling %s" (if (suderman/sideways-scroll-p) "on" "off")))
+
 (defun suderman/android-touch-hscroll (scroll dx dy)
-  "Call SCROLL with DX and DY, swiping sideways only where lines are truncated.
-Dired, Dirvish, and IBuffer stay vertical-only.  Other truncated buffers
-stop following point sideways, so a vertical swipe keeps the horizontal
-position, and scroll both ways at once: touch-screen.el otherwise ignores
-sideways movement once a swipe has scrolled vertically."
-  (let ((touch-screen-enable-hscroll
-         (and truncate-lines
-              (not (derived-mode-p 'dired-mode 'ibuffer-mode
-                                   'dirvish-directory-view-mode
-                                   'dirvish-special-preview-mode)))))
+  "Call SCROLL with DX and DY, swiping sideways where `suderman/sideways-scroll-p'.
+Those buffers stop following point sideways, so a vertical swipe keeps
+the horizontal position, and scroll both ways at once: touch-screen.el
+otherwise ignores sideways movement once a swipe has scrolled vertically."
+  (let ((touch-screen-enable-hscroll (suderman/sideways-scroll-p)))
     (when touch-screen-enable-hscroll
       (setq-local auto-hscroll-mode nil)
       ;; A nonzero count of sideways steps lifts the lock.
@@ -97,8 +127,8 @@ sideways movement once a swipe has scrolled vertically."
 The `fling' package continues swipes; see `suderman-windows'."
   (require 'pixel-scroll)
   (require 'touch-screen)
-  ;; Swipe sideways only where lines are truncated, such as Org Agenda;
-  ;; horizontal scrolling would defeat visual wrapping elsewhere.
+  ;; Swipe sideways only where lines are truncated, such as Org Agenda, or
+  ;; where `SPC t t' turned it on; it would defeat visual wrapping elsewhere.
   ;; Keep vertical swipes pixel-precise, and let touch adjust either end of a
   ;; word selection.  Shorten long press and hide drag events in the echo area.
   (advice-add 'touch-screen-handle-scroll :around
