@@ -201,5 +201,60 @@
                             #'forward-char)))
             (kill-buffer sheet)))))))
 
+;; Which-Key keypad clicks
+
+(ert-deftest suderman/meow-keypad-click-types-the-which-key-entry ()
+  ;; Hooks into Which-Key's entry formatting; an upgrade could drop the tag.
+  (require 'which-key)
+  (let* ((entries (which-key--format-and-replace
+                   '(("C-x $" . "set-selective-display")
+                     ("C-x t" . "group:toggles"))))
+         (buffer (get-buffer-create " *which-key-click-test*"))
+         (which-key--buffer buffer)
+         (typed nil))
+    (unwind-protect
+        (save-window-excursion
+          (with-current-buffer buffer
+            (erase-buffer)
+            (dolist (entry entries)
+              (insert (apply #'concat entry) "\n")))
+          (set-window-buffer (selected-window) buffer)
+          (cl-letf (((symbol-function 'meow--keypad-handle-input-event)
+                     (lambda (event) (push event typed) t)))
+            (let ((click (lambda (type text)
+                           (let ((suderman/meow-keypad-last-key
+                                  (list type
+                                        (list (selected-window)
+                                              (with-current-buffer buffer
+                                                (goto-char (point-min))
+                                                (search-forward text)
+                                                (match-beginning 0))
+                                              '(0 . 0) 0))))
+                             (suderman/meow-keypad-click)))))
+              (should-not (funcall click 'down-mouse-1 "set-selective"))
+              (should (funcall click 'mouse-1 "set-selective"))
+              ;; Anywhere on a group's entry, including its "+".
+              (should (funcall click 'mouse-2 "+"))
+              (should (equal typed '(?t ?$))))))
+      (kill-buffer buffer))))
+
+(ert-deftest suderman/meow-keypad-read-key-returns-taps-in-place ()
+  ;; touch-screen.el only turns a tap into a click where `read-key-empty-map'
+  ;; binds one, and selects the window tapped.
+  (save-window-excursion
+    (let ((origin (selected-window))
+          (other (split-window)))
+      (let ((meow-keypad-mode t))
+        (should (eq (suderman/meow-keypad-read-taps
+                     (lambda ()
+                       (select-window other)
+                       (lookup-key read-key-empty-map [mouse-2])))
+                    'ignore))
+        (should (eq (selected-window) origin)))
+      (let ((meow-keypad-mode nil))
+        (should-not (eq (suderman/meow-keypad-read-taps
+                         (lambda () read-key-empty-map))
+                        suderman/meow-keypad-read-key-map))))))
+
 (provide 'suderman-input-test)
 ;;; suderman-input-test.el ends here

@@ -15,6 +15,11 @@
 (declare-function suderman/dirvish-side-toggle "suderman-files")
 (declare-function meow-insert-exit "meow" ())
 (declare-function meow-keypad-quit "meow-keypad" ())
+(declare-function meow--keypad-handle-input-event "meow-keypad" (input-event))
+(declare-function which-key--popup-showing-p "which-key" ())
+(declare-function which-key--pages-num-pages "which-key" (pages))
+(defvar which-key--pages-obj)
+(defvar which-key--buffer)
 
 ;;;; Keypad
 
@@ -35,6 +40,95 @@
   (interactive)
   (which-key-show-previous-page-cycle)
   nil)
+
+(defun suderman/meow-keypad-page-or-key (page)
+  "Call PAGE while Which-Key shows several pages, else type the key.
+Otherwise the key stays part of the keypad sequence, as in `SPC x <'."
+  (if (and (which-key--popup-showing-p)
+           which-key--pages-obj
+           (> (which-key--pages-num-pages which-key--pages-obj) 1))
+      (funcall page)
+    (meow--keypad-handle-input-event last-input-event)))
+
+(defun suderman/meow-keypad-next-page-or-key ()
+  "Show the next Which-Key page, or type the key when there is one page."
+  (interactive)
+  (suderman/meow-keypad-page-or-key #'suderman/meow-keypad-next-page))
+
+(defun suderman/meow-keypad-previous-page-or-key ()
+  "Show the previous Which-Key page, or type the key when there is one page."
+  (interactive)
+  (suderman/meow-keypad-page-or-key #'suderman/meow-keypad-previous-page))
+
+(defun suderman/which-key-tag-entry (replace key-binding)
+  "Call REPLACE with KEY-BINDING, tagging the shown key with the original.
+Replacements can change how a key is shown, so keep the key itself as
+`suderman/which-key-key'."
+  (let ((result (funcall replace key-binding))
+        (key (car-safe key-binding)))
+    (if (and (consp result) (stringp key) (stringp (car result)))
+        (cons (propertize (car result) 'suderman/which-key-key key)
+              (cdr result))
+      result)))
+
+(defun suderman/which-key-tag-entries (entries)
+  "Spread each of ENTRIES' `suderman/which-key-key' over the whole entry.
+ENTRIES are (KEY SEPARATOR DESCRIPTION) strings, so a click anywhere on
+one, including a group's \"+\", finds its key."
+  (dolist (entry entries entries)
+    (when-let* ((key (and (stringp (car entry))
+                          (get-text-property 0 'suderman/which-key-key
+                                             (car entry)))))
+      (setcdr entry (mapcar (lambda (part)
+                              (if (stringp part)
+                                  (propertize part 'suderman/which-key-key key)
+                                part))
+                            (cdr entry))))))
+
+(defvar suderman/meow-keypad-read-key-map
+  (let ((map (make-sparse-keymap)))
+    (keymap-set map "<mouse-1>" #'ignore)
+    (keymap-set map "<mouse-2>" #'ignore)
+    map)
+  "Keymap `read-key' uses while Meow's keypad waits for a key.
+touch-screen.el turns a tap into a click only where a click is bound, and
+`read-key' normally hides every binding.")
+
+(defvar suderman/meow-keypad-last-key nil
+  "The last event `read-key' returned to Meow's keypad.
+For a tap, `last-input-event' is the raw touch event instead.")
+
+(defun suderman/meow-keypad-read-taps (read-key &rest args)
+  "Call READ-KEY with ARGS, returning taps as clicks in Meow's keypad.
+A tap also selects the window tapped, so select the original again."
+  (if (not (bound-and-true-p meow-keypad-mode))
+      (apply read-key args)
+    (let ((read-key-empty-map suderman/meow-keypad-read-key-map)
+          (window (selected-window)))
+      (unwind-protect
+          (setq suderman/meow-keypad-last-key (apply read-key args))
+        (when (and (window-live-p window)
+                   (not (eq window (selected-window))))
+          (select-window window))))))
+
+(defun suderman/meow-keypad-click ()
+  "Type the key of the Which-Key entry under a click, as if pressed.
+Meow's keypad popup lists the keys typed at this point, so a click acts
+on that entry.  Ignore clicks elsewhere and the press half of a click."
+  (interactive)
+  (let* ((event suderman/meow-keypad-last-key)
+         (posn (event-start event))
+         (window (posn-window posn))
+         (pos (posn-point posn))
+         (key (and (memq (car-safe event) '(mouse-1 mouse-2))
+                   (windowp window)
+                   (eq (window-buffer window) which-key--buffer)
+                   pos
+                   (get-text-property pos 'suderman/which-key-key
+                                      which-key--buffer)))
+         (keys (and key (ignore-errors (key-parse key)))))
+    (when (> (length keys) 0)
+      (meow--keypad-handle-input-event (aref keys (1- (length keys)))))))
 
 (defun suderman/meow-escape ()
   "Cancel any selection, then exit Insert state or return to the top level."
@@ -703,6 +797,19 @@ bindings that were deleted from source."
               #'suderman/meow-keypad-previous-page)
   (keymap-set meow-keypad-state-keymap "<up>"
               #'suderman/meow-keypad-previous-page)
+  (keymap-set meow-keypad-state-keymap ">"
+              #'suderman/meow-keypad-next-page-or-key)
+  (keymap-set meow-keypad-state-keymap "<"
+              #'suderman/meow-keypad-previous-page-or-key)
+  ;; Click a Which-Key entry to type its key.
+  (keymap-set meow-keypad-state-keymap "<down-mouse-1>" #'ignore)
+  (keymap-set meow-keypad-state-keymap "<mouse-1>" #'suderman/meow-keypad-click)
+  ;; A tap on a button, such as a description, arrives as mouse-2.
+  (keymap-set meow-keypad-state-keymap "<mouse-2>" #'suderman/meow-keypad-click)
+  (advice-add 'read-key :around #'suderman/meow-keypad-read-taps)
+  (advice-add 'which-key--maybe-replace :around #'suderman/which-key-tag-entry)
+  (advice-add 'which-key--format-and-replace :filter-return
+              #'suderman/which-key-tag-entries)
   ;; Toolbar buttons without a keypad key, such as Esc, cancel the keypad.
   (keymap-set meow-keypad-state-keymap "<tool-bar>" #'meow-keypad-quit)
   (meow-global-mode 1)
