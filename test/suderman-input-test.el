@@ -78,20 +78,6 @@
         (should-not events)
         (should (equal applied (list ?x (list remaining))))))))
 
-(ert-deftest suderman/android-volume-buttons-support-modifiers-and-chords ()
-  (cl-letf (((symbol-function 'read-event) (lambda (&rest _) 'volume-up)))
-    (should (equal (suderman/android-volume-control nil) [escape])))
-  (cl-letf (((symbol-function 'read-event) (lambda (&rest _) 'volume-down)))
-    (should (equal (suderman/android-volume-meta nil) [tab])))
-  (cl-letf (((symbol-function 'read-event) (lambda (&rest _) ?x))
-            ((symbol-function 'event-apply-modifier)
-             (lambda (event modifier bit prefix)
-               (list event modifier bit prefix))))
-    (should (equal (suderman/android-volume-control nil)
-                   [(120 control 26 "C-")]))
-    (should (equal (suderman/android-volume-meta nil)
-                   [(120 meta 27 "M-")]))))
-
 
 ;; Meow editing behavior
 

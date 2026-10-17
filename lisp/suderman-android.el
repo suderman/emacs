@@ -1,8 +1,8 @@
 ;;; suderman-android.el --- Android platform bootstrap -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Android-only input: volume-key modifiers, pinch zoom, touch scrolling, the
-;; software keyboard, the Emacs server, and Termux executables.  The toolbar
+;; Android-only input: volume keys for the software keyboard, pinch zoom,
+;; touch scrolling, the Emacs server, and Termux executables.  The toolbar
 ;; shared with desktop lives in `suderman-toolbar'.
 
 ;;; Code:
@@ -22,20 +22,15 @@
 (defconst suderman/android-termux-bin
   "/data/data/com.termux/files/usr/bin")
 
-(defun suderman/android-volume-control (_prompt)
-  "Apply Control to the next event, or make Volume Up send Escape."
-  (let ((event (read-event)))
-    (if (eq event 'volume-up)
-        [escape]
-      (vector (event-apply-modifier event 'control 26 "C-")))))
+(defun suderman/android-show-keyboard ()
+  "Show the Android software keyboard for the selected frame."
+  (interactive)
+  (frame-toggle-on-screen-keyboard (selected-frame) nil))
 
-(defun suderman/android-volume-meta (_prompt)
-  "Apply Meta to the next event, or make Volume Down send Tab."
-  (let ((event (read-event)))
-    (if (eq event 'volume-down)
-        [tab]
-      (vector (event-apply-modifier event 'meta 27 "M-")))))
-
+(defun suderman/android-hide-keyboard ()
+  "Hide the Android software keyboard for the selected frame."
+  (interactive)
+  (frame-toggle-on-screen-keyboard (selected-frame) t))
 
 (defun suderman/android-keyboard-visible-p (frame)
   "Return non-nil when FRAME appears shortened by the Android keyboard.
@@ -193,8 +188,8 @@ Instead that frame takes another frame's windows, and the other closes."
   (suderman/android-keyboard-visible-p (selected-frame))
   (add-hook 'window-setup-hook #'suderman/android-mark-main-frame)
   (advice-add 'delete-frame :around #'suderman/android-delete-frame)
-  (define-key function-key-map [volume-down] #'suderman/android-volume-control)
-  (define-key function-key-map [volume-up] #'suderman/android-volume-meta))
+  (global-set-key [volume-up] #'suderman/android-show-keyboard)
+  (global-set-key [volume-down] #'suderman/android-hide-keyboard))
 
 (provide 'suderman-android)
 ;;; suderman-android.el ends here
