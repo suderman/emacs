@@ -158,8 +158,8 @@
                "h" '("HOLD" . suderman/org-todo-hold)
                "i" '("expand/collapse all" . suderman/org-expand-or-collapse-all)
                "I" '("collapse all" . suderman/org-collapse-all)
-               "l" #'org-store-link
-               "L" #'suderman/org-insert-link
+               "l" #'suderman/org-insert-link
+               "L" #'org-store-link
                "m" '("AUTO" . suderman/org-todo-auto)
                "n" #'org-toggle-narrow-to-subtree
                "o" '("dashboard" . suderman/org-dashboard)
