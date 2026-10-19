@@ -648,5 +648,20 @@
     (should (equal (buffer-substring-no-properties (point-min) (point-max))
                    "* Servers :kit:\n** PROG Update\n"))))
 
+(ert-deftest suderman/org-move-keeps-last-folded-subtree-folded ()
+  ;; Org's delayed fold repair reopened the last subtree after moving it up.
+  (with-temp-buffer
+    (insert "* A\na body\n* B\nb body\n\n\n* Last\n- x\n- y\n")
+    (org-mode)
+    (org-fold-hide-sublevels 1)
+    (goto-char (point-max))
+    (backward-char)
+    (suderman/org-move #'org-metaup)
+    (org-fold-core--process-delayed)
+    (should (equal (buffer-substring-no-properties (line-beginning-position)
+                                                   (line-end-position))
+                   "* Last"))
+    (should (org-fold-folded-p (line-end-position) 'outline))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here

@@ -13,6 +13,7 @@
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/dirvish-side-toggle "suderman-files")
+(declare-function suderman/org-move "suderman-org" (command))
 (declare-function meow-insert-exit "meow" ())
 (declare-function meow-keypad-quit "meow-keypad" ())
 (declare-function meow--keypad-handle-input-event "meow-keypad" (input-event))
@@ -486,7 +487,7 @@ An active selection is replaced without modifying the kill ring."
   "Move the current Org element or ordinary lines upward."
   (interactive)
   (if (derived-mode-p 'org-mode)
-      (call-interactively #'org-metaup)
+      (suderman/org-move #'org-metaup)
     (if (use-region-p)
         (suderman/meow--move-selected-lines #'move-text-up)
       (call-interactively #'move-text-up))))
@@ -495,7 +496,7 @@ An active selection is replaced without modifying the kill ring."
   "Move the current Org element or ordinary lines downward."
   (interactive)
   (if (derived-mode-p 'org-mode)
-      (call-interactively #'org-metadown)
+      (suderman/org-move #'org-metadown)
     (if (use-region-p)
         (suderman/meow--move-selected-lines #'move-text-down)
       (call-interactively #'move-text-down))))

@@ -1118,6 +1118,25 @@ Linewise text would otherwise land inside the heading's hidden body."
             (goto-char start)))
       (call-interactively #'suderman/meow-paste))))
 
+(defun suderman/org-move (command)
+  "Move the Org element at point with COMMAND, keeping a folded heading folded.
+Point just past a folded heading's line moves to that heading first.
+Org's delayed fold repair reopens some moved subtrees, such as the last
+one in the buffer, so run it now and fold again."
+  (suderman/org-goto-adjacent-heading)
+  (if (not (and (org-at-heading-p)
+                (org-fold-folded-p (line-end-position) 'outline)))
+      (call-interactively command)
+    ;; Org restores the column with `move-to-column', which can pass the
+    ;; line end into the hidden body.
+    (let ((offset (- (point) (line-beginning-position))))
+      (beginning-of-line)
+      (call-interactively command)
+      (org-fold-core--process-delayed)
+      (org-fold-subtree t)
+      (goto-char (min (+ (line-beginning-position) offset)
+                      (line-end-position))))))
+
 (defun suderman/org-cycle-adjacent-heading ()
   "Move from a folded subtree's boundary to its visible heading.
 Return nil so Org continues its normal TAB action."
