@@ -10,6 +10,8 @@
 (require 'use-package)
 
 (defvar hs-treesit-things)
+(declare-function suderman/meow-toggle-fold "suderman-meow" ())
+(declare-function suderman/goto-shown-line-end "suderman-meow" ())
 
 (defconst suderman/markdown-preview-css
   (with-temp-buffer
@@ -175,10 +177,78 @@ and updates only after a save changes the preview."
   (goto-char (treesit-node-end (treesit-thing-at (point) hs-treesit-things)))
   (skip-chars-backward "\n"))
 
+(defun suderman/markdown-mouse-toggle-fold (event)
+  "Toggle the heading whose trailing arrow received EVENT."
+  (interactive "e")
+  (mouse-set-point event)
+  (suderman/meow-toggle-fold))
+
+(defun suderman/markdown-fold-arrow-press ()
+  "Ignore a press on a fold arrow; the click toggles it."
+  (interactive))
+
+;; A touch that starts on an arrow still scrolls instead of dragging a region.
+(put 'suderman/markdown-fold-arrow-press 'ignored-mouse-command t)
+
+(defvar suderman/markdown-fold-arrow-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [down-mouse-1] #'suderman/markdown-fold-arrow-press)
+    (define-key map [mouse-1] #'suderman/markdown-mouse-toggle-fold)
+    (define-key map [mouse-2] #'suderman/markdown-mouse-toggle-fold)
+    map)
+  "Mouse bindings on trailing Markdown heading arrows.")
+
+(defun suderman/markdown-fontify-fold-arrows (beg end)
+  "Show fold arrows after headings with content between BEG and END.
+The arrow replaces Outline's ellipsis, as in Org."
+  (save-excursion
+    (goto-char end)
+    (setq end (min (point-max) (1+ (pos-eol))))
+    ;; An edit in a section body can give its heading content.
+    (goto-char beg)
+    (ignore-errors (outline-back-to-heading t))
+    (setq beg (pos-bol))
+    (remove-overlays beg end 'suderman/markdown-fold-arrow t)
+    (unless (outline-on-heading-p t)
+      (outline-next-heading))
+    (while (and (< (point) end) (not (eobp)))
+      (let ((eol (pos-eol)))
+        (when (and (> eol (pos-bol))
+                   (< eol (save-excursion (outline-end-of-subtree) (point))))
+          (let* ((pos (1- eol))
+                 ;; Inherit the face; copying it would scale the heading twice.
+                 (char (buffer-substring-no-properties pos eol))
+                 (overlay (make-overlay pos eol))
+                 (folded '(with-current-buffer object
+                            (save-excursion
+                              (goto-char buffer-position)
+                              (outline-invisible-p (pos-eol))))))
+            (overlay-put overlay 'suderman/markdown-fold-arrow t)
+            (overlay-put overlay 'evaporate t)
+            (overlay-put
+             overlay 'display
+             (mapcar
+              (lambda (state)
+                `(when ,(if (car state) folded `(not ,folded))
+                   . ,(concat char
+                              (propertize (cdr state)
+                                          'face '(org-ellipsis
+                                                  suderman/fixed-pitch-text)
+                                          'mouse-face 'highlight
+                                          'pointer 'hand
+                                          'help-echo "Toggle section"
+                                          'keymap suderman/markdown-fold-arrow-map))))
+              '((t . " ▸") (nil . " ▾")))))))
+      (outline-next-heading))))
+
 (defun suderman/markdown-folding ()
   "Fold headings with Outline and fenced code blocks with Hideshow."
   (require 'hideshow)
   (outline-minor-mode 1)
+  ;; Arrows replace the ellipsis.
+  (remove-from-invisibility-spec '(outline . t))
+  (add-to-invisibility-spec 'outline)
+  (jit-lock-register #'suderman/markdown-fontify-fold-arrows)
   ;; The mode defines no tree-sitter `list' thing, so point Hideshow's
   ;; tree-sitter search at fences instead of its bracket defaults.
   (setq-local hs-treesit-things "\\`fenced_code_block\\'"
@@ -197,6 +267,9 @@ and updates only after a save changes the preview."
   :ensure nil
   :mode "\\.\\(?:md\\|markdown\\)\\'"
   :hook (markdown-ts-mode . suderman/markdown-folding)
+  :config
+  ;; TAB after a folded heading's arrow should still cycle that heading.
+  (advice-add 'markdown-ts-outline-cycle :before #'suderman/goto-shown-line-end)
   :bind (:map markdown-ts-mode-map
               ("C-c C-p" . suderman/markdown-preview-buffer)))
 

@@ -20,9 +20,21 @@
   (global-treesit-auto-mode -1))
 
 ;; Normal o toggles the block that starts on the current line.
+(defun suderman/hs-fold-arrow (overlay)
+  "Show a folded Hideshow OVERLAY as an arrow, like Org headings."
+  (overlay-put overlay 'display
+               (propertize " ▸"
+                           'face '(org-ellipsis suderman/fixed-pitch-text)
+                           'mouse-face 'highlight
+                           'pointer 'hand
+                           'help-echo "Show hidden lines"
+                           'keymap '(keymap (mouse-1 . hs-toggle-hiding)))))
+
 (use-package hideshow
   :ensure nil
-  :hook ((prog-mode yaml-ts-mode) . hs-minor-mode))
+  :hook ((prog-mode yaml-ts-mode) . hs-minor-mode)
+  :custom
+  (hs-set-up-overlay #'suderman/hs-fold-arrow))
 
 (use-package web-mode
   :mode ("\\.twig\\'" . web-mode))

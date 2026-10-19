@@ -173,9 +173,23 @@ Enter Insert when Return edited the buffer."
                  (/= tick (buffer-chars-modified-tick)))
         (suderman/meow-insert)))))
 
+(defun suderman/goto-shown-line-end ()
+  "Move from a hidden line to the end of the shown line above it.
+A click after a fold's arrow leaves point at the end of the hidden text,
+or on a line that starts right after it and so shows on the fold's line."
+  (let ((bol (pos-bol)))
+    (when (and (> bol (point-min))
+               (or (invisible-p bol) (invisible-p (1- bol))))
+      (goto-char (if (invisible-p bol) bol (1- bol)))
+      (forward-line 0)
+      (while (and (not (bobp)) (invisible-p (point)))
+        (forward-line -1))
+      (end-of-line))))
+
 (defun suderman/meow--toggle-line-fold (&optional show)
   "Toggle the outline heading or Hideshow block that starts on this line.
 With SHOW, only unfold.  Return non-nil when a fold was found."
+  (suderman/goto-shown-line-end)
   (cond
    ((and (bound-and-true-p outline-minor-mode) (outline-on-heading-p t))
     (if (outline-invisible-p (pos-eol))
