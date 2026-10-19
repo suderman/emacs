@@ -1145,14 +1145,13 @@ would leave its hidden body under the previous heading."
 
 (defun suderman/org-kill-line ()
   "Cut the current line, or the whole subtree of a folded heading.
-Then enter Insert, like `suderman/meow-kill-line'."
+Stay in Normal, like `suderman/meow-kill-line'."
   (interactive)
   (if-let* ((bounds (suderman/org--folded-subtree-bounds)))
       (progn
         (suderman/meow--cancel-active-selection)
         (let ((select-enable-clipboard meow-use-clipboard))
-          (kill-region (car bounds) (cdr bounds)))
-        (suderman/meow-insert))
+          (kill-region (car bounds) (cdr bounds))))
     (call-interactively #'suderman/meow-kill-line)))
 
 (defun suderman/org-save ()

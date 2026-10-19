@@ -580,17 +580,23 @@ An active selection is replaced without modifying the kill ring."
       (back-to-indentation))))
 
 (defun suderman/meow-kill-line ()
-  "Cut the selection or current line, then enter insert state."
+  "Cut the lines the selection touches, or the current line.
+Stay in Normal: whole lines are usually cut to move them, not to type
+in their place."
   (interactive)
-  (if (use-region-p)
-      (suderman/meow-kill)
+  (pcase-let ((`(,beg . ,end)
+               (if (use-region-p)
+                   (let ((beg (region-beginning)) (end (region-end)))
+                     (cons (save-excursion (goto-char beg) (pos-bol))
+                           (save-excursion
+                             (goto-char end)
+                             (if (and (bolp) (> end beg)) end (pos-bol 2)))))
+                 (suderman/meow--line-bounds))))
     (suderman/meow--cancel-active-selection)
-    (pcase-let ((`(,beg . ,end) (suderman/meow--line-bounds)))
-      (let ((select-enable-clipboard meow-use-clipboard))
-        (kill-region beg end))
-      (goto-char beg)
-      (back-to-indentation)
-      (suderman/meow-insert))))
+    (let ((select-enable-clipboard meow-use-clipboard))
+      (kill-region beg end))
+    (goto-char beg)
+    (back-to-indentation)))
 
 ;;;; Keymaps and mode activation
 
