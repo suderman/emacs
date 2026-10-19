@@ -1,0 +1,35 @@
+--- a/src/dispextern.h
++++ b/src/dispextern.h
+@@ -3290,6 +3290,11 @@
+   /* The scale factor applied to the image.  */
+   double scale;
+ 
++  /* The frame scale factor the image was loaded at.  SVGs are
++     rendered at that scale, so frames on monitors with other scales
++     need their own copy.  */
++  double frame_scale;
++
+   /* These values are used for the rectangles displayed for images
+      that can't be loaded.  */
+ #define DEFAULT_IMAGE_WIDTH 30
+--- a/src/image.c
++++ b/src/image.c
+@@ -2241,6 +2241,10 @@
+     if (img->hash == hash
+ 	&& !NILP (Fequal (img->spec, spec))
+ 	&& scale == img->scale
++#ifdef HAVE_RSVG
++	&& (img->frame_scale == FRAME_SCALE_FACTOR (f)
++	    || !EQ (image_spec_value (img->spec, QCtype, NULL), Qsvg))
++#endif
+ 	&& (ignore_colors || (img->face_foreground == foreground
+                               && img->face_background == background
+ 			      && img->face_font_size == font_size
+@@ -3557,6 +3561,7 @@
+       block_input ();
+       img = make_image (spec, hash);
+       cache_image (f, img);
++      img->frame_scale = FRAME_SCALE_FACTOR (f);
+       img->face_foreground = foreground;
+       img->face_background = background;
+       img->face_font_size = font_size;

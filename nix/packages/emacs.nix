@@ -34,7 +34,10 @@
       patches =
         (old.patches or [])
         ++ [./emacs-tty-menu-restore.patch]
-        ++ lib.optional (!tty) ./emacs-pgtk-toolbar-scale.patch;
+        ++ lib.optionals (!tty) [
+          ./emacs-pgtk-toolbar-scale.patch
+          ./emacs-pgtk-svg-cache-scale.patch
+        ];
     });
   # Preserve package compilation when Home Manager wraps Emacs again.
   emacsSetupHook =
