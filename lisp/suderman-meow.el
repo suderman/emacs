@@ -20,7 +20,8 @@
 (declare-function which-key--popup-showing-p "which-key" ())
 (declare-function outline-on-heading-p "outline" (&optional invisible-ok))
 (declare-function outline-invisible-p "outline" (&optional pos))
-(declare-function outline-show-subtree "outline" (&optional event))
+(declare-function outline-show-entry "outline" (&optional event))
+(declare-function outline-show-children "outline" (&optional level))
 (declare-function outline-hide-subtree "outline" (&optional event))
 (declare-function hs-overlay-at "hideshow" (position))
 (declare-function hs-show-block "hideshow" ())
@@ -178,7 +179,7 @@ With SHOW, only unfold.  Return non-nil when a fold was found."
   (cond
    ((and (bound-and-true-p outline-minor-mode) (outline-on-heading-p t))
     (if (outline-invisible-p (pos-eol))
-        (outline-show-subtree)
+        (progn (outline-show-entry) (outline-show-children))
       (unless show (outline-hide-subtree)))
     t)
    ((not (bound-and-true-p hs-minor-mode)) nil)

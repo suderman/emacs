@@ -25,6 +25,8 @@
 
 (declare-function suderman/dired-archive "suderman-files" ())
 (declare-function suderman/meow-insert "suderman-meow" ())
+(declare-function meow--selection-type "meow-util" ())
+(declare-function meow-purrsist-adopt-region "meow-purrsist" (&optional line))
 (declare-function suderman/meow-delete-line "suderman-meow" ())
 (declare-function suderman/meow-kill-line "suderman-meow" ())
 (declare-function suderman/meow-paste "suderman-meow" ())
@@ -336,7 +338,7 @@ normal newline behavior."
     (cond
      (current-prefix-arg (suderman/org-open-below-heading))
      ;; Org's skip also passes blank lines; open directly below the metadata.
-     (t (org-fold-show-subtree)
+     (t (suderman/org-show-children)
         (org-end-of-meta-data t)
         (skip-chars-backward " \t\n")
         (end-of-line)
@@ -1120,9 +1122,16 @@ ends.  An edit that starts a heading leaves the subtree folded."
 
 (add-hook 'org-mode-hook #'suderman/org-enable-fold-arrows)
 
+(defun suderman/org-show-children ()
+  "Show the heading's body and its direct child headings, like Org's
+children cycling state.  Deeper levels stay folded."
+  (org-fold-show-entry)
+  (org-fold-show-children))
+
 (defun suderman/org-toggle-fold ()
   "Toggle a heading, drawer, or block, then move to the line end.
-Empty headings and lines that cannot fold only move to the line end."
+A folded heading opens to its body and direct children.  Empty headings
+and lines that cannot fold only move to the line end."
   (interactive)
   (suderman/org-goto-adjacent-heading)
   (cond
@@ -1130,7 +1139,7 @@ Empty headings and lines that cannot fold only move to the line end."
    ((org-at-heading-p)
     (when (suderman/org-heading-has-content-p)
       (if (org-fold-folded-p (line-end-position) 'outline)
-          (org-fold-show-subtree)
+          (suderman/org-show-children)
         (org-fold-hide-subtree))))
    ;; Only the delimiter lines toggle; a line inside the block just moves.
    ((org-match-line "[ \t]*#\\+\\(?:begin\\|end\\)_")
@@ -1214,6 +1223,46 @@ rather than below it.  Fold pasted subtrees, as `org-yank' does."
             (org-fold-hide-subtree)
             (org-end-of-subtree t t))))
       (goto-char start))))
+
+(defun suderman/org--keep-selection (command)
+  "Call COMMAND, then restore an active selection so it can be repeated.
+Org's structure commands deactivate the region."
+  (if (not (use-region-p))
+      (call-interactively command)
+    (let ((anchor (copy-marker (mark)))
+          (active (copy-marker (point)))
+          (line (equal (meow--selection-type) '(expand . line))))
+      (unwind-protect
+          (progn
+            (call-interactively command)
+            (set-mark anchor)
+            (goto-char active)
+            (activate-mark)
+            (meow-purrsist-adopt-region line)
+            (setq deactivate-mark nil
+                  disable-point-adjustment t))
+        (set-marker anchor nil)
+        (set-marker active nil)))))
+
+(defun suderman/org-promote ()
+  "Promote with Org, keeping the selection for repeated use."
+  (interactive)
+  (suderman/org--keep-selection #'org-metaleft))
+
+(defun suderman/org-demote ()
+  "Demote with Org, then open a folded new parent to its children.
+Otherwise the demoted headings show under a parent that looks folded
+and hides its own body.  Keep the selection for repeated use."
+  (interactive)
+  (let ((start (copy-marker (if (use-region-p) (region-beginning) (point)))))
+    (suderman/org--keep-selection #'org-metaright)
+    (save-excursion
+      (goto-char start)
+      (when (and (org-at-heading-p)
+                 (org-up-heading-safe)
+                 (org-fold-folded-p (pos-eol) 'outline))
+        (suderman/org-show-children)))
+    (set-marker start nil)))
 
 (defun suderman/org-move-selected-subtrees (down)
   "Move the subtrees the selection covers past a sibling, DOWN or up.
@@ -1408,6 +1457,8 @@ Return nil so Org continues its normal TAB action."
               #'suderman/org-kill-line)
   (define-key org-mode-map [remap suderman/meow-save] #'suderman/org-save)
   (define-key org-mode-map [remap suderman/meow-paste] #'suderman/org-paste)
+  (define-key org-mode-map [remap suderman/meow-indent] #'suderman/org-demote)
+  (define-key org-mode-map [remap suderman/meow-outdent] #'suderman/org-promote)
   (keymap-set org-mode-map "<mouse-1>" #'mouse-set-point)
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading)
   (advice-add 'org-fold-core-region :filter-args
