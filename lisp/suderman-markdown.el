@@ -12,6 +12,9 @@
 (defvar hs-treesit-things)
 (declare-function suderman/meow-toggle-fold "suderman-meow" ())
 (declare-function suderman/goto-shown-line-end "suderman-meow" ())
+(declare-function suderman/meow-insert "suderman-meow" ())
+(declare-function markdown-ts-insert-list-item "markdown-ts-mode" ())
+(declare-function markdown-ts-newline "markdown-ts-mode" ())
 
 (defconst suderman/markdown-preview-css
   (with-temp-buffer
@@ -241,6 +244,71 @@ The arrow replaces Outline's ellipsis, as in Org."
               '((t . " ▸") (nil . " ▾")))))))
       (outline-next-heading))))
 
+(defconst suderman/markdown-item-regexp
+  "^[ \t]*\\(?:[-+*]\\|[0-9]+[.)]\\)[ \t]+\\(\\[[ xX]\\][ \t]+\\)?"
+  "Match a list marker and an optional task checkbox at line start.")
+
+(defun suderman/markdown--item-line-p ()
+  "Return non-nil when this line starts a list item outside code.
+Leave match data for `suderman/markdown-item-regexp'."
+  (and (not (treesit-parent-until
+             (treesit-node-at (pos-bol) 'markdown)
+             "\\`\\(?:fenced\\|indented\\)_code_block\\'"))
+       (save-excursion
+         (beginning-of-line)
+         (looking-at suderman/markdown-item-regexp))))
+
+(defun suderman/markdown-insert-item ()
+  "Insert a list item after this one, continuing a task checkbox."
+  (let ((task (match-beginning 1)))
+    (markdown-ts-insert-list-item)
+    (when task (insert "[ ] "))))
+
+(defun suderman/markdown-return ()
+  "Continue a list item at its end, like Org; otherwise use Markdown's Return.
+Return on an empty item removes it and ends the list.  Enter Insert
+from Normal."
+  (interactive)
+  (if (and (eolp) (suderman/markdown--item-line-p))
+      (if (= (point) (match-end 0))
+          (progn
+            (delete-region (pos-bol) (point))
+            (insert "\n"))
+        (suderman/markdown-insert-item))
+    (call-interactively #'markdown-ts-newline))
+  (when (bound-and-true-p meow-normal-mode)
+    (suderman/meow-insert)))
+
+(defun suderman/markdown-meta-return ()
+  "Insert a list item in a list, otherwise a heading at this section's level.
+The heading goes after the whole section, as M-RET does in Org.  Enter
+Insert from Normal."
+  (interactive)
+  (if (suderman/markdown--item-line-p)
+      (suderman/markdown-insert-item)
+    (let* ((section (save-excursion (ignore-errors (outline-back-to-heading t))))
+           (level (or (and section
+                           (save-excursion
+                             (goto-char section)
+                             (and (looking-at "#+") (length (match-string 0)))))
+                      1))
+           (heading (concat (make-string level ?#) " ")))
+      (if section
+          (progn
+            (goto-char section)
+            (outline-end-of-subtree)
+            (outline-next-heading))
+        (end-of-line))
+      (if (and (bolp) (not (eobp)))
+          (save-excursion (insert heading "\n\n"))
+        (unless (bolp) (insert "\n"))
+        (unless (save-excursion (forward-line -1) (looking-at-p "[ \t]*$"))
+          (insert "\n"))
+        (save-excursion (insert heading)))
+      (end-of-line)))
+  (when (bound-and-true-p meow-normal-mode)
+    (suderman/meow-insert)))
+
 (defun suderman/markdown-folding ()
   "Fold headings with Outline and fenced code blocks with Hideshow."
   (require 'hideshow)
@@ -271,6 +339,8 @@ The arrow replaces Outline's ellipsis, as in Org."
   ;; TAB after a folded heading's arrow should still cycle that heading.
   (advice-add 'markdown-ts-outline-cycle :before #'suderman/goto-shown-line-end)
   :bind (:map markdown-ts-mode-map
+              ("RET" . suderman/markdown-return)
+              ("M-RET" . suderman/markdown-meta-return)
               ("C-c C-p" . suderman/markdown-preview-buffer)))
 
 (provide 'suderman-markdown)
