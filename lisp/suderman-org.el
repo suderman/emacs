@@ -948,6 +948,39 @@ Otherwise a folded last subtree hides the empty line below it."
         `(,from ,(1- to) ,flag . ,rest)
       args)))
 
+(defun suderman/org-reveal-final-line (pos)
+  "Show a folded last subtree when POS is on the line below it.
+`suderman/org-fold-keep-final-newline' leaves that line visible, but it
+belongs to the subtree, so typing there would hide its context."
+  (save-excursion
+    (save-restriction
+      (widen)
+      (goto-char (point-max))
+      (beginning-of-line)
+      (when (and (>= pos (1- (point)))
+                 (> (point) (1+ (point-min)))
+                 (org-fold-folded-p (- (point) 2) 'outline))
+        (goto-char (- (point) 2))
+        (org-back-to-heading t)
+        (while (and (org-invisible-p) (org-up-heading-safe)))
+        (org-fold-show-subtree)))))
+
+(defun suderman/org-reveal-final-line-edit (beg _end)
+  "Show a folded last subtree before an edit at BEG on the line below it."
+  (when this-command
+    (suderman/org-reveal-final-line beg)))
+
+(defun suderman/org-reveal-final-line-insert ()
+  "Show a folded last subtree when Insert starts on the line below it."
+  (suderman/org-reveal-final-line (point)))
+
+(defun suderman/org-enable-final-line-reveal ()
+  "Show a folded last subtree before edits on the line below it."
+  (add-hook 'before-change-functions #'suderman/org-reveal-final-line-edit nil t)
+  (add-hook 'meow-insert-enter-hook #'suderman/org-reveal-final-line-insert nil t))
+
+(add-hook 'org-mode-hook #'suderman/org-enable-final-line-reveal)
+
 (defun suderman/org-mouse-toggle-fold (event)
   "Toggle the heading or drawer whose trailing arrow received EVENT."
   (interactive "e")
@@ -1291,7 +1324,8 @@ Return nil so Org continues its normal TAB action."
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (derived-mode-p 'org-mode)
-        (suderman/org-enable-fold-arrows)))))
+        (suderman/org-enable-fold-arrows)
+        (suderman/org-enable-final-line-reveal)))))
 
 (use-package org-agenda
   :ensure nil
