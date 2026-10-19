@@ -309,27 +309,47 @@
 (add-hook 'org-mode-hook #'suderman/org-enable-mouse-todo-cycling)
 
 (defun suderman/org-return ()
-  "Continue a list item or use Org Return, then enter Insert from Normal.
-Return on an empty item removes it and ends the list.  A prefix
-argument keeps Org's normal newline behavior."
+  "Continue a heading or list item, or use Org Return, then enter Insert.
+At the end of a folded heading, add a sibling after its subtree.  At
+the end of an open heading, open a line above its body, below planning
+lines and drawers.  Return on an empty item removes it and ends the
+list.  A prefix argument keeps Org's normal newline behavior."
   (interactive)
-  (if (and (not current-prefix-arg) (eolp) (org-at-item-p)
-           (org-match-line org-list-full-item-re))
-      (if (= (point) (match-end 0))
-          (progn
-            (delete-region (line-beginning-position) (point))
-            ;; Electric indentation would put point back inside the list.
-            (insert "\n")
-            (org-update-checkbox-count-maybe))
-        (org-insert-item (match-beginning 3)))
-    (call-interactively #'org-return))
+  (cond
+   ((and (not current-prefix-arg) (eolp) (org-at-heading-p))
+    (if (org-fold-folded-p (point) 'outline)
+        (org-insert-heading-respect-content)
+      (org-end-of-meta-data t)
+      (unless (bolp) (insert "\n"))
+      (insert "\n")
+      (backward-char)))
+   ((and (not current-prefix-arg) (eolp) (org-at-item-p)
+         (org-match-line org-list-full-item-re))
+    (if (= (point) (match-end 0))
+        (progn
+          (delete-region (line-beginning-position) (point))
+          ;; Electric indentation would put point back inside the list.
+          (insert "\n")
+          (org-update-checkbox-count-maybe))
+      (org-insert-item (match-beginning 3))))
+   (t (call-interactively #'org-return)))
   (when (bound-and-true-p meow-normal-mode)
     (suderman/meow-insert)))
 
 (defun suderman/org-meta-return ()
-  "Insert a heading or list item using Org, then enter Insert from Normal."
+  "Insert a heading or list item using Org, then enter Insert from Normal.
+On a heading with content, add a sibling after a folded subtree, or
+open a line directly below an open heading, where planning lines or
+drawers can be added by hand.  Org would give the new heading the
+body instead."
   (interactive)
-  (call-interactively #'org-meta-return)
+  (cond
+   ((or current-prefix-arg (not (suderman/org-heading-has-content-p)))
+    (call-interactively #'org-meta-return))
+   ((org-fold-folded-p (line-end-position) 'outline)
+    (org-insert-heading-respect-content))
+   (t (end-of-line)
+      (insert "\n")))
   (when (bound-and-true-p meow-normal-mode)
     (suderman/meow-insert)))
 
@@ -987,15 +1007,19 @@ Otherwise a folded last subtree hides the empty line below it."
 (add-hook 'org-mode-hook #'suderman/org-enable-fold-arrows)
 
 (defun suderman/org-open-below ()
-  "Toggle a drawer or heading with content, or open a line below with Meow."
+  "Toggle a heading or drawer and move to its line end.
+Empty headings only move to the line end.  Elsewhere open a line
+below with Meow."
   (interactive)
   (suderman/org-goto-adjacent-heading)
   (cond
-   ((org-fold-hide-drawer-toggle nil t))
-   ((suderman/org-heading-has-content-p)
-    (if (org-fold-folded-p (line-end-position) 'outline)
-        (org-fold-show-subtree)
-      (org-fold-hide-subtree)))
+   ((org-fold-hide-drawer-toggle nil t) (end-of-line))
+   ((org-at-heading-p)
+    (when (suderman/org-heading-has-content-p)
+      (if (org-fold-folded-p (line-end-position) 'outline)
+          (org-fold-show-subtree)
+        (org-fold-hide-subtree)))
+    (end-of-line))
    (t (call-interactively #'meow-open-below))))
 
 (defun suderman/org-cycle-adjacent-heading ()
