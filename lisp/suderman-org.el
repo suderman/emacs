@@ -674,6 +674,16 @@ as the nightly archive timer; return the number of headings."
         (org-fold-show-entry)
         (org-fold-show-children)))))
 
+(defun suderman/org-fold-heading ()
+  "Fold the heading whose entry contains point, then move to its line end."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "This command requires an Org buffer"))
+  (suderman/meow--cancel-active-selection)
+  (org-back-to-heading)
+  (org-fold-hide-subtree)
+  (end-of-line))
+
 (defun suderman/org-expand-or-collapse-all ()
   "Expand all headings, drawers, and blocks, or collapse when none is folded."
   (interactive)
