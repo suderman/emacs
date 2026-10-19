@@ -323,20 +323,22 @@ Planning lines or drawers can be added there by hand."
 
 (defun suderman/org-return ()
   "Continue a heading or list item, or use Org Return, then enter Insert.
-At the end of a folded heading, add a sibling after its subtree.  At
-the end of an open heading, open a line directly below its planning
-lines and drawers.  With a prefix argument, open a line directly below
-the heading instead.  Return on an empty item removes it and ends the
-list.  Elsewhere a prefix argument keeps Org's normal newline behavior."
+Anywhere on a folded heading, or at the end of an open one, show the
+subtree and open a line directly below its planning lines and drawers.
+Only an open heading splits at point.  With a prefix argument, open a
+line directly below the heading instead.  Return on an empty item
+removes it and ends the list.  Elsewhere a prefix argument keeps Org's
+normal newline behavior."
   (interactive)
+  (suderman/org-goto-adjacent-heading)
   (cond
-   ((and (eolp) (org-at-heading-p))
+   ((and (org-at-heading-p)
+         (or (eolp) (org-fold-folded-p (line-end-position) 'outline)))
     (cond
      (current-prefix-arg (suderman/org-open-below-heading))
-     ((org-fold-folded-p (point) 'outline)
-      (org-insert-heading-respect-content))
      ;; Org's skip also passes blank lines; open directly below the metadata.
-     (t (org-end-of-meta-data t)
+     (t (org-fold-show-subtree)
+        (org-end-of-meta-data t)
         (skip-chars-backward " \t\n")
         (end-of-line)
         (insert "\n"))))
@@ -928,7 +930,10 @@ argument, active region, or heading uses Org's toggle unchanged."
                    (beginning-of-line)
                    (and (not (bobp))
                         (looking-at-p "[ \t]*$")
-                        (org-fold-folded-p (1- (point)) 'outline)))))
+                        ;; The final newline stays visible; test the one before.
+                        (org-fold-folded-p
+                         (max (point-min) (- (point) (if (eobp) 2 1)))
+                         'outline)))))
     ;; At EOF the visible newline can belong to a hidden, nonblank body line.
     ;; Skip hidden child headings to find the visible parent.
     (org-back-to-heading)))
