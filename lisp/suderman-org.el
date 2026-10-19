@@ -308,21 +308,31 @@
 
 (add-hook 'org-mode-hook #'suderman/org-enable-mouse-todo-cycling)
 
+(defun suderman/org-open-below-heading ()
+  "Open a line directly below the heading at point, showing its entry.
+Planning lines or drawers can be added there by hand."
+  (org-fold-show-entry)
+  (end-of-line)
+  (insert "\n"))
+
 (defun suderman/org-return ()
   "Continue a heading or list item, or use Org Return, then enter Insert.
 At the end of a folded heading, add a sibling after its subtree.  At
 the end of an open heading, open a line above its body, below planning
-lines and drawers.  Return on an empty item removes it and ends the
-list.  A prefix argument keeps Org's normal newline behavior."
+lines and drawers.  With a prefix argument, open a line directly below
+the heading instead.  Return on an empty item removes it and ends the
+list.  Elsewhere a prefix argument keeps Org's normal newline behavior."
   (interactive)
   (cond
-   ((and (not current-prefix-arg) (eolp) (org-at-heading-p))
-    (if (org-fold-folded-p (point) 'outline)
-        (org-insert-heading-respect-content)
-      (org-end-of-meta-data t)
-      (unless (bolp) (insert "\n"))
-      (insert "\n")
-      (backward-char)))
+   ((and (eolp) (org-at-heading-p))
+    (cond
+     (current-prefix-arg (suderman/org-open-below-heading))
+     ((org-fold-folded-p (point) 'outline)
+      (org-insert-heading-respect-content))
+     (t (org-end-of-meta-data t)
+        (unless (bolp) (insert "\n"))
+        (insert "\n")
+        (backward-char))))
    ((and (not current-prefix-arg) (eolp) (org-at-item-p)
          (org-match-line org-list-full-item-re))
     (if (= (point) (match-end 0))
@@ -338,25 +348,22 @@ list.  A prefix argument keeps Org's normal newline behavior."
 
 (defun suderman/org-meta-return ()
   "Insert a heading or list item using Org, then enter Insert from Normal.
-On a heading with content, add a sibling after a folded subtree, or
-open a line directly below an open heading, where planning lines or
-drawers can be added by hand.  Org would give the new heading the
-body instead."
+On a heading with content, add the sibling after its subtree.  Org
+would give the new heading the body instead."
   (interactive)
-  (cond
-   ((or current-prefix-arg (not (suderman/org-heading-has-content-p)))
+  (if (and (not current-prefix-arg) (suderman/org-heading-has-content-p))
+      (org-insert-heading-respect-content)
     (call-interactively #'org-meta-return))
-   ((org-fold-folded-p (line-end-position) 'outline)
-    (org-insert-heading-respect-content))
-   (t (end-of-line)
-      (insert "\n")))
   (when (bound-and-true-p meow-normal-mode)
     (suderman/meow-insert)))
 
 (defun suderman/org-insert-heading-after-subtree ()
-  "Insert a heading after the subtree, then enter Insert from Normal."
+  "Insert a heading after the subtree, then enter Insert from Normal.
+On a heading, open a line directly below it instead."
   (interactive)
-  (call-interactively #'org-insert-heading-respect-content)
+  (if (org-at-heading-p)
+      (suderman/org-open-below-heading)
+    (call-interactively #'org-insert-heading-respect-content))
   (when (bound-and-true-p meow-normal-mode)
     (suderman/meow-insert)))
 
