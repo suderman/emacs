@@ -25,6 +25,12 @@
 
 (declare-function suderman/dired-archive "suderman-files" ())
 (declare-function suderman/meow-insert "suderman-meow" ())
+(declare-function suderman/meow-delete-line "suderman-meow" ())
+(declare-function suderman/meow-kill-line "suderman-meow" ())
+(declare-function suderman/meow-paste "suderman-meow" ())
+(declare-function suderman/meow-save "suderman-meow" ())
+(declare-function suderman/meow--cancel-active-selection "suderman-meow" ())
+(defvar meow-use-clipboard)
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
 (declare-function org-agenda "org-agenda" (&optional arg keys restriction))
@@ -1046,6 +1052,72 @@ below with Meow."
     (end-of-line))
    (t (call-interactively #'meow-open-below))))
 
+(defun suderman/org--folded-subtree-bounds ()
+  "Return the bounds of a folded subtree, or nil.
+Point must be on its heading with no selection, or the selection must
+cover exactly the heading line.  Acting on only a folded heading line
+would leave its hidden body under the previous heading."
+  (when-let* ((line (if (use-region-p)
+                        (let ((end (region-end)))
+                          (save-excursion
+                            (goto-char (region-beginning))
+                            (and (bolp)
+                                 (<= (line-end-position) end
+                                     (1+ (line-end-position)))
+                                 (point))))
+                      (line-beginning-position))))
+    (save-excursion
+      (goto-char line)
+      (when (and (org-at-heading-p)
+                 (org-fold-folded-p (line-end-position) 'outline))
+        (cons (point) (org-end-of-subtree t t))))))
+
+(defun suderman/org-delete-line ()
+  "Delete the current line, or the whole subtree of a folded heading."
+  (interactive)
+  (if-let* ((bounds (suderman/org--folded-subtree-bounds)))
+      (progn
+        (suderman/meow--cancel-active-selection)
+        (delete-region (car bounds) (cdr bounds)))
+    (call-interactively #'suderman/meow-delete-line)))
+
+(defun suderman/org-kill-line ()
+  "Cut the current line, or the whole subtree of a folded heading.
+Then enter Insert, like `suderman/meow-kill-line'."
+  (interactive)
+  (if-let* ((bounds (suderman/org--folded-subtree-bounds)))
+      (progn
+        (suderman/meow--cancel-active-selection)
+        (let ((select-enable-clipboard meow-use-clipboard))
+          (kill-region (car bounds) (cdr bounds)))
+        (suderman/meow-insert))
+    (call-interactively #'suderman/meow-kill-line)))
+
+(defun suderman/org-save ()
+  "Copy the selection, or a folded heading's whole subtree.
+The subtree is copied when the selection covers exactly that heading line."
+  (interactive)
+  (if-let* ((bounds (and (use-region-p) (suderman/org--folded-subtree-bounds))))
+      (let ((select-enable-clipboard meow-use-clipboard))
+        (kill-ring-save (car bounds) (cdr bounds))
+        (suderman/meow--cancel-active-selection))
+    (call-interactively #'suderman/meow-save)))
+
+(defun suderman/org-paste ()
+  "Paste the current kill, after the whole subtree of a folded heading.
+Linewise text would otherwise land inside the heading's hidden body."
+  (interactive)
+  (let ((bounds (suderman/org--folded-subtree-bounds))
+        (text (and kill-ring (current-kill 0 t))))
+    (if (and bounds text (not (use-region-p)) (string-suffix-p "\n" text))
+        (progn
+          (goto-char (cdr bounds))
+          (unless (bolp) (insert "\n"))
+          (let ((start (point)))
+            (insert-for-yank text)
+            (goto-char start)))
+      (call-interactively #'suderman/meow-paste))))
+
 (defun suderman/org-cycle-adjacent-heading ()
   "Move from a folded subtree's boundary to its visible heading.
 Return nil so Org continues its normal TAB action."
@@ -1154,6 +1226,13 @@ Return nil so Org continues its normal TAB action."
   (keymap-set org-mode-map "<remap> <org-insert-heading-respect-content>"
               #'suderman/org-insert-heading-after-subtree)
   (keymap-set org-mode-map "<remap> <meow-open-below>" #'suderman/org-open-below)
+  ;; `keymap-set' rejects the slash in these command names.
+  (define-key org-mode-map [remap suderman/meow-delete-line]
+              #'suderman/org-delete-line)
+  (define-key org-mode-map [remap suderman/meow-kill-line]
+              #'suderman/org-kill-line)
+  (define-key org-mode-map [remap suderman/meow-save] #'suderman/org-save)
+  (define-key org-mode-map [remap suderman/meow-paste] #'suderman/org-paste)
   (keymap-set org-mode-map "<mouse-1>" #'mouse-set-point)
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading)
   (advice-add 'org-fold-core-region :filter-args
