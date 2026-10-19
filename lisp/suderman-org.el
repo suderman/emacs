@@ -675,14 +675,28 @@ as the nightly archive timer; return the number of headings."
         (org-fold-show-children)))))
 
 (defun suderman/org-fold-heading ()
-  "Fold the heading whose entry contains point, then move to its line end."
+  "Fold the heading whose entry contains point, then move to its line end.
+On a heading that is already folded or empty, collapse the whole buffer."
   (interactive)
   (unless (derived-mode-p 'org-mode)
     (user-error "This command requires an Org buffer"))
   (suderman/meow--cancel-active-selection)
+  (if (and (org-at-heading-p)
+           (or (org-fold-folded-p (line-end-position) 'outline)
+               (not (suderman/org-heading-has-content-p))))
+      (suderman/org-collapse-all)
+    (org-back-to-heading)
+    (org-fold-hide-subtree))
+  ;; After a collapse, the nearest visible heading holds point.
   (org-back-to-heading)
-  (org-fold-hide-subtree)
   (end-of-line))
+
+(defun suderman/org-expand-headings ()
+  "Expand every heading, leaving drawers and blocks as they are."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "This command requires an Org buffer"))
+  (org-fold-show-all '(headings)))
 
 (defun suderman/org-expand-or-collapse-all ()
   "Expand all headings, drawers, and blocks, or collapse when none is folded."

@@ -159,7 +159,8 @@
                "h" '("HOLD" . suderman/org-todo-hold)
                "i" '("expand/collapse all" . suderman/org-expand-or-collapse-all)
                "I" '("collapse all" . suderman/org-collapse-all)
-               "k" '("fold heading" . suderman/org-fold-heading)
+               "j" '("expand headings" . suderman/org-expand-headings)
+               "k" '("fold heading, then all" . suderman/org-fold-heading)
                "l" #'suderman/org-insert-link
                "L" #'org-store-link
                "m" '("AUTO" . suderman/org-todo-auto)
