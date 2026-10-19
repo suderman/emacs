@@ -1181,6 +1181,8 @@ Return nil so Org continues its normal TAB action."
         org-M-RET-may-split-line '((default . nil))
         org-insert-heading-respect-content nil
         org-blank-before-new-entry '((heading . nil) (plain-list-item . auto))
+        ;; Keep a folded subtree's trailing blank lines folded with it.
+        org-cycle-separator-lines 0
         org-log-done 'time
         org-log-into-drawer t
         org-fontify-whole-block-delimiter-line nil
