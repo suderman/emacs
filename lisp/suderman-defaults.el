@@ -25,7 +25,11 @@
       enable-recursive-minibuffers t
       scroll-preserve-screen-position 'always
       scroll-error-top-bottom t
-      isearch-wrap-pause 'no-ding)
+      isearch-wrap-pause 'no-ding
+      ;; Auto-revert of externally edited files fills the default 160 KB fast.
+      undo-limit (* 8 1024 1024)
+      undo-strong-limit (* 12 1024 1024)
+      undo-outer-limit (* 120 1024 1024))
 
 (setq-default indent-tabs-mode nil
               tab-width 2
