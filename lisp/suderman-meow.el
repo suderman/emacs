@@ -18,6 +18,14 @@
 (declare-function meow-keypad-quit "meow-keypad" ())
 (declare-function meow--keypad-handle-input-event "meow-keypad" (input-event))
 (declare-function which-key--popup-showing-p "which-key" ())
+(declare-function outline-on-heading-p "outline" (&optional invisible-ok))
+(declare-function outline-invisible-p "outline" (&optional pos))
+(declare-function outline-show-subtree "outline" (&optional event))
+(declare-function outline-hide-subtree "outline" (&optional event))
+(declare-function hs-overlay-at "hideshow" (position))
+(declare-function hs-show-block "hideshow" ())
+(declare-function hs-get-first-block-on-line "hideshow" (&optional include-comments))
+(declare-function hs-hide-block-at-point "hideshow" (&optional comment-reg))
 (declare-function which-key--pages-num-pages "which-key" (pages))
 (defvar which-key--pages-obj)
 (defvar which-key--buffer)
@@ -147,15 +155,48 @@ on that entry.  Ignore clicks elsewhere and the press half of a click."
     (meow--cancel-selection)))
 
 (defun suderman/meow-return ()
-  "Clear an active selection, otherwise run the mode's Return command."
+  "Clear an active selection, otherwise run the mode's Return command.
+A folded line unfolds first, so the new line is not typed out of sight.
+Enter Insert when Return edited the buffer."
   (interactive)
   (if (region-active-p)
       (progn
         (meow--cancel-selection)
         (meow--remove-search-indicator))
+    (suderman/meow--toggle-line-fold 'show)
     (let ((command (let ((meow-normal-mode nil))
-                     (key-binding (this-command-keys-vector)))))
-      (call-interactively command))))
+                     (key-binding (this-command-keys-vector))))
+          (tick (buffer-chars-modified-tick)))
+      (call-interactively command)
+      (when (and (bound-and-true-p meow-normal-mode)
+                 (/= tick (buffer-chars-modified-tick)))
+        (suderman/meow-insert)))))
+
+(defun suderman/meow--toggle-line-fold (&optional show)
+  "Toggle the outline heading or Hideshow block that starts on this line.
+With SHOW, only unfold.  Return non-nil when a fold was found."
+  (cond
+   ((and (bound-and-true-p outline-minor-mode) (outline-on-heading-p t))
+    (if (outline-invisible-p (pos-eol))
+        (outline-show-subtree)
+      (unless show (outline-hide-subtree)))
+    t)
+   ((not (bound-and-true-p hs-minor-mode)) nil)
+   ((hs-overlay-at (pos-eol)) (hs-show-block) t)
+   (show nil)
+   ((when-let* ((beg (save-excursion
+                       (forward-line 0)
+                       (hs-get-first-block-on-line))))
+      (save-excursion (goto-char beg) (hs-hide-block-at-point))))))
+
+(defun suderman/meow-toggle-fold ()
+  "Toggle the fold that starts on this line, then move to the line end.
+A line that cannot fold only moves to its end, so this then Return
+opens a line below."
+  (interactive)
+  (suderman/meow--cancel-active-selection)
+  (suderman/meow--toggle-line-fold)
+  (end-of-line))
 
 (defun suderman/meow--adopt-surround-selection (&rest _)
   "Convert Surround's active region for normal Meow motion."
@@ -662,8 +703,9 @@ bindings that were deleted from source."
    '("M" . meow-purrsist-line-or-rectangle)
    '("n" . suderman/meow-search)
    '("N" . meow-page-down)
-   '("o" . meow-open-below)
+   '("o" . suderman/meow-toggle-fold)
    '("O" . meow-open-above)
+   '("C-o" . meow-open-below)
    '("p" . suderman/meow-search-backward)
    '("P" . meow-page-up)
    '("q" . meow-quit)

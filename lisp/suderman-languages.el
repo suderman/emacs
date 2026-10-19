@@ -19,6 +19,11 @@
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode -1))
 
+;; Normal o toggles the block that starts on the current line.
+(use-package hideshow
+  :ensure nil
+  :hook ((prog-mode yaml-ts-mode) . hs-minor-mode))
+
 (use-package web-mode
   :mode ("\\.twig\\'" . web-mode))
 

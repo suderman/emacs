@@ -41,7 +41,6 @@
 (declare-function meow--disable "meow")
 (declare-function meow-mode "meow")
 (declare-function meow-keypad "meow-keypad")
-(declare-function meow-open-below "meow-command" ())
 (declare-function org-agenda-deadline "org-agenda" (arg &optional time))
 (declare-function org-agenda-goto-today "org-agenda" ())
 (declare-function org-agenda-maybe-redo "org-agenda" ())
@@ -953,7 +952,7 @@ Otherwise a folded last subtree hides the empty line below it."
   "Toggle the heading or drawer whose trailing arrow received EVENT."
   (interactive "e")
   (mouse-set-point event)
-  (suderman/org-open-below))
+  (suderman/org-toggle-fold))
 
 (defun suderman/org-fold-arrow-press ()
   "Ignore a press on a fold arrow; the click toggles it."
@@ -1065,21 +1064,22 @@ Otherwise a folded last subtree hides the empty line below it."
 
 (add-hook 'org-mode-hook #'suderman/org-enable-fold-arrows)
 
-(defun suderman/org-open-below ()
-  "Toggle a heading or drawer and move to its line end.
-Empty headings only move to the line end.  Elsewhere open a line
-below with Meow."
+(defun suderman/org-toggle-fold ()
+  "Toggle a heading, drawer, or block, then move to the line end.
+Empty headings and lines that cannot fold only move to the line end."
   (interactive)
   (suderman/org-goto-adjacent-heading)
   (cond
-   ((org-fold-hide-drawer-toggle nil t) (end-of-line))
+   ((org-fold-hide-drawer-toggle nil t))
    ((org-at-heading-p)
     (when (suderman/org-heading-has-content-p)
       (if (org-fold-folded-p (line-end-position) 'outline)
           (org-fold-show-subtree)
-        (org-fold-hide-subtree)))
-    (end-of-line))
-   (t (call-interactively #'meow-open-below))))
+        (org-fold-hide-subtree))))
+   ;; Only the delimiter lines toggle; a line inside the block just moves.
+   ((org-match-line "[ \t]*#\\+\\(?:begin\\|end\\)_")
+    (org-fold-hide-block-toggle nil t)))
+  (end-of-line))
 
 (defun suderman/org--folded-subtree-bounds ()
   "Return the bounds of a folded subtree, or nil.
@@ -1275,8 +1275,9 @@ Return nil so Org continues its normal TAB action."
   (keymap-set org-mode-map "<remap> <org-meta-return>" #'suderman/org-meta-return)
   (keymap-set org-mode-map "<remap> <org-insert-heading-respect-content>"
               #'suderman/org-insert-heading-after-subtree)
-  (keymap-set org-mode-map "<remap> <meow-open-below>" #'suderman/org-open-below)
   ;; `keymap-set' rejects the slash in these command names.
+  (define-key org-mode-map [remap suderman/meow-toggle-fold]
+              #'suderman/org-toggle-fold)
   (define-key org-mode-map [remap suderman/meow-delete-line]
               #'suderman/org-delete-line)
   (define-key org-mode-map [remap suderman/meow-kill-line]

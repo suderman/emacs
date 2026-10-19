@@ -9,6 +9,8 @@
 (require 'subr-x)
 (require 'use-package)
 
+(defvar hs-treesit-things)
+
 (defconst suderman/markdown-preview-css
   (with-temp-buffer
     (insert-file-contents
@@ -168,9 +170,33 @@ and updates only after a save changes the preview."
   (add-hook 'kill-buffer-hook #'suderman/markdown-preview-cleanup nil t)
   (browse-url suderman/markdown-preview-url))
 
+(defun suderman/markdown-fence-end (_arg)
+  "Move to the end of the fenced code block at point, before its newline."
+  (goto-char (treesit-node-end (treesit-thing-at (point) hs-treesit-things)))
+  (skip-chars-backward "\n"))
+
+(defun suderman/markdown-folding ()
+  "Fold headings with Outline and fenced code blocks with Hideshow."
+  (require 'hideshow)
+  (outline-minor-mode 1)
+  ;; The mode defines no tree-sitter `list' thing, so point Hideshow's
+  ;; tree-sitter search at fences instead of its bracket defaults.
+  (setq-local hs-treesit-things "\\`fenced_code_block\\'"
+              hs-c-start-regexp nil
+              hs-block-start-regexp nil
+              hs-block-end-regexp nil
+              hs-forward-sexp-function #'suderman/markdown-fence-end
+              hs-find-block-beginning-function #'treesit-hs-find-block-beginning
+              hs-find-next-block-function #'treesit-hs-find-next-block
+              hs-looking-at-block-start-predicate
+              #'treesit-hs-looking-at-block-start-p
+              hs-inside-comment-predicate #'ignore)
+  (hs-minor-mode 1))
+
 (use-package markdown-ts-mode
   :ensure nil
   :mode "\\.\\(?:md\\|markdown\\)\\'"
+  :hook (markdown-ts-mode . suderman/markdown-folding)
   :bind (:map markdown-ts-mode-map
               ("C-c C-p" . suderman/markdown-preview-buffer)))
 
