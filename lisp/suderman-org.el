@@ -1215,11 +1215,67 @@ rather than below it.  Fold pasted subtrees, as `org-yank' does."
             (org-end-of-subtree t t))))
       (goto-char start))))
 
+(defun suderman/org-move-selected-subtrees (down)
+  "Move the subtrees the selection covers past a sibling, DOWN or up.
+Org's region move reopens folds, so swap the sibling's text instead,
+refold it, and keep the selection for repeated moves."
+  (let* ((beg (save-excursion (goto-char (region-beginning)) (pos-bol)))
+         (end (save-excursion
+                (goto-char (max beg (1- (region-end))))
+                (org-back-to-heading t)
+                (org-end-of-subtree t t)
+                (point)))
+         (level (save-excursion (goto-char beg) (org-current-level)))
+         (other-beg (save-excursion
+                      (if down
+                          (progn (goto-char end)
+                                 (and (org-at-heading-p) (point)))
+                        (goto-char beg)
+                        (and (org-get-previous-sibling) (point)))))
+         (other-end (and other-beg
+                         (save-excursion
+                           (goto-char other-beg)
+                           (org-end-of-subtree t t)
+                           (point)))))
+    (unless (and other-beg
+                 (= level (save-excursion (goto-char other-beg) (org-current-level))))
+      (user-error "Cannot move past superior level or buffer limit"))
+    (let* ((folded (save-excursion
+                     (goto-char other-beg)
+                     (org-fold-folded-p (pos-eol) 'outline)))
+           (text (buffer-substring other-beg other-end))
+           (text (if (string-suffix-p "\n" text) text (concat text "\n")))
+           (shift (if down (length text) (- (length text))))
+           (new-mark (+ (mark) shift))
+           (new-point (+ (point) shift)))
+      (delete-region other-beg other-end)
+      (goto-char (if down beg (+ end shift)))
+      (unless (bolp) (insert "\n"))
+      (let ((start (point)))
+        (insert text)
+        (org-fold-core--process-delayed)
+        (when folded
+          (goto-char start)
+          (org-fold-subtree t)))
+      (set-mark new-mark)
+      (goto-char new-point)
+      (setq deactivate-mark nil
+            disable-point-adjustment t))))
+
 (defun suderman/org-move (command)
   "Move the Org element at point with COMMAND, keeping a folded heading folded.
 Point just past a folded heading's line moves to that heading first.
 Org's delayed fold repair reopens some moved subtrees, such as the last
-one in the buffer, so run it now and fold again."
+one in the buffer, so run it now and fold again.  A selection starting
+on a heading moves its subtrees together."
+  (if (and (use-region-p)
+           (save-excursion (goto-char (region-beginning)) (beginning-of-line)
+                           (org-at-heading-p)))
+      (suderman/org-move-selected-subtrees (eq command #'org-metadown))
+    (suderman/org-move-heading command)))
+
+(defun suderman/org-move-heading (command)
+  "Move the Org element at point with COMMAND; see `suderman/org-move'."
   (suderman/org-goto-adjacent-heading)
   (if (not (and (org-at-heading-p)
                 (org-fold-folded-p (line-end-position) 'outline)))
