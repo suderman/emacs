@@ -948,35 +948,58 @@ Otherwise a folded last subtree hides the empty line below it."
         `(,from ,(1- to) ,flag . ,rest)
       args)))
 
-(defun suderman/org-reveal-final-line (pos)
-  "Show a folded last subtree when POS is on the line below it.
+(defvar-local suderman/org--final-line-edit nil
+  "Start of this command's edits on the line below a folded last subtree.")
+
+(defun suderman/org--below-folded-end-p (pos)
+  "Return non-nil when POS is on the line below a folded last subtree.
 `suderman/org-fold-keep-final-newline' leaves that line visible, but it
 belongs to the subtree, so typing there would hide its context."
+  (save-restriction
+    (widen)
+    (let ((bol (save-excursion (goto-char (point-max)) (pos-bol))))
+      (and (>= pos (1- bol))
+           (> bol (1+ (point-min)))
+           (org-fold-folded-p (- bol 2) 'outline)))))
+
+(defun suderman/org--show-subtree-at (pos)
+  "Show the visible subtree whose hidden body contains POS."
   (save-excursion
     (save-restriction
       (widen)
-      (goto-char (point-max))
-      (beginning-of-line)
-      (when (and (>= pos (1- (point)))
-                 (> (point) (1+ (point-min)))
-                 (org-fold-folded-p (- (point) 2) 'outline))
-        (goto-char (- (point) 2))
-        (org-back-to-heading t)
-        (while (and (org-invisible-p) (org-up-heading-safe)))
-        (org-fold-show-subtree)))))
-
-(defun suderman/org-reveal-final-line-edit (beg _end)
-  "Show a folded last subtree before an edit at BEG on the line below it."
-  (when this-command
-    (suderman/org-reveal-final-line beg)))
+      (goto-char pos)
+      (org-back-to-heading t)
+      (while (and (org-invisible-p) (org-up-heading-safe)))
+      (org-fold-show-subtree))))
 
 (defun suderman/org-reveal-final-line-insert ()
   "Show a folded last subtree when Insert starts on the line below it."
-  (suderman/org-reveal-final-line (point)))
+  (when (and (suderman/org--below-folded-end-p (point))
+             (not (org-at-heading-p)))
+    (suderman/org--show-subtree-at (1- (pos-bol)))))
+
+(defun suderman/org-reveal-final-line-edit (beg _end)
+  "Note an interactive edit at BEG on the line below a folded last subtree."
+  (when (and this-command (suderman/org--below-folded-end-p beg))
+    (setq suderman/org--final-line-edit
+          (min beg (or suderman/org--final-line-edit beg)))))
+
+(defun suderman/org-reveal-after-final-line-edit ()
+  "Show a folded last subtree after a command edited body text below it.
+Org builds a new heading in several changes, so decide once the command
+ends.  An edit that starts a heading leaves the subtree folded."
+  (when-let* ((beg suderman/org--final-line-edit))
+    (setq suderman/org--final-line-edit nil)
+    (unless (save-excursion
+              (goto-char (min beg (point-max)))
+              (skip-chars-forward "\n")
+              (and (bolp) (org-at-heading-p)))
+      (suderman/org--show-subtree-at (max (point-min) (1- beg))))))
 
 (defun suderman/org-enable-final-line-reveal ()
-  "Show a folded last subtree before edits on the line below it."
+  "Show a folded last subtree before body edits on the line below it."
   (add-hook 'before-change-functions #'suderman/org-reveal-final-line-edit nil t)
+  (add-hook 'post-command-hook #'suderman/org-reveal-after-final-line-edit nil t)
   (add-hook 'meow-insert-enter-hook #'suderman/org-reveal-final-line-insert nil t))
 
 (add-hook 'org-mode-hook #'suderman/org-enable-final-line-reveal)
@@ -1166,18 +1189,31 @@ The subtree is copied when the selection covers exactly that heading line."
 
 (defun suderman/org-paste ()
   "Paste the current kill, after the whole subtree of a folded heading.
-Linewise text would otherwise land inside the heading's hidden body."
+Linewise text would otherwise land inside the heading's hidden body.
+On the empty line below a folded last subtree, paste onto that line
+rather than below it.  Fold pasted subtrees, as `org-yank' does."
   (interactive)
-  (let ((bounds (suderman/org--folded-subtree-bounds))
-        (text (and kill-ring (current-kill 0 t))))
-    (if (and bounds text (not (use-region-p)) (string-suffix-p "\n" text))
-        (progn
-          (goto-char (cdr bounds))
-          (unless (bolp) (insert "\n"))
-          (let ((start (point)))
-            (insert-for-yank text)
-            (goto-char start)))
-      (call-interactively #'suderman/meow-paste))))
+  (let* ((text (and kill-ring (current-kill 0 t)))
+         (linewise (and text (not (use-region-p)) (string-suffix-p "\n" text)))
+         (bounds (and linewise (suderman/org--folded-subtree-bounds)))
+         (start (cond (bounds (cdr bounds))
+                      ((and linewise
+                            (suderman/org--below-folded-end-p (point))
+                            (org-match-line "[ \t]*$"))
+                       (pos-bol)))))
+    (if (not start)
+        (call-interactively #'suderman/meow-paste)
+      (goto-char start)
+      (unless (bolp) (insert "\n"))
+      (setq start (point))
+      (insert-for-yank text)
+      (when (and org-yank-folded-subtrees (org-kill-is-subtree-p text))
+        (let ((end (point)))
+          (goto-char start)
+          (while (< (point) end)
+            (org-fold-hide-subtree)
+            (org-end-of-subtree t t))))
+      (goto-char start))))
 
 (defun suderman/org-move (command)
   "Move the Org element at point with COMMAND, keeping a folded heading folded.
