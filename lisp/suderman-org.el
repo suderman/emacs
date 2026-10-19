@@ -867,9 +867,25 @@ and batch state changes pass through untouched."
        (org-cut-subtree)))))
 
 (defun suderman/org-toggle-checkbox ()
-  "Toggle a checkbox in an Org buffer."
+  "Toggle a checkbox in an Org buffer, adding one where it is missing.
+A list item without a box gains one, and any other line becomes a
+checkbox item; on a blank line, enter Insert from Normal.  A prefix
+argument, active region, or heading uses Org's toggle unchanged."
   (interactive)
-  (suderman/org--call-contextually #'org-toggle-checkbox))
+  (if (or current-prefix-arg (use-region-p)
+          (not (derived-mode-p 'org-mode)) (org-at-heading-p))
+      (suderman/org--call-contextually #'org-toggle-checkbox)
+    ;; A blank line inside a list still belongs to the item above it.
+    (let ((item (and (not (org-match-line "[ \t]*$")) (org-in-item-p))))
+      (if item
+          (save-excursion
+            (goto-char item)
+            (org-toggle-checkbox (unless (org-at-item-checkbox-p) '(4))))
+        (back-to-indentation)
+        (insert "- [ ] ")
+        (org-update-checkbox-count-maybe)
+        (when (and (eolp) (bound-and-true-p meow-normal-mode))
+          (suderman/meow-insert))))))
 
 (defun suderman/org-goto-adjacent-heading ()
   "Move to the visible heading when point borders its folded subtree."
