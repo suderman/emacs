@@ -318,7 +318,7 @@ Planning lines or drawers can be added there by hand."
 (defun suderman/org-return ()
   "Continue a heading or list item, or use Org Return, then enter Insert.
 At the end of a folded heading, add a sibling after its subtree.  At
-the end of an open heading, open a line above its body, below planning
+the end of an open heading, open a line directly below its planning
 lines and drawers.  With a prefix argument, open a line directly below
 the heading instead.  Return on an empty item removes it and ends the
 list.  Elsewhere a prefix argument keeps Org's normal newline behavior."
@@ -329,10 +329,11 @@ list.  Elsewhere a prefix argument keeps Org's normal newline behavior."
      (current-prefix-arg (suderman/org-open-below-heading))
      ((org-fold-folded-p (point) 'outline)
       (org-insert-heading-respect-content))
+     ;; Org's skip also passes blank lines; open directly below the metadata.
      (t (org-end-of-meta-data t)
-        (unless (bolp) (insert "\n"))
-        (insert "\n")
-        (backward-char))))
+        (skip-chars-backward " \t\n")
+        (end-of-line)
+        (insert "\n"))))
    ((and (not current-prefix-arg) (eolp) (org-at-item-p)
          (org-match-line org-list-full-item-re))
     (if (= (point) (match-end 0))
@@ -1088,6 +1089,7 @@ Return nil so Org continues its normal TAB action."
         auto-save-visited-predicate #'suderman/org-auto-save-visited-p
         org-M-RET-may-split-line '((default . nil))
         org-insert-heading-respect-content nil
+        org-blank-before-new-entry '((heading . nil) (plain-list-item . auto))
         org-log-done 'time
         org-log-into-drawer t
         org-fontify-whole-block-delimiter-line nil
