@@ -69,7 +69,7 @@
          (draft (expand-file-name "draft.org" org-directory))
          (archive (expand-file-name "notes/archive.org" org-directory))
          (contexts (list life notes client project))
-         (destinations (append (list todo routines) contexts)))
+         (destinations (cons todo contexts)))
     (unwind-protect
         (progn
           (dolist (directory (list (file-name-directory life)
@@ -83,7 +83,9 @@
           (should (equal (suderman/org-context-files) contexts))
           (with-temp-buffer
             (setq buffer-file-name inbox)
-            (should (equal (suderman/org-refile-files) destinations)))
+            (should (equal (suderman/org-refile-files) destinations))
+            ;; routines.org left the refile targets on 2026-10-16.
+            (should-not (member routines (suderman/org-refile-files))))
           (with-temp-buffer
             (setq buffer-file-name draft)
             (should (equal (suderman/org-refile-files)
