@@ -297,11 +297,62 @@ Like `suderman/org--step', for Markdown's tree-sitter tree."
         (goto-char (treesit-node-start sibling)))))
    (t (suderman/meow--step-body (suderman/markdown--body-blocks) forward))))
 
+(defun suderman/code--line-indent ()
+  "Return the indentation of the line at point if it is navigable.
+Blank and hidden lines, lines inside strings, and lines that open with a
+closing bracket are skipped."
+  (save-excursion
+    (back-to-indentation)
+    (unless (or (eolp)
+                (invisible-p (point))
+                (eq (char-syntax (char-after)) ?\))
+                (nth 3 (syntax-ppss))
+                ;; Tree-sitter knows strings that syntax tables miss, like
+                ;; Nix's indented strings.
+                (and (fboundp 'treesit-parser-list) (treesit-parser-list)
+                     (when-let* ((string (treesit-parent-until
+                                          (treesit-node-at (point))
+                                          (lambda (node)
+                                            (string-match-p
+                                             "string" (treesit-node-type node)))
+                                          t)))
+                       (< (treesit-node-start string) (point)))))
+      (current-column))))
+
+(defun suderman/code--indent ()
+  "Return the indentation that navigation measures from at point."
+  (or (suderman/code--line-indent) (current-indentation)))
+
+(defun suderman/code--find (direction match stop)
+  "Move to the next navigable line in DIRECTION whose indentation MATCH accepts.
+Give up at a line whose indentation is below STOP.  Return non-nil on success."
+  (let (target)
+    (save-excursion
+      (catch 'done
+        (while (and (zerop (forward-line direction)) (not (eobp)))
+          (let ((other (suderman/code--line-indent)))
+            (cond ((null other))
+                  ((funcall match other)
+                   (back-to-indentation)
+                   (setq target (point))
+                   (throw 'done nil))
+                  ((< other stop) (throw 'done nil)))))))
+    (when target (goto-char target))))
+
+(defun suderman/code--step (forward)
+  "Move to the next line at this indentation, or previous unless FORWARD.
+Stop where indentation drops below this line."
+  (let ((indent (suderman/code--indent)))
+    (unless (suderman/code--find (if forward 1 -1)
+                                 (lambda (other) (= other indent)) indent)
+      (user-error (if forward "No next sibling line" "No previous sibling line")))))
+
 (defun suderman/meow-next-block (&optional n)
   "Move to the Nth next sibling block, or previous when N is negative.
 Org and Markdown step among headings on a heading, among items in a
 list, and among body elements in a heading's body.  Other outlines
-move by the heading that contains point, and code by function."
+move by the heading that contains point, and code by lines at the
+same indentation."
   (interactive "p")
   (suderman/meow--cancel-active-selection)
   (let ((n (or n 1)))
@@ -315,7 +366,9 @@ move by the heading that contains point, and code by function."
      ((bound-and-true-p outline-minor-mode)
       (if (> n 0) (outline-forward-same-level n)
         (outline-backward-same-level (- n))))
-     (t (beginning-of-defun (- n))))))
+     (t
+      (dotimes (_ (abs n))
+        (suderman/code--step (> n 0)))))))
 
 (defun suderman/meow-previous-block (&optional n)
   "Move to the Nth previous sibling block."
@@ -325,7 +378,8 @@ move by the heading that contains point, and code by function."
 (defun suderman/meow-parent-block ()
   "Move to the block that contains point.
 Org and Markdown list items go to their parent item or heading; body
-text goes to its own heading.  Code climbs one bracket level."
+text goes to its own heading.  Code goes to the line above with less
+indentation."
   (interactive)
   (suderman/meow--cancel-active-selection)
   (cond
@@ -349,13 +403,16 @@ text goes to its own heading.  Code climbs one bracket level."
     (if (outline-on-heading-p t)
         (outline-up-heading 1)
       (outline-back-to-heading t)))
-   (t (backward-up-list 1 t t))))
+   (t
+    (let ((indent (suderman/code--indent)))
+      (unless (suderman/code--find -1 (lambda (other) (< other indent)) 0)
+        (user-error "No parent line"))))))
 
 (defun suderman/meow-child-block ()
   "Move to the first child of the block at point, showing it if folded.
 Org and Markdown list items go to their first nested item.  Headings
 go to their first child heading, or else their first paragraph or list.  Code
-descends one bracket level."
+goes to the next line when it is indented further, unfolding it first."
   (interactive)
   (suderman/meow--cancel-active-selection)
   (cond
@@ -400,7 +457,12 @@ descends one bracket level."
       (unless (or heading text) (user-error "No child heading or body text"))
       (if heading (outline-show-children) (outline-show-entry))
       (goto-char (or heading text))))
-   (t (down-list 1 t))))
+   (t
+    (let ((indent (suderman/code--indent)))
+      (suderman/meow--toggle-line-fold t)
+      (unless (suderman/code--find 1 (lambda (other) (> other indent))
+                                   most-positive-fixnum)
+        (user-error "No indented child line"))))))
 
 (defun suderman/meow--adopt-surround-selection (&rest _)
   "Convert Surround's active region for normal Meow motion."
