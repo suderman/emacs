@@ -20,8 +20,8 @@
 (defvar suderman/ibuffer-grouped nil
   "Non-nil groups IBuffer by project; nil lists recent buffers.")
 
-(defvar suderman/ibuffer-show-starred nil
-  "Non-nil shows starred buffers that IBuffer hides by default.")
+(defvar suderman/ibuffer-show-hidden nil
+  "Non-nil shows the buffers that IBuffer hides by default.")
 
 (defvar suderman/ibuffer-starred-keep '("*scratch*" "*Messages*")
   "Starred buffer names that IBuffer always shows.")
@@ -57,11 +57,15 @@
   (let ((root (car (ibuffer-project-root buffer))))
     (if root (file-name-nondirectory (directory-file-name root)) "")))
 
-(defun suderman/ibuffer-starred-p (buffer)
-  "Return non-nil when BUFFER is a starred buffer IBuffer hides."
+(defun suderman/ibuffer-hidden-p (buffer)
+  "Return non-nil when IBuffer hides BUFFER by default.
+That is a starred buffer, or a file never shown in a window, such as
+the files Org Agenda loads."
   (let ((name (buffer-name buffer)))
-    (and (string-suffix-p "*" name)
-         (not (member name suderman/ibuffer-starred-keep)))))
+    (or (and (string-suffix-p "*" name)
+             (not (member name suderman/ibuffer-starred-keep)))
+        (and (buffer-file-name buffer)
+             (not (buffer-local-value 'buffer-display-time buffer))))))
 
 (defun suderman/ibuffer-toggle ()
   "Open IBuffer, or restore the previous buffer when already there.
@@ -90,10 +94,10 @@ The recent list starts on the previous buffer, like Alt-Tab."
   (goto-char (point-min))
   (ibuffer-forward-line 0 t))
 
-(defun suderman/ibuffer-toggle-starred ()
-  "Show or hide starred buffers in IBuffer."
+(defun suderman/ibuffer-toggle-hidden ()
+  "Show or hide the buffers IBuffer hides by default."
   (interactive)
-  (setq suderman/ibuffer-show-starred (not suderman/ibuffer-show-starred))
+  (setq suderman/ibuffer-show-hidden (not suderman/ibuffer-show-hidden))
   (suderman/ibuffer-setup))
 
 (defun suderman/ibuffer-disable-visual-line-mode ()
@@ -215,8 +219,8 @@ Buffers stop at the edge of their group; group headers move among groups."
           ibuffer-sorting-mode 'recency
           ibuffer-current-format 0))
   (setq-local ibuffer-maybe-show-predicates
-              (append (unless suderman/ibuffer-show-starred
-                        '(suderman/ibuffer-starred-p))
+              (append (unless suderman/ibuffer-show-hidden
+                        '(suderman/ibuffer-hidden-p))
                       (default-value 'ibuffer-maybe-show-predicates)))
   (ibuffer-update nil t))
 
@@ -264,7 +268,7 @@ Buffers stop at the edge of their group; group headers move among groups."
   (keymap-set ibuffer-mode-map "]" #'suderman/ibuffer-next-sibling)
   (keymap-set ibuffer-mode-map "{" #'suderman/ibuffer-parent)
   (keymap-set ibuffer-mode-map "}" #'suderman/ibuffer-child)
-  (keymap-set ibuffer-mode-map "i" #'suderman/ibuffer-toggle-starred)
+  (keymap-set ibuffer-mode-map "i" #'suderman/ibuffer-toggle-hidden)
   (keymap-set ibuffer-mode-map "d" #'ibuffer-do-delete)
   (keymap-set ibuffer-mode-map "M" #'suderman/ibuffer-mark-all)
   (keymap-set ibuffer-mode-map "u" #'suderman/ibuffer-unmark)

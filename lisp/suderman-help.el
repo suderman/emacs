@@ -32,7 +32,7 @@
     (suderman/ibuffer-mark-all . "mark all")
     (suderman/ibuffer-unmark . "unmark")
     (suderman/ibuffer-toggle-grouped . "projects")
-    (suderman/ibuffer-toggle-starred . "starred")
+    (suderman/ibuffer-toggle-hidden . "hidden")
     (suderman/ibuffer-next-sibling . "next same")
     (suderman/ibuffer-previous-sibling . "prev same")
     (suderman/ibuffer-parent . "group")
