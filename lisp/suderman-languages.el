@@ -21,9 +21,10 @@
 
 ;; Normal o toggles the block that starts on the current line.
 (defun suderman/hs-fold-arrow (overlay)
-  "Show a folded Hideshow OVERLAY as an arrow, like Org headings."
+  "Show a folded Hideshow OVERLAY as an ellipsis.
+Markdown fences keep the arrow its headings use."
   (overlay-put overlay 'display
-               (propertize " ▸"
+               (propertize (if (derived-mode-p 'markdown-ts-mode) " ▸" "...")
                            'face '(org-ellipsis suderman/fixed-pitch-text)
                            'mouse-face 'highlight
                            'pointer 'hand
