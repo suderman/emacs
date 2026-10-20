@@ -680,5 +680,21 @@
     (should (string-match-p "Text\\.\n\n#\\+begin_src css\\(.\\|\n\\)*bash"
                             (buffer-string)))))
 
+(ert-deftest suderman/org-demote-shifts-plain-lines ()
+  ;; Org's M-right only moved by a word on a plain line.
+  (with-temp-buffer
+    (insert "* H\nhello world.\nI am Jon.\n")
+    (org-mode)
+    (org-fold-show-all)
+    (search-backward "Jon.")
+    (suderman/org-demote)
+    (suderman/org-demote)
+    (should (equal (buffer-string) "* H\nhello world.\n    I am Jon.\n"))
+    (suderman/org-promote)
+    (should (equal (buffer-string) "* H\nhello world.\n  I am Jon.\n"))
+    (goto-char (point-min))
+    (suderman/org-demote)
+    (should (equal (buffer-string) "** H\nhello world.\n  I am Jon.\n"))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here

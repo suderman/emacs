@@ -1247,7 +1247,9 @@ Org's structure commands deactivate the region."
 (defun suderman/org-promote ()
   "Promote with Org, keeping the selection for repeated use."
   (interactive)
-  (suderman/org--keep-selection #'org-metaleft))
+  (let ((org-metaleft-final-hook
+         (list (lambda () (suderman/meow--shift-lines -2) t))))
+    (suderman/org--keep-selection #'org-metaleft)))
 
 (defun suderman/org-demote ()
   "Demote with Org, then open a folded new parent to its children.
@@ -1255,7 +1257,10 @@ Otherwise the demoted headings show under a parent that looks folded
 and hides its own body.  Keep the selection for repeated use."
   (interactive)
   (let ((start (copy-marker (if (use-region-p) (region-beginning) (point)))))
-    (suderman/org--keep-selection #'org-metaright)
+    ;; Shift plain lines, where Org would only move by a word.
+    (let ((org-metaright-final-hook
+           (list (lambda () (suderman/meow--shift-lines 2) t))))
+      (suderman/org--keep-selection #'org-metaright))
     (save-excursion
       (goto-char start)
       (when (and (org-at-heading-p)
