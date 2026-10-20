@@ -696,5 +696,23 @@
     (suderman/org-demote)
     (should (equal (buffer-string) "** H\nhello world.\n  I am Jon.\n"))))
 
+(ert-deftest suderman/org-child-block-from-folded-heading-end ()
+  ;; A click after a folded heading leaves point at the end of its hidden
+  ;; body, where } found the last list item and had no nested item.
+  (with-temp-buffer
+    (insert "* A\n* Malfoid\nNotes.\n- one\n- two\n* hi\n")
+    (org-mode)
+    (org-fold-hide-sublevels 1)
+    (goto-char (point-min))
+    (search-forward "- two")
+    (should (org-invisible-p (1- (point))))
+    (suderman/meow-child-block)
+    (should (looking-at-p "Notes\\."))
+    (org-fold-hide-sublevels 1)
+    (goto-char (point-min))
+    (search-forward "- two")
+    (suderman/meow-next-block)
+    (should (looking-at-p "\\* hi"))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here

@@ -14,6 +14,7 @@
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/dirvish-side-toggle "suderman-files")
 (declare-function suderman/org-move "suderman-org" (command))
+(declare-function suderman/org-goto-adjacent-heading "suderman-org" ())
 (declare-function meow-insert-exit "meow" ())
 (declare-function meow-keypad-quit "meow-keypad" ())
 (declare-function meow--keypad-handle-input-event "meow-keypad" (input-event))
@@ -347,6 +348,12 @@ Stop where indentation drops below this line."
                                  (lambda (other) (= other indent)) indent)
       (user-error (if forward "No next sibling line" "No previous sibling line")))))
 
+(defun suderman/meow--leave-folded-body ()
+  "Move from the hidden end of a folded Org subtree to its heading.
+A click after a folded heading lands there; Tab and o do the same."
+  (when (derived-mode-p 'org-mode)
+    (suderman/org-goto-adjacent-heading)))
+
 (defun suderman/meow-next-block (&optional n)
   "Move to the Nth next sibling block, or previous when N is negative.
 Org and Markdown step among headings on a heading, among items in a
@@ -355,6 +362,7 @@ move by the heading that contains point, and code by lines at the
 same indentation."
   (interactive "p")
   (suderman/meow--cancel-active-selection)
+  (suderman/meow--leave-folded-body)
   (let ((n (or n 1)))
     (cond
      ((derived-mode-p 'org-mode)
@@ -382,6 +390,7 @@ text goes to its own heading.  Code goes to the line above with less
 indentation."
   (interactive)
   (suderman/meow--cancel-active-selection)
+  (suderman/meow--leave-folded-body)
   (cond
    ((and (derived-mode-p 'org-mode) (org-in-item-p))
     (let* ((item (org-in-item-p))
@@ -415,6 +424,7 @@ go to their first child heading, or else their first paragraph or list.  Code
 goes to the next line when it is indented further, unfolding it first."
   (interactive)
   (suderman/meow--cancel-active-selection)
+  (suderman/meow--leave-folded-body)
   (cond
    ((and (derived-mode-p 'org-mode) (org-in-item-p))
     (let* ((item (org-in-item-p))
