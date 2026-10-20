@@ -663,5 +663,22 @@
                    "* Last"))
     (should (org-fold-folded-p (line-end-position) 'outline))))
 
+(ert-deftest suderman/org-move-drags-src-blocks ()
+  ;; Babel's M-up and M-down hooks errored on blocks without a session.
+  (with-temp-buffer
+    (insert "* H\n\n#+begin_src bash\necho\n#+end_src\n\nText.\n\n"
+            "#+begin_src css\np {}\n#+end_src\n")
+    (org-mode)
+    (goto-char (point-min))
+    (search-forward "#+begin_src bash")
+    (suderman/org-move #'org-metadown)
+    (should (string-match-p "Text\\.\n\n#\\+begin_src bash"
+                            (buffer-string)))
+    (goto-char (point-min))
+    (search-forward "p {}")
+    (suderman/org-move #'org-metaup)
+    (should (string-match-p "Text\\.\n\n#\\+begin_src css\\(.\\|\n\\)*bash"
+                            (buffer-string)))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here

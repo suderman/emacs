@@ -1548,7 +1548,10 @@ Return nil so Org continues its normal TAB action."
      (shell . t)
      (python . t)
      (js . t)
-     (sqlite . t))))
+     (sqlite . t)))
+  ;; J and K move blocks with M-up and M-down, not load or pop to sessions.
+  (remove-hook 'org-metaup-hook #'org-babel-load-in-session-maybe)
+  (remove-hook 'org-metadown-hook #'org-babel-pop-to-session-maybe))
 
 (use-package org-superstar
   :after org
