@@ -66,6 +66,8 @@
 (declare-function dirvish-side--session-visible-p "dirvish-side")
 (declare-function dirvish-side-follow-mode "dirvish-side")
 (declare-function dirvish-subtree-toggle "dirvish-subtree")
+(declare-function dirvish-subtree--depth "dirvish-subtree")
+(declare-function dirvish-subtree--expanded-p "dirvish-subtree")
 (declare-function dirvish-subtree-toggle-or-open "dirvish-subtree")
 (declare-function dirvish-yank "dirvish-yank")
 (declare-function dv-curr-layout "dirvish")
@@ -211,6 +213,10 @@ Return non-nil when handling a normal FIND-FUNCTION file visit."
   "b" '("Drag files with Ripdrag" . suderman/dired-ripdrag)
   "TAB" '("Toggle subtree" . suderman/dirvish-toggle-subtree)
   "o" '("Toggle subtree" . suderman/dirvish-toggle-subtree)
+  "[" '("Previous entry at this level" . suderman/dirvish-previous-sibling)
+  "]" '("Next entry at this level" . suderman/dirvish-next-sibling)
+  "{" '("Containing directory" . suderman/dirvish-parent)
+  "}" '("First entry inside" . suderman/dirvish-child)
   "M-o" '("Open in other window" . dired-find-file-other-window)
   "\\" '("Toggle file sidebar" . suderman/dirvish-side-toggle)
   "<" '("Previous buffer" . previous-buffer)
@@ -268,6 +274,66 @@ Return non-nil when handling a normal FIND-FUNCTION file visit."
   (when-let* ((entry (dired-get-filename nil t))
               ((file-directory-p entry)))
     (dirvish-subtree-toggle)))
+
+(defun suderman/dirvish-next-sibling (&optional n)
+  "Move to the Nth next entry at this subtree depth, or previous if N < 0.
+Stop at the edge of the current subtree."
+  (interactive "p")
+  (let ((n (or n 1))
+        (depth (dirvish-subtree--depth))
+        target)
+    (save-excursion
+      (dotimes (_ (abs n))
+        (setq target nil)
+        (catch 'done
+          (while (zerop (forward-line (if (> n 0) 1 -1)))
+            (when (and (not (invisible-p (point))) (dired-get-filename nil t))
+              (let ((other (dirvish-subtree--depth)))
+                (cond ((= other depth) (setq target (point)) (throw 'done nil))
+                      ((< other depth) (throw 'done nil)))))))
+        (unless target
+          (user-error (if (> n 0) "No next entry here" "No previous entry here")))))
+    (goto-char target)
+    (dired-move-to-filename)))
+
+(defun suderman/dirvish-previous-sibling (&optional n)
+  "Move to the Nth previous entry at this subtree depth."
+  (interactive "p")
+  (suderman/dirvish-next-sibling (- (or n 1))))
+
+(defun suderman/dirvish-parent ()
+  "Move to the directory that holds this entry.
+Inside a subtree that is its directory line; at the top, the parent
+directory."
+  (interactive)
+  (let ((depth (dirvish-subtree--depth)))
+    (if (zerop depth)
+        (dired-up-directory)
+      (while (and (zerop (forward-line -1))
+                  (not (and (dired-get-filename nil t)
+                            (< (dirvish-subtree--depth) depth)))))
+      (dired-move-to-filename))))
+
+(defun suderman/dirvish-child ()
+  "Expand the directory at point if needed and move to its first entry."
+  (interactive)
+  (let ((entry (dired-get-filename nil t))
+        (depth (dirvish-subtree--depth)))
+    (unless (and entry (file-directory-p entry))
+      (user-error "Not a directory"))
+    (unless (dirvish-subtree--expanded-p)
+      (dirvish-subtree-toggle))
+    (let ((child (save-excursion
+                   (forward-line 1)
+                   (and (> (dirvish-subtree--depth) depth)
+                        (dired-get-filename nil t)
+                        (point)))))
+      (unless child
+        ;; An empty directory expands to a blank line; fold it back.
+        (when (dirvish-subtree--expanded-p) (dirvish-subtree-toggle))
+        (user-error "Empty directory"))
+      (goto-char child)
+      (dired-move-to-filename))))
 
 (defun suderman/dirvish-search (pattern)
   "Search below the current directory for comma-separated PATTERNs."
