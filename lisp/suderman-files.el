@@ -857,6 +857,40 @@ client's frame, not this buffer, keeps a terminal client alive."
       (unless cached
         (redraw-frame frame)))))
 
+(defun suderman/kitty-graphics-herdr-p ()
+  "Return non-nil when kitty-graphics targets a Herdr pane.
+Herdr speaks the Kitty protocol but hides Kitty's environment markers and
+its outer terminal may lack Sixel."
+  (equal (kitty-graphics--frame-getenv "TERM_PROGRAM"
+                                       (kitty-graphics--target-frame))
+         "herdr"))
+
+(defun suderman/kitty-graphics-herdr-placement ()
+  "Use Unicode placeholders in Herdr, as in tmux, so images follow panes."
+  (and (suderman/kitty-graphics-herdr-p) 'placeholder))
+
+(defun suderman/image-mode-match-frame (frame)
+  "Reopen FRAME's selected image buffer in the image mode its frame needs.
+A GUI and a terminal frame on one daemon share the buffer, but native Image
+mode and kitty-graphics' terminal mode cannot display each other's buffers.
+The frame used last wins."
+  (let ((window (frame-selected-window frame)))
+    (with-current-buffer (window-buffer window)
+      ;; Frame switches also run the hooks for the frame being left.
+      (when (and (eq frame (selected-frame))
+                 buffer-file-name
+                 (if (display-graphic-p frame)
+                     (eq major-mode 'kitty-graphics-image-mode)
+                   (and kitty-graphics-mode (eq major-mode 'image-mode))))
+        ;; Kitty drops stored image data while another frame owns the
+        ;; buffer, so send it again instead of trusting the record.
+        (unless (display-graphic-p frame)
+          (set-terminal-parameter frame 'kitty-graphics-transmitted nil))
+        ;; `revert-buffer' would run Image mode's local hook in the new mode.
+        (remove-hook 'after-revert-hook #'image-after-revert-hook t)
+        (with-selected-window window
+          (revert-buffer t t))))))
+
 (use-package kitty-graphics
   :ensure nil
   :after dirvish
@@ -867,6 +901,12 @@ client's frame, not this buffer, keeps a terminal client alive."
   :config
   (advice-add 'kitty-graphics--query-text-sizing-support :around
               #'suderman/kitty-graphics-probe-with-redraw)
+  (advice-add 'kitty-graphics--kitty-detect :after-until
+              #'suderman/kitty-graphics-herdr-p)
+  (advice-add 'kitty-graphics--effective-placement-mode :before-until
+              #'suderman/kitty-graphics-herdr-placement)
+  (add-hook 'window-buffer-change-functions #'suderman/image-mode-match-frame)
+  (add-hook 'window-selection-change-functions #'suderman/image-mode-match-frame)
   (kitty-graphics-setup))
 
 (provide 'suderman-files)
