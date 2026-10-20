@@ -77,6 +77,7 @@
    "?" #'suderman/cheatsheet
    "TAB" '("expand/collapse all" . suderman/org-expand-or-collapse-all)
    "e" '("mail" . suderman/mail)
+   "z" '("fold all" . suderman/meow-fold-all)
    "0" #'meow-digit-argument
    "1" #'meow-digit-argument
    "2" #'meow-digit-argument

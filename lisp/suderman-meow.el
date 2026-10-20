@@ -15,6 +15,7 @@
 (declare-function suderman/dirvish-side-toggle "suderman-files")
 (declare-function suderman/org-move "suderman-org" (command))
 (declare-function suderman/org-goto-adjacent-heading "suderman-org" ())
+(declare-function suderman/org-collapse-all "suderman-org" ())
 (declare-function meow-insert-exit "meow" ())
 (declare-function corfu-quit "corfu" ())
 (declare-function meow-keypad-quit "meow-keypad" ())
@@ -245,6 +246,17 @@ press at the end moves to the start."
                          (hs-overlay-at (pos-eol))))
                 'folded
               'open))))))
+
+(defun suderman/meow-fold-all ()
+  "Fold the buffer to its top-level headings, or fold every code block."
+  (interactive)
+  (suderman/meow--cancel-active-selection)
+  (cond
+   ((derived-mode-p 'org-mode) (suderman/org-collapse-all))
+   ((bound-and-true-p outline-minor-mode) (outline-hide-sublevels 1))
+   ((bound-and-true-p hs-minor-mode) (hs-hide-all))
+   (t (user-error "Nothing to fold here")))
+  (suderman/goto-shown-line-end))
 
 (defun suderman/org--body-blocks ()
   "Return (BEGIN . TYPE) for each body element of the entry at point.

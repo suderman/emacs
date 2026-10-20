@@ -748,5 +748,28 @@
     (should (eolp))
     (should (org-fold-folded-p (line-end-position) 'outline))))
 
+(ert-deftest suderman/meow-fold-all-shows-top-level-headings ()
+  ;; SPC z folds the whole buffer to its top-level headings.
+  (with-temp-buffer
+    (insert "* A\na body\n** A1\n* B\n:PROPERTIES:\n:ID: 1\n:END:\n")
+    (org-mode)
+    (org-fold-show-all)
+    (goto-char (point-max))
+    (forward-line -2)
+    (suderman/meow-fold-all)
+    (let (lines)
+      (save-excursion
+        (goto-char (point-min))
+        (while (not (eobp))
+          (unless (invisible-p (point))
+            (push (buffer-substring-no-properties (point) (line-end-position))
+                  lines))
+          (forward-line 1)))
+      (should (equal (nreverse lines) '("* A" "* B"))))
+    ;; Point left the hidden drawer for the heading that shows it.
+    (should (equal (buffer-substring-no-properties (line-beginning-position)
+                                                   (line-end-position))
+                   "* B"))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here
