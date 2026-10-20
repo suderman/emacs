@@ -32,6 +32,7 @@
 (declare-function suderman/meow-paste "suderman-meow" ())
 (declare-function suderman/meow-save "suderman-meow" ())
 (declare-function suderman/meow--cancel-active-selection "suderman-meow" ())
+(declare-function suderman/meow--fold-move "suderman-meow" (bounce start fold))
 (defvar meow-use-clipboard)
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
@@ -1128,23 +1129,33 @@ children cycling state.  Deeper levels stay folded."
   (org-fold-show-entry)
   (org-fold-show-children))
 
-(defun suderman/org-toggle-fold ()
+(defun suderman/org-toggle-fold (&optional bounce)
   "Toggle a heading, drawer, or block, then move to the line end.
 A folded heading opens to its body and direct children.  Empty headings
-and lines that cannot fold only move to the line end."
-  (interactive)
-  (suderman/org-goto-adjacent-heading)
-  (cond
-   ((org-fold-hide-drawer-toggle nil t))
-   ((org-at-heading-p)
-    (when (suderman/org-heading-has-content-p)
-      (if (org-fold-folded-p (line-end-position) 'outline)
-          (suderman/org-show-children)
-        (org-fold-hide-subtree))))
-   ;; Only the delimiter lines toggle; a line inside the block just moves.
-   ((org-match-line "[ \t]*#\\+\\(?:begin\\|end\\)_")
-    (org-fold-hide-block-toggle nil t)))
-  (end-of-line))
+and lines that cannot fold only move to the line end.  With BOUNCE, as
+from a key, a fold that closes moves to the line start instead, and on a
+line that cannot fold a press at the end moves to the start."
+  (interactive (list t))
+  (let ((start (point)))
+    (suderman/org-goto-adjacent-heading)
+    (let* ((moved (/= start (point)))
+           (foldable
+            (cond
+             ((org-fold-hide-drawer-toggle nil t))
+             ((org-at-heading-p)
+              (when (suderman/org-heading-has-content-p)
+                (if (org-fold-folded-p (line-end-position) 'outline)
+                    (suderman/org-show-children)
+                  (org-fold-hide-subtree))
+                t))
+             ;; Only the delimiter lines toggle; a line inside the block just moves.
+             ((org-match-line "[ \t]*#\\+\\(?:begin\\|end\\)_")
+              (org-fold-hide-block-toggle nil t)
+              t))))
+      (suderman/meow--fold-move
+       bounce (if moved -1 start)
+       (and foldable
+            (if (org-fold-folded-p (line-end-position)) 'folded 'open))))))
 
 (defun suderman/org--folded-subtree-bounds ()
   "Return the bounds of a folded subtree, or nil.

@@ -205,14 +205,37 @@ With SHOW, only unfold.  Return non-nil when a fold was found."
                        (hs-get-first-block-on-line))))
       (save-excursion (goto-char beg) (hs-hide-block-at-point))))))
 
-(defun suderman/meow-toggle-fold ()
+(defun suderman/meow--fold-move (bounce start fold)
+  "Move to the line start or end after a fold toggle.
+Without BOUNCE, go to the end.  FOLD is `folded' or `open' when the line
+folds: go to the start when folded, else the end.  A line that cannot
+fold goes to the start only when point stayed at START, the line end."
+  (if (and bounce
+           (if fold (eq fold 'folded)
+             (and (= (point) start) (eolp) (not (bolp)))))
+      (back-to-indentation)
+    (end-of-line)))
+
+(defun suderman/meow-toggle-fold (&optional bounce)
   "Toggle the fold that starts on this line, then move to the line end.
 A line that cannot fold only moves to its end, so this then Return
-opens a line below."
-  (interactive)
+opens a line below.  With BOUNCE, as from a key, a fold that closes
+moves to the line start instead, and on a line that cannot fold a
+press at the end moves to the start."
+  (interactive (list t))
   (suderman/meow--cancel-active-selection)
-  (suderman/meow--toggle-line-fold)
-  (end-of-line))
+  (let ((start (point)))
+    (suderman/goto-shown-line-end)
+    (let ((moved (/= start (point))))
+      (suderman/meow--fold-move
+       bounce (if moved -1 start)
+       (and (suderman/meow--toggle-line-fold)
+            (if (or (and (bound-and-true-p outline-minor-mode)
+                         (outline-invisible-p (pos-eol)))
+                    (and (bound-and-true-p hs-minor-mode)
+                         (hs-overlay-at (pos-eol))))
+                'folded
+              'open))))))
 
 (defun suderman/org--body-blocks ()
   "Return (BEGIN . TYPE) for each body element of the entry at point.

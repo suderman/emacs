@@ -714,5 +714,39 @@
     (suderman/meow-next-block)
     (should (looking-at-p "\\* hi"))))
 
+(ert-deftest suderman/org-toggle-fold-follows-the-fold ()
+  ;; o puts the cursor at the line start when it folds and at the end when
+  ;; it opens.  Lines that cannot fold alternate between their ends.
+  (with-temp-buffer
+    (insert "* A\n* Malfoid\nNotes.\n* hi\n  plain line\n")
+    (org-mode)
+    (org-fold-show-all)
+    (org-fold-hide-sublevels 1)
+    (goto-char (point-min))
+    (search-forward "Malf")
+    (call-interactively #'suderman/org-toggle-fold)
+    (should (eolp))
+    (should-not (org-fold-folded-p (line-end-position) 'outline))
+    (backward-char 3)
+    (call-interactively #'suderman/org-toggle-fold)
+    (should (bolp))
+    (should (org-fold-folded-p (line-end-position) 'outline))
+    (forward-char 4)
+    (call-interactively #'suderman/org-toggle-fold)
+    (should (eolp))
+    (should-not (org-fold-folded-p (line-end-position) 'outline))
+    (org-fold-show-all)
+    (search-forward "plain")
+    (call-interactively #'suderman/org-toggle-fold)
+    (should (eolp))
+    (call-interactively #'suderman/org-toggle-fold)
+    (should (looking-at-p "plain line"))
+    ;; Mouse clicks call it without BOUNCE and end at the line end.
+    (goto-char (point-min))
+    (search-forward "Malf")
+    (suderman/org-toggle-fold)
+    (should (eolp))
+    (should (org-fold-folded-p (line-end-position) 'outline))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here
