@@ -16,6 +16,7 @@
 (declare-function suderman/org-move "suderman-org" (command))
 (declare-function suderman/org-goto-adjacent-heading "suderman-org" ())
 (declare-function meow-insert-exit "meow" ())
+(declare-function corfu-quit "corfu" ())
 (declare-function meow-keypad-quit "meow-keypad" ())
 (declare-function meow--keypad-handle-input-event "meow-keypad" (input-event))
 (declare-function which-key--popup-showing-p "which-key" ())
@@ -140,6 +141,14 @@ on that entry.  Ignore clicks elsewhere and the press half of a click."
          (keys (and key (ignore-errors (key-parse key)))))
     (when (> (length keys) 0)
       (meow--keypad-handle-input-event (aref keys (1- (length keys)))))))
+
+(defun suderman/meow-insert-escape ()
+  "Close a completion popup, or else leave Insert state.
+Meow's Insert keymap outranks Corfu's, so Corfu never sees Escape."
+  (interactive)
+  (if (and (bound-and-true-p completion-in-region-mode) (fboundp 'corfu-quit))
+      (corfu-quit)
+    (meow-insert-exit)))
 
 (defun suderman/meow-escape ()
   "Cancel any selection, then exit Insert state or return to the top level."
@@ -992,6 +1001,7 @@ bindings that were deleted from source."
   (add-hook 'meow-switch-state-hook
             #'suderman/android-meow-text-conversion)
   (suderman/meow-setup-qwerty)
+  (keymap-set meow-insert-state-keymap "<escape>" #'suderman/meow-insert-escape)
   (keymap-set meow-keypad-state-keymap "<right>"
               #'suderman/meow-keypad-next-page)
   (keymap-set meow-keypad-state-keymap "<down>"
