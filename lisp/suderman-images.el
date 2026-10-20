@@ -286,6 +286,16 @@
                          (eq meow--current-state 'motion))))
       (meow-mode 1))))
 
+(defun suderman/image-metadata-graphic-frame (arguments)
+  "Measure images on a GUI frame while a terminal frame is selected.
+Animation timers call `image-metadata' with ARGUMENTS lacking a frame, which
+fails and kills a GUI animation whenever a daemon's terminal frame is in use."
+  (if (or (cadr arguments) (display-graphic-p))
+      arguments
+    (list (car arguments) (seq-find #'display-graphic-p (frame-list)))))
+
+(advice-add 'image-metadata :filter-args #'suderman/image-metadata-graphic-frame)
+
 (with-eval-after-load 'image-mode
   (setq image-animate-loop t)
   (keymap-set image-mode-map "," #'suderman/ibuffer-toggle)

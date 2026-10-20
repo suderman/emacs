@@ -883,9 +883,13 @@ The frame used last wins."
                      (eq major-mode 'kitty-graphics-image-mode)
                    (and kitty-graphics-mode (eq major-mode 'image-mode))))
         ;; Kitty drops stored image data while another frame owns the
-        ;; buffer, so send it again instead of trusting the record.
+        ;; buffer, so send it again instead of trusting the record.  Image
+        ;; mode's animation timer would keep running on the hidden image.
         (unless (display-graphic-p frame)
-          (set-terminal-parameter frame 'kitty-graphics-transmitted nil))
+          (set-terminal-parameter frame 'kitty-graphics-transmitted nil)
+          (when-let* ((image (image-get-display-property))
+                      (timer (image-animate-timer image)))
+            (cancel-timer timer)))
         ;; `revert-buffer' would run Image mode's local hook in the new mode.
         (remove-hook 'after-revert-hook #'image-after-revert-hook t)
         (with-selected-window window
@@ -896,7 +900,11 @@ The frame used last wins."
   :after dirvish
   :demand t
   :init
+  ;; mpv 0.41's Kitty output leaves its final escape open, freezing the
+  ;; terminal after playback, so show GIFs as still images.  Videos open
+  ;; externally through `suderman/dired-open'.
   (setq kitty-graphics-enable-video t
+        kitty-graphics-play-gifs-with-mpv nil
         kitty-graphics-dirvish-video-inline-preview t)
   :config
   (advice-add 'kitty-graphics--query-text-sizing-support :around
