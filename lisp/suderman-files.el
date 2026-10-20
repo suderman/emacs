@@ -736,16 +736,6 @@ Skip archive.org files and archive directories.  Timestamp names on collisions."
 
 (add-hook 'dired-mode-hook #'suderman/dired-setup)
 (add-hook 'dired-mode-hook #'suderman/dired-hide-dotfiles t)
-(keymap-set ibuffer-mode-map "." #'suderman/ibuffer-dirvish)
-(keymap-unset ibuffer-mode-map "S" t)
-(keymap-set ibuffer-mode-map "B" #'ibuffer-copy-buffername-as-kill)
-(keymap-set ibuffer-mode-map "\\" #'suderman/ibuffer-dirvish-side)
-(keymap-set ibuffer-mode-map "<" #'previous-buffer)
-(keymap-set ibuffer-mode-map ">" #'next-buffer)
-(keymap-set ibuffer-mode-map "l" #'suderman/ibuffer-open)
-(keymap-unset ibuffer-mode-map "i" t)
-(keymap-unset ibuffer-mode-map "H" t)
-(keymap-set ibuffer-mode-map "SPC" #'meow-keypad)
 (keymap-set dired-mode-map "`" #'suderman/dashboard)
 
 (use-package pdf-loader

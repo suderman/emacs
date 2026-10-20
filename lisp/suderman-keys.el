@@ -91,7 +91,7 @@
    "," (cons "buffers"
              (define-keymap
                "/" #'consult-buffer
-               "b" #'ibuffer
+               "b" #'suderman/ibuffer-toggle
                "k" #'kill-current-buffer
                "," #'suderman/alternate-buffer
                "n" #'next-buffer
