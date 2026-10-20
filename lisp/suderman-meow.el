@@ -247,15 +247,50 @@ press at the end moves to the start."
                 'folded
               'open))))))
 
+(defun suderman/meow--hidden-ranges ()
+  "Return the hidden ranges of the buffer, merging adjacent ones."
+  (let ((pos (point-min)) ranges)
+    (while (< pos (point-max))
+      (let ((next (next-single-char-property-change pos 'invisible)))
+        (when (invisible-p pos)
+          (if (and ranges (= (cdar ranges) pos))
+              (setcdr (car ranges) next)
+            (push (cons pos next) ranges)))
+        (setq pos next)))
+    ranges))
+
+(defun suderman/meow--hs-hide-all ()
+  "Fold every top-level code block.
+A lone block holding the whole file, such as a Nix attribute set, stays
+open with its own blocks folded, as a lone Org heading does."
+  (hs-hide-all)
+  (let ((folds (seq-filter (lambda (overlay) (overlay-get overlay 'hs))
+                           (overlays-in (point-min) (point-max)))))
+    (when (length= folds 1)
+      (let ((start (overlay-start (car folds))))
+        (hs-show-all)
+        (save-excursion
+          (goto-char start)
+          (forward-line 0)
+          (goto-char (hs-get-first-block-on-line))
+          (hs-hide-level 1))))))
+
 (defun suderman/meow-fold-all ()
-  "Fold the buffer to its top-level headings, or fold every code block."
+  "Fold the buffer to its top-level headings, or fold every code block.
+When everything is already folded that way, open everything instead."
   (interactive)
   (suderman/meow--cancel-active-selection)
-  (cond
-   ((derived-mode-p 'org-mode) (suderman/org-collapse-all))
-   ((bound-and-true-p outline-minor-mode) (outline-hide-sublevels 1))
-   ((bound-and-true-p hs-minor-mode) (hs-hide-all))
-   (t (user-error "Nothing to fold here")))
+  (let ((before (suderman/meow--hidden-ranges)))
+    (cond
+     ((derived-mode-p 'org-mode) (suderman/org-collapse-all))
+     ((bound-and-true-p outline-minor-mode) (outline-hide-sublevels 1))
+     ((bound-and-true-p hs-minor-mode) (suderman/meow--hs-hide-all))
+     (t (user-error "Nothing to fold here")))
+    (when (equal before (suderman/meow--hidden-ranges))
+      (cond
+       ((derived-mode-p 'org-mode) (org-fold-show-all))
+       ((bound-and-true-p outline-minor-mode) (outline-show-all))
+       (t (hs-show-all)))))
   (suderman/goto-shown-line-end))
 
 (defun suderman/org--body-blocks ()

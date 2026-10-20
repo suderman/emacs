@@ -75,9 +75,8 @@
  (define-keymap
    "SPC" #'execute-extended-command
    "?" #'suderman/cheatsheet
-   "TAB" '("expand/collapse all" . suderman/org-expand-or-collapse-all)
+   "TAB" '("fold/open all" . suderman/meow-fold-all)
    "e" '("mail" . suderman/mail)
-   "z" '("fold all" . suderman/meow-fold-all)
    "0" #'meow-digit-argument
    "1" #'meow-digit-argument
    "2" #'meow-digit-argument

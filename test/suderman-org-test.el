@@ -768,6 +768,10 @@
                   lines))
           (forward-line 1)))
       (should (equal (nreverse lines) '("* A" "* B"))))
+    ;; Pressed again on a fully folded buffer, it opens everything.
+    (suderman/meow-fold-all)
+    (should-not (suderman/meow--hidden-ranges))
+    (suderman/meow-fold-all)
     ;; Point left the hidden drawer for the heading that shows it.
     (should (equal (buffer-substring-no-properties (line-beginning-position)
                                                    (line-end-position))

@@ -220,10 +220,33 @@
     (treesit-font-lock-recompute-features)
     (font-lock-flush)))
 
+(defun suderman/nix-folding-setup ()
+  "Fold Nix brackets and indented strings by their tree-sitter nodes.
+The mode defines no tree-sitter `list' thing, so Hideshow paired brackets
+by syntax, including those in shell code inside indented strings."
+  (setq-local treesit-thing-settings (copy-tree treesit-thing-settings))
+  (push `(list ,(rx bos (or "attrset_expression" "rec_attrset_expression"
+                            "list_expression" "parenthesized_expression"
+                            "formals" "indented_string_expression")
+                   eos))
+        (alist-get 'nix treesit-thing-settings))
+  ;; What `treesit-major-mode-setup' sets when a mode defines `list'.
+  (setq-local forward-list-function #'treesit-forward-list
+              hs-c-start-regexp nil
+              hs-block-start-regexp nil
+              hs-block-end-regexp #'treesit-hs-block-end
+              hs-forward-sexp-function #'forward-list
+              hs-find-block-beginning-function #'treesit-hs-find-block-beginning
+              hs-find-next-block-function #'treesit-hs-find-next-block
+              hs-looking-at-block-start-predicate
+              #'treesit-hs-looking-at-block-start-p
+              hs-inside-comment-predicate #'treesit-hs-inside-comment-p))
+
 (unless (featurep 'android)
   (use-package nix-ts-mode
     :mode "\\.nix\\'"
-    :hook (nix-ts-mode . suderman/nix-embedded-languages-setup)))
+    :hook ((nix-ts-mode . suderman/nix-embedded-languages-setup)
+           (nix-ts-mode . suderman/nix-folding-setup))))
 
 (provide 'suderman-nix)
 ;;; suderman-nix.el ends here

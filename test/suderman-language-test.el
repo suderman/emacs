@@ -106,5 +106,32 @@
     (should (eq (suderman/test-nix-face-at "plain string")
                 'font-lock-string-face))))
 
+(ert-deftest suderman/nix-folds-by-tree-sitter-nodes ()
+  ;; Shell code in an indented string used to pair the file's opening brace
+  ;; with a parenthesis inside the string.  SPC z keeps a lone outer
+  ;; attribute set open with its own blocks folded, then opens everything.
+  (skip-unless (treesit-language-available-p 'nix))
+  (with-temp-buffer
+    (insert "{\n  a = [\n    1\n  ];\n  s = ''\n    case x in\n      y) echo ;;\n    esac\n  '';\n}\n")
+    (nix-ts-mode)
+    (hs-minor-mode 1)
+    (let ((folds (lambda ()
+                   (sort (mapcar (lambda (overlay)
+                                   (line-number-at-pos (overlay-start overlay)))
+                                 (seq-filter (lambda (overlay) (overlay-get overlay 'hs))
+                                             (overlays-in (point-min) (point-max))))
+                         #'<))))
+      (hs-hide-all)
+      (should (equal (funcall folds) '(1)))
+      ;; The outer fold runs to the closing brace, past the string's ")".
+      (should (= (line-number-at-pos
+                  (overlay-end (seq-find (lambda (overlay) (overlay-get overlay 'hs))
+                                         (overlays-in (point-min) (point-max)))))
+                 10))
+      (suderman/meow-fold-all)
+      (should (equal (funcall folds) '(2 5)))
+      (suderman/meow-fold-all)
+      (should-not (funcall folds)))))
+
 (provide 'suderman-language-test)
 ;;; suderman-language-test.el ends here
