@@ -98,13 +98,15 @@ on, and the `visual-line-mode' and `truncate-lines' to restore.")
 (defun suderman/sideways-scroll-p ()
   "Return non-nil when touch may scroll the current buffer sideways.
 By default that is where lines are truncated, except Dired, Dirvish, and
-IBuffer, which stay vertical-only."
+IBuffer's recent list, which stay vertical-only."
   (if suderman/sideways-scroll
       (car suderman/sideways-scroll)
     (and truncate-lines
-         (not (derived-mode-p 'dired-mode 'ibuffer-mode
-                              'dirvish-directory-view-mode
-                              'dirvish-special-preview-mode)))))
+         (if (derived-mode-p 'ibuffer-mode)
+             (bound-and-true-p suderman/ibuffer-grouped)
+           (not (derived-mode-p 'dired-mode
+                                'dirvish-directory-view-mode
+                                'dirvish-special-preview-mode))))))
 
 (defun suderman/toggle-sideways-scroll ()
   "Toggle wrapping and sideways scrolling in the current buffer.

@@ -83,6 +83,10 @@ The recent list starts on the previous buffer, like Alt-Tab."
   (interactive)
   (setq suderman/ibuffer-grouped (not suderman/ibuffer-grouped))
   (suderman/ibuffer-setup)
+  (unless suderman/ibuffer-grouped
+    ;; Android touch scrolls only the grouped view sideways.
+    (kill-local-variable 'auto-hscroll-mode)
+    (set-window-hscroll nil 0))
   (goto-char (point-min))
   (ibuffer-forward-line 0 t))
 
