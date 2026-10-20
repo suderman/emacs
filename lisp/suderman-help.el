@@ -371,7 +371,7 @@
     (meow-purrsist-find-backward . "find back")
     (suderman/meow-buffer-beginning . "buf beg")
     (suderman/meow-buffer-end . "buf end")
-    (suderman/meow-buffer-end-or-beginning . "buf end/beg")
+    (suderman/meow-buffer-end-or-beginning . "buf ends")
     (suderman/meow-indent . "indent")
     (suderman/meow-insert . "insert")
     (suderman/meow-insert-at-indentation . "at indent")
@@ -386,10 +386,11 @@
     (suderman/meow-join-line . "join line")
     (suderman/move-down . "move down")
     (suderman/move-up . "move up")
-    (suderman/meow-next-block . "block fwd")
-    (suderman/meow-previous-block . "block back")
-    (suderman/meow-parent-block . "block up")
-    (suderman/meow-child-block . "block down")
+    (suderman/meow-next-block . "block →")
+    (suderman/meow-previous-block . "block ←")
+    (suderman/meow-parent-block . "block ↑")
+    (suderman/meow-child-block . "block ↓")
+    (suderman/meow-toggle-fold . "fold")
     (suderman/meow-paste . "paste")
     (suderman/meow-replace-char . "rep char")
     (suderman/meow-repeat . "repeat")
@@ -407,6 +408,11 @@
   "Readable command labels for Meow and local-map cheatsheets.
 Keyboard cells have nine columns; longer labels get a numbered note.
 Unknown commands use their names without the mode or personal prefix.")
+
+;; Meow's absolute 9pt keyboard ignores text-scale zoom.  A relative height
+;; would compound where Meow stacks the face twice, so the cheatsheet
+;; buffer shrinks as a whole instead.
+(set-face-attribute 'meow-cheatsheet-command nil :height 'unspecified)
 
 (dolist (entry suderman/command-labels)
   (setf (alist-get (car entry) meow-command-to-short-name-list)
@@ -441,6 +447,8 @@ Dired and Dirvish share a map.  Other invoking modes join this list locally.")
 (define-derived-mode suderman/cheatsheet-mode special-mode "Cheatsheet"
   "Read a keyboard cheatsheet; quit returns to the invoking view."
   (setq-local truncate-lines t)
+  ;; Fit the keyboard drawing; text-scale zoom still applies on top.
+  (face-remap-add-relative 'default :height 0.75)
   (add-hook 'meow-mode-hook #'suderman/cheatsheet-disable-meow nil t)
   (suderman/cheatsheet-disable-meow))
 
@@ -546,7 +554,10 @@ Dired and Dirvish share a map.  Other invoking modes join this list locally.")
       (let ((existing (get-buffer "*Meow Cheatsheet*")))
         (unwind-protect
             (save-window-excursion
-              (with-current-buffer origin (meow-cheatsheet))
+              ;; The thing selectors it explains are unbound; m covers them.
+              (cl-letf (((symbol-function 'meow--render-cheatsheet-thing-table)
+                         (lambda () "")))
+                (with-current-buffer origin (meow-cheatsheet)))
               (with-current-buffer (window-buffer)
                 (string-trim-left (buffer-string))))
           (unless existing
