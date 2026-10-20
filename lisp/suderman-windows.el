@@ -75,7 +75,10 @@ Prefixes such as ESC are merged key by key, so MAP keeps its other bindings."
     (scroll-on-jump-advice-add suderman/meow-buffer-beginning)
     (scroll-on-jump-advice-add suderman/meow-buffer-end)
     (scroll-on-jump-advice-add meow-goto-line)
-    (scroll-on-jump-advice-add suderman/meow-search)))
+    (scroll-on-jump-advice-add suderman/meow-search)
+    (scroll-on-jump-advice-add suderman/meow-next-block)
+    (scroll-on-jump-advice-add suderman/meow-parent-block)
+    (scroll-on-jump-advice-add suderman/meow-child-block)))
 
 (defvar zoom-window-mode-line-color)
 

@@ -213,6 +213,84 @@ opens a line below."
   (suderman/meow--toggle-line-fold)
   (end-of-line))
 
+(defun suderman/meow-next-block (&optional n)
+  "Move to the Nth next sibling block, or previous when N is negative.
+Org list items step among their items.  Elsewhere outlines move by
+the heading that contains point, and code by function."
+  (interactive "p")
+  (suderman/meow--cancel-active-selection)
+  (let ((n (or n 1)))
+    (cond
+     ((and (derived-mode-p 'org-mode) (org-in-item-p))
+      (dotimes (_ (abs n))
+        (if (> n 0) (org-next-item) (org-previous-item))))
+     ((derived-mode-p 'org-mode)
+      (org-back-to-heading t)
+      (if (> n 0) (org-forward-heading-same-level n t)
+        (org-backward-heading-same-level (- n) t)))
+     ((bound-and-true-p outline-minor-mode)
+      (if (> n 0) (outline-forward-same-level n)
+        (outline-backward-same-level (- n))))
+     (t (beginning-of-defun (- n))))))
+
+(defun suderman/meow-previous-block (&optional n)
+  "Move to the Nth previous sibling block."
+  (interactive "p")
+  (suderman/meow-next-block (- (or n 1))))
+
+(defun suderman/meow-parent-block ()
+  "Move to the block that contains point.
+Org list items go to their parent item or heading; body text goes
+to its own heading.  Code climbs one bracket level."
+  (interactive)
+  (suderman/meow--cancel-active-selection)
+  (cond
+   ((and (derived-mode-p 'org-mode) (org-in-item-p))
+    (let* ((item (org-in-item-p))
+           (struct (save-excursion (goto-char item) (org-list-struct)))
+           (parent (org-list-get-parent item struct
+                                        (org-list-parents-alist struct))))
+      ;; A top-level item skips the plain-list stop `org-up-element' makes.
+      (if parent (goto-char parent) (org-back-to-heading t))))
+   ((derived-mode-p 'org-mode)
+    (org-up-element))
+   ((bound-and-true-p outline-minor-mode)
+    (if (outline-on-heading-p t)
+        (outline-up-heading 1)
+      (outline-back-to-heading t)))
+   (t (backward-up-list 1 t t))))
+
+(defun suderman/meow-child-block ()
+  "Move to the first child of the block at point, showing it if folded.
+Org list items go to their first nested item and headings to their
+first child heading.  Code descends one bracket level."
+  (interactive)
+  (suderman/meow--cancel-active-selection)
+  (cond
+   ((and (derived-mode-p 'org-mode) (org-in-item-p))
+    (let* ((item (org-in-item-p))
+           (child (org-list-has-child-p
+                   item (save-excursion (goto-char item) (org-list-struct)))))
+      (unless child (user-error "No nested item"))
+      (goto-char child)))
+   ((derived-mode-p 'org-mode)
+    (org-back-to-heading t)
+    (org-fold-show-children)
+    (unless (org-goto-first-child) (user-error "No child heading")))
+   ((bound-and-true-p outline-minor-mode)
+    (outline-back-to-heading t)
+    (let ((level (funcall outline-level))
+          (child (save-excursion
+                   (outline-next-heading)
+                   (and (outline-on-heading-p t) (point)))))
+      (unless (and child (> (save-excursion (goto-char child)
+                                            (funcall outline-level))
+                            level))
+        (user-error "No child heading"))
+      (outline-show-children)
+      (goto-char child)))
+   (t (down-list 1 t))))
+
 (defun suderman/meow--adopt-surround-selection (&rest _)
   "Convert Surround's active region for normal Meow motion."
   (when (bound-and-true-p meow-normal-mode)
@@ -688,10 +766,10 @@ bindings that were deleted from source."
    '("\\" . suderman/dirvish-side-toggle)
    '("<" . previous-buffer)
    '(">" . next-buffer)
-   '("[" . meow-inner-of-thing)
-   '("]" . meow-bounds-of-thing)
-   '("{" . meow-beginning-of-thing)
-   '("}" . meow-end-of-thing)
+   '("[" . suderman/meow-previous-block)
+   '("]" . suderman/meow-next-block)
+   '("{" . suderman/meow-parent-block)
+   '("}" . suderman/meow-child-block)
    '("\"" . ignore)
    '("`" . suderman/dashboard)
    '("~" . ignore)
