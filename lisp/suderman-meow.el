@@ -213,21 +213,105 @@ opens a line below."
   (suderman/meow--toggle-line-fold)
   (end-of-line))
 
+(defun suderman/org--body-blocks ()
+  "Return (BEGIN . TYPE) for each body element of the entry at point.
+Planning, drawers, and clocks are skipped; a child heading ends the body."
+  (save-excursion
+    (let* ((start (if (org-before-first-heading-p)
+                      (point-min)
+                    (org-back-to-heading t)
+                    (forward-line 1)
+                    (point)))
+           (end (progn (unless (org-at-heading-p) (outline-next-heading))
+                       (point)))
+           blocks)
+      (goto-char start)
+      (while (progn (skip-chars-forward " \t\n" end) (< (point) end))
+        (let ((element (org-element-at-point)))
+          ;; Climb from a nested element to the one directly in the body.
+          (while (not (memq (org-element-type (org-element-parent element))
+                            '(section org-data nil)))
+            (setq element (org-element-parent element)))
+          (unless (memq (org-element-type element)
+                        '(planning property-drawer drawer clock))
+            (push (cons (org-element-begin element) (org-element-type element))
+                  blocks))
+          (goto-char (org-element-end element))))
+      (nreverse blocks))))
+
+(defun suderman/org--step (forward)
+  "Move to the next sibling, or previous unless FORWARD.
+Headings step among headings and list items among items.  Body text
+steps among the entry's body elements, stopping at its edges."
+  (cond
+   ((org-at-heading-p)
+    (if forward (org-forward-heading-same-level 1 t)
+      (org-backward-heading-same-level 1 t)))
+   ;; Past a list's first or last item, continue through the body.
+   ((and (org-in-item-p)
+         (ignore-errors (if forward (org-next-item) (org-previous-item)) t)))
+   (t (suderman/meow--step-body (suderman/org--body-blocks) forward))))
+
+(defun suderman/meow--step-body (blocks forward)
+  "Move to the next of BLOCKS after point, or the previous unless FORWARD.
+BLOCKS holds (BEGIN . TYPE) pairs in order.  Stop at the body's edges."
+  (let* ((starts (mapcar #'car blocks))
+         (target (if forward
+                     (seq-find (lambda (pos) (> pos (point))) starts)
+                   (seq-find (lambda (pos) (< pos (point))) (reverse starts)))))
+    (unless target
+      (user-error (if forward "End of heading" "Start of heading")))
+    (goto-char target)))
+
+(defun suderman/markdown--node (type)
+  "Return the Markdown node of TYPE that contains point, or nil."
+  (treesit-parent-until (treesit-node-at (point) 'markdown)
+                        (lambda (node) (equal (treesit-node-type node) type))
+                        t))
+
+(defun suderman/markdown--body-blocks ()
+  "Return (BEGIN . TYPE) for each body element of the heading at point.
+Child headings are not part of the body."
+  (let ((section (or (suderman/markdown--node "section")
+                     (treesit-buffer-root-node 'markdown))))
+    (delq nil
+          (mapcar (lambda (node)
+                    (let ((type (treesit-node-type node)))
+                      (unless (member type '("atx_heading" "setext_heading"
+                                             "section"))
+                        (cons (treesit-node-start node) type))))
+                  (treesit-node-children section t)))))
+
+(defun suderman/markdown--step (forward)
+  "Move to the next sibling, or previous unless FORWARD.
+Like `suderman/org--step', for Markdown's tree-sitter tree."
+  (cond
+   ((outline-on-heading-p t)
+    (if forward (outline-forward-same-level 1)
+      (outline-backward-same-level 1)))
+   ;; Past a list's first or last item, continue through the body.
+   ((when-let* ((item (suderman/markdown--node "list_item"))
+                (sibling (if forward (treesit-node-next-sibling item t)
+                           (treesit-node-prev-sibling item t))))
+      (when (equal (treesit-node-type sibling) "list_item")
+        (goto-char (treesit-node-start sibling)))))
+   (t (suderman/meow--step-body (suderman/markdown--body-blocks) forward))))
+
 (defun suderman/meow-next-block (&optional n)
   "Move to the Nth next sibling block, or previous when N is negative.
-Org list items step among their items.  Elsewhere outlines move by
-the heading that contains point, and code by function."
+Org and Markdown step among headings on a heading, among items in a
+list, and among body elements in a heading's body.  Other outlines
+move by the heading that contains point, and code by function."
   (interactive "p")
   (suderman/meow--cancel-active-selection)
   (let ((n (or n 1)))
     (cond
-     ((and (derived-mode-p 'org-mode) (org-in-item-p))
-      (dotimes (_ (abs n))
-        (if (> n 0) (org-next-item) (org-previous-item))))
      ((derived-mode-p 'org-mode)
-      (org-back-to-heading t)
-      (if (> n 0) (org-forward-heading-same-level n t)
-        (org-backward-heading-same-level (- n) t)))
+      (dotimes (_ (abs n))
+        (suderman/org--step (> n 0))))
+     ((derived-mode-p 'markdown-ts-mode)
+      (dotimes (_ (abs n))
+        (suderman/markdown--step (> n 0))))
      ((bound-and-true-p outline-minor-mode)
       (if (> n 0) (outline-forward-same-level n)
         (outline-backward-same-level (- n))))
@@ -240,8 +324,8 @@ the heading that contains point, and code by function."
 
 (defun suderman/meow-parent-block ()
   "Move to the block that contains point.
-Org list items go to their parent item or heading; body text goes
-to its own heading.  Code climbs one bracket level."
+Org and Markdown list items go to their parent item or heading; body
+text goes to its own heading.  Code climbs one bracket level."
   (interactive)
   (suderman/meow--cancel-active-selection)
   (cond
@@ -254,6 +338,13 @@ to its own heading.  Code climbs one bracket level."
       (if parent (goto-char parent) (org-back-to-heading t))))
    ((derived-mode-p 'org-mode)
     (org-up-element))
+   ((and (derived-mode-p 'markdown-ts-mode)
+         (suderman/markdown--node "list_item"))
+    (let ((parent (treesit-parent-until
+                   (treesit-node-parent (suderman/markdown--node "list_item"))
+                   (lambda (node) (equal (treesit-node-type node) "list_item")))))
+      (if parent (goto-char (treesit-node-start parent))
+        (outline-back-to-heading t))))
    ((bound-and-true-p outline-minor-mode)
     (if (outline-on-heading-p t)
         (outline-up-heading 1)
@@ -262,8 +353,9 @@ to its own heading.  Code climbs one bracket level."
 
 (defun suderman/meow-child-block ()
   "Move to the first child of the block at point, showing it if folded.
-Org list items go to their first nested item and headings to their
-first child heading.  Code descends one bracket level."
+Org and Markdown list items go to their first nested item.  Headings
+go to their first child heading, or else their first paragraph or list.  Code
+descends one bracket level."
   (interactive)
   (suderman/meow--cancel-active-selection)
   (cond
@@ -273,22 +365,41 @@ first child heading.  Code descends one bracket level."
                    item (save-excursion (goto-char item) (org-list-struct)))))
       (unless child (user-error "No nested item"))
       (goto-char child)))
-   ((derived-mode-p 'org-mode)
-    (org-back-to-heading t)
+   ((and (derived-mode-p 'org-mode) (org-at-heading-p))
     (org-fold-show-children)
-    (unless (org-goto-first-child) (user-error "No child heading")))
+    (unless (org-goto-first-child)
+      (let ((text (seq-find (lambda (block)
+                              (memq (cdr block) '(paragraph plain-list)))
+                            (suderman/org--body-blocks))))
+        (unless text (user-error "No child heading or body text"))
+        (org-fold-show-entry)
+        (goto-char (car text)))))
+   ((derived-mode-p 'org-mode)
+    (user-error "No child here; { goes up to the heading"))
+   ((and (derived-mode-p 'markdown-ts-mode)
+         (suderman/markdown--node "list_item"))
+    (let ((list (seq-find (lambda (node) (equal (treesit-node-type node) "list"))
+                          (treesit-node-children
+                           (suderman/markdown--node "list_item") t))))
+      (unless list (user-error "No nested item"))
+      (goto-char (treesit-node-start (treesit-node-child list 0 t)))))
+   ((and (derived-mode-p 'markdown-ts-mode) (not (outline-on-heading-p t)))
+    (user-error "No child here; { goes up to the heading"))
    ((bound-and-true-p outline-minor-mode)
     (outline-back-to-heading t)
-    (let ((level (funcall outline-level))
-          (child (save-excursion
-                   (outline-next-heading)
-                   (and (outline-on-heading-p t) (point)))))
-      (unless (and child (> (save-excursion (goto-char child)
-                                            (funcall outline-level))
-                            level))
-        (user-error "No child heading"))
-      (outline-show-children)
-      (goto-char child)))
+    (let* ((level (funcall outline-level))
+           (heading (save-excursion
+                      (outline-next-heading)
+                      (and (outline-on-heading-p t)
+                           (> (funcall outline-level) level)
+                           (point))))
+           (text (and (not heading) (derived-mode-p 'markdown-ts-mode)
+                      (car (seq-find (lambda (block)
+                                       (member (cdr block) '("paragraph" "list")))
+                                     (suderman/markdown--body-blocks))))))
+      (unless (or heading text) (user-error "No child heading or body text"))
+      (if heading (outline-show-children) (outline-show-entry))
+      (goto-char (or heading text))))
    (t (down-list 1 t))))
 
 (defun suderman/meow--adopt-surround-selection (&rest _)
