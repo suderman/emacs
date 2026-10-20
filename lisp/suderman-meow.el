@@ -464,58 +464,6 @@ goes to the next line when it is indented further, unfolding it first."
                                    most-positive-fixnum)
         (user-error "No indented child line"))))))
 
-(defun suderman/meow--adopt-surround-selection (&rest _)
-  "Convert Surround's active region for normal Meow motion."
-  (when (bound-and-true-p meow-normal-mode)
-    (meow-purrsist-adopt-region)))
-
-(defun suderman/meow--adopt-touch-selection (&rest _)
-  "Adopt an Android touch region for normal Meow motion."
-  (when (and (featurep 'android)
-             (bound-and-true-p meow-normal-mode))
-    (meow-purrsist-adopt-region)))
-
-(defun suderman/meow-repeat (n)
-  "Repeat the previous find or till motion, or the last edit N times."
-  (interactive "p")
-  (cond
-   ((and meow--last-find
-         (memq last-command
-               '(meow-purrsist-find meow-purrsist-find-backward)))
-    (let ((command last-command))
-      (setq this-command command)
-      (funcall command n meow--last-find)))
-   ((and meow--last-till
-         (memq last-command
-               '(meow-purrsist-till meow-purrsist-till-backward)))
-    (let ((command last-command))
-      (setq this-command command)
-      (funcall command n meow--last-till)))
-   (t
-    (repeat-fu-execute n))))
-
-(defun suderman/meow--finish-isearch ()
-  "Make a successful Isearch match available to Meow's search motions."
-  (remove-hook 'isearch-mode-end-hook #'suderman/meow--finish-isearch t)
-  (when (and (not isearch-mode-end-hook-quit)
-             isearch-success
-             (not (string-empty-p isearch-string))
-             isearch-other-end)
-    ;; Meow searches with `case-fold-search' nil, so encode lowercase
-    ;; queries as case-insensitive regexps for its n/p and count paths.
-    (meow--push-search
-     (if (string= isearch-string (downcase isearch-string))
-         (mapconcat (lambda (char)
-                      (if (= char (upcase char))
-                          (regexp-quote (char-to-string char))
-                        (regexp-opt-charset (list char (upcase char)))))
-                    isearch-string "")
-       (regexp-quote isearch-string)))
-    (set-mark isearch-other-end)
-    (activate-mark)
-    (meow-purrsist-adopt-region)
-    (meow--highlight-regexp-in-buffer (car regexp-search-ring))))
-
 (defvar-local suderman/meow-search-count nil
   "Current Meow search match and total for the mode line.")
 
@@ -528,93 +476,6 @@ goes to the next line when it is indented further, unfolding it first."
   "Clear the mode-line count when Meow removes its search indicator."
   (setq suderman/meow-search-count nil)
   (force-mode-line-update))
-
-(defun suderman/meow-start-search ()
-  "Search incrementally for literal text, then select it for Meow n/p."
-  (interactive)
-  (suderman/meow--cancel-active-selection)
-  (meow--remove-search-indicator)
-  (add-hook 'isearch-mode-end-hook #'suderman/meow--finish-isearch nil t)
-  (let ((case-fold-search t)
-        (search-upper-case t)
-        (search-default-mode nil))
-    (isearch-forward)))
-
-(defun suderman/meow-search (&optional backward)
-  "Search in the requested direction, leaving a character selection.
-Search backward when BACKWARD is non-nil, otherwise search forward."
-  (interactive)
-  (let ((selecting (region-active-p)))
-    (when selecting
-      (funcall (if backward
-                   #'meow--direction-backward
-                 #'meow--direction-forward)))
-    (meow-search (and backward (not selecting) -1)))
-  (meow-purrsist-adopt-region))
-
-(defun suderman/meow-search-backward ()
-  "Search backward, leaving an expandable character selection."
-  (interactive)
-  (suderman/meow-search t))
-
-(defun suderman/meow-smart-beginning-of-line ()
-  "Move to indentation, or to beginning of line if already there."
-  (interactive)
-  (let ((target
-         (save-excursion
-           (let ((origin (point)))
-             (back-to-indentation)
-             (if (= origin (point))
-                 (line-beginning-position)
-               (point))))))
-    (meow-purrsist-move-to target)))
-
-(defun suderman/meow-smart-end-of-line ()
-  "Move to end of code, or end of line if already there."
-  (interactive)
-  (let* ((origin (point))
-         (eol (line-end-position))
-         (code-end
-          (save-excursion
-            (comment-normalize-vars)
-            (goto-char eol)
-            (when-let* ((comment-pos (comment-beginning)))
-              (goto-char comment-pos)
-              (skip-chars-backward " \t")
-              (point))))
-         (target
-          (cond
-           ;; Before trailing comment: end of code.
-           ((and code-end
-                 (> code-end (line-beginning-position))
-                 (< origin code-end))
-            code-end)
-
-           ;; At end of code: physical EOL.
-           ((and code-end (= origin code-end))
-            eol)
-
-           ;; No comment, or already inside comment.
-           (t eol))))
-    (meow-purrsist-move-to target)))
-
-(defun suderman/meow-buffer-beginning ()
-  "Move to the beginning of the buffer, extending an active selection."
-  (interactive)
-  (meow-purrsist-move-to (point-min)))
-
-(defun suderman/meow-buffer-end ()
-  "Move to the end of the buffer, extending an active selection."
-  (interactive)
-  (meow-purrsist-move-to (point-max)))
-
-(defun suderman/meow-buffer-end-or-beginning ()
-  "Move to buffer end, or beginning when already on the last line.
-Extend an active selection."
-  (interactive)
-  (if (= (line-end-position) (point-max))
-      (suderman/meow-buffer-beginning)
-    (suderman/meow-buffer-end)))
 
 ;;;; Editing
 
@@ -665,20 +526,16 @@ Extend an active selection."
 (defun suderman/meow-insert-at-indentation ()
   "Extend an active selection to smart line start, or insert there."
   (interactive)
-  (if (region-active-p)
-      (meow-purrsist-extend-with-motion
-       #'suderman/meow-smart-beginning-of-line)
-    (suderman/meow-smart-beginning-of-line)
-    (suderman/meow-insert)))
+  (let ((selecting (region-active-p)))
+    (meow-purrsist-beginning-of-line)
+    (unless selecting (suderman/meow-insert))))
 
 (defun suderman/meow-insert-at-end-of-line ()
   "Extend an active selection to smart line end, or insert there."
   (interactive)
-  (if (region-active-p)
-      (meow-purrsist-extend-with-motion
-       #'suderman/meow-smart-end-of-line)
-    (suderman/meow-smart-end-of-line)
-    (suderman/meow-insert)))
+  (let ((selecting (region-active-p)))
+    (meow-purrsist-end-of-line)
+    (unless selecting (suderman/meow-insert))))
 
 (defun suderman/meow-delete ()
   "Delete selection, or one character forward.
@@ -867,10 +724,7 @@ in their place."
 ;;;; Keymaps and mode activation
 
 (use-package surround
-  :demand t
-  :config
-  (advice-add 'surround--op-mark :after
-              #'suderman/meow--adopt-surround-selection))
+  :demand t)
 
 (defun suderman/meow--cheatsheet-command-name (original command)
   "Label Surround's anonymous prefix map, or call ORIGINAL for COMMAND."
@@ -929,9 +783,9 @@ bindings that were deleted from source."
    '("?" . meow-reverse)
    '(":" . execute-extended-command)
    '("#" . meow-goto-line)
-   '("$" . suderman/meow-smart-end-of-line)
+   '("$" . meow-purrsist-end-of-line)
    '("%" . evilmi-jump-items-native)
-   '("^" . suderman/meow-smart-beginning-of-line)
+   '("^" . meow-purrsist-beginning-of-line)
    '("(" . meow-left-expand)
    '(")" . meow-right-expand)
    '("," . suderman/ibuffer-toggle)
@@ -973,12 +827,12 @@ bindings that were deleted from source."
    '("L" . suderman/meow-indent)
    '("m" . meow-purrsist-visual)
    '("M" . meow-purrsist-line-or-rectangle)
-   '("n" . suderman/meow-search)
+   '("n" . meow-purrsist-search)
    '("N" . meow-page-down)
    '("o" . suderman/meow-toggle-fold)
    '("O" . meow-open-above)
    '("C-o" . meow-open-below)
-   '("p" . suderman/meow-search-backward)
+   '("p" . meow-purrsist-search-backward)
    '("P" . meow-page-up)
    '("q" . meow-quit)
    '("Q" . kill-current-buffer)
@@ -999,9 +853,9 @@ bindings that were deleted from source."
    '("y" . undo-redo)
    '("Y" . meow-sync-grab)
    '("z" . meow-pop-selection)
-   '("Z" . suderman/meow-buffer-end-or-beginning)
-   '(";" . suderman/meow-repeat)
-   '("/" . suderman/meow-start-search)
+   '("Z" . meow-purrsist-end-or-beginning-of-buffer)
+   '(";" . meow-purrsist-repeat)
+   '("/" . meow-purrsist-isearch)
    '("<escape>" . suderman/meow-escape)))
 
 (use-package evil-matchit
@@ -1084,7 +938,9 @@ bindings that were deleted from source."
     :vc (:url "https://github.com/suderman/meow-purrsist" :rev :newest)
     :ensure nil
     :if t
-    :demand t)
+    :demand t
+    :init
+    (setq meow-purrsist-repeat-function #'repeat-fu-execute))
   (advice-add 'meow--show-indicator :override
               #'suderman/meow-show-search-count)
   (advice-add 'meow--remove-search-indicator :after
@@ -1096,7 +952,6 @@ bindings that were deleted from source."
   (doom-modeline-remove-segment 'suderman-meow-search)
   (doom-modeline-add-segment 'suderman-meow-search 'matches :after)
   (meow-purrsist-mode 1)
-  (advice-add 'touch-screen-hold :after #'suderman/meow--adopt-touch-selection)
   (advice-add 'meow--short-command-name :around
               #'suderman/meow--cheatsheet-command-name)
   (add-hook 'meow-mode-hook

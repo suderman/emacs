@@ -190,7 +190,7 @@ THEME is non-nil when refreshing the toolbar after a theme change."
                   :help "Open Dirvish")
       'suderman-buffers)
     (define-key-after map [suderman-search]
-      `(menu-item "Search" suderman/meow-start-search
+      `(menu-item "Search" meow-purrsist-isearch
                   :image ,(suderman/tool-bar-image "search")
                   :help "Search the buffer")
       'suderman-files)
