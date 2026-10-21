@@ -242,6 +242,8 @@ Buffers stop at the edge of their group; group headers move among groups."
   :config
   (keymap-set ibuffer-name-map "<mouse-1>" #'ibuffer-mouse-visit-buffer)
   (keymap-set ibuffer-name-map "<mouse-2>" #'ibuffer-mouse-toggle-mark)
+  (keymap-set ibuffer-mode-map "<mouse-1>"
+              #'suderman/mouse-set-point-or-toggle-keyboard)
   (keymap-set ibuffer-mode-map "`" #'suderman/dashboard)
   (keymap-set ibuffer-mode-map "," #'suderman/ibuffer-toggle)
   (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-toggle)

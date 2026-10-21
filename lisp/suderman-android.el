@@ -48,6 +48,46 @@ resize can therefore be mistaken for the keyboard."
       (set-frame-parameter frame 'suderman/android-keyboard-full-size size))
     (< (cdr size) (cdr full-size))))
 
+(defvar suderman/android-blank-tap nil
+  "Time and window of the last tap below a listing's final line, or nil.")
+
+(defun suderman/android-below-last-line-p (posn)
+  "Return non-nil when POSN lies below the last line of its buffer's text."
+  (when-let* ((window (posn-window posn))
+              ((windowp window))
+              (pos (posn-point posn)))
+    (with-current-buffer (window-buffer window)
+      (> pos (save-excursion
+               (goto-char (point-max))
+               (skip-chars-backward " \t\n")
+               (line-end-position))))))
+
+(defun suderman/mouse-set-point-or-toggle-keyboard (event)
+  "Set point at EVENT, or toggle the Android keyboard on a double tap.
+Listings such as Dired and IBuffer are read-only, so a tap never shows the
+keyboard.  A double tap in the blank space below the last entry toggles it.
+A tap elsewhere hides it, as Emacs does after other taps in read-only text."
+  (interactive "e")
+  (let ((posn (event-start event)))
+    (if (not (and (featurep 'android)
+                  (suderman/android-below-last-line-p posn)))
+        (progn
+          (setq suderman/android-blank-tap nil)
+          (mouse-set-point event)
+          (when (featurep 'android)
+            (suderman/android-hide-keyboard)))
+      (let ((previous suderman/android-blank-tap))
+        (setq suderman/android-blank-tap (cons (float-time) (posn-window posn)))
+        (when (and previous
+                   (eq (cdr previous) (posn-window posn))
+                   (< (- (float-time) (car previous))
+                      (/ (if (numberp double-click-time) double-click-time 500)
+                         1000.0)))
+          (setq suderman/android-blank-tap nil)
+          (if (suderman/android-keyboard-visible-p (selected-frame))
+              (suderman/android-hide-keyboard)
+            (suderman/android-show-keyboard)))))))
+
 (defun suderman/android-volume-up ()
   "Show the software keyboard, or with it showing, open the Meow keypad."
   (interactive)
