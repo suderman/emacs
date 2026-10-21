@@ -119,8 +119,9 @@ new one when a concern has genuinely outgrown its home.
 - `suderman-clipboard.el`: terminal copy through Wayland or OSC 52.
 - `suderman-appearance.el`: style file, fonts, theme faces, Doom Modeline,
   line numbers, and the column guide.
-- `suderman-windows.el`: window helpers, Meta window keys, smooth jumps, and
-  Android touch flings.
+- `suderman-windows.el`: window helpers, Meta window keys, `suderman/meow-off`
+  for views with their own letter keys, smooth jumps, and Android touch
+  flings.
 - `suderman-projects.el`: Org work projects with source and data companions.
 - `suderman-buffers.el`: project-grouped IBuffer.
 - `suderman-completion.el`: Vertico, Orderless, Consult, Marginalia, Embark,
@@ -152,10 +153,20 @@ can hand off to the surrounding terminal multiplexer. `fling`
 Do not put generated files, package trees, caches, or compiled Elisp in the
 repository. `.gitignore` describes those boundaries.
 
+Documentation is Org. `README.org` covers broad usage, how to run the config,
+and the most common keys, and links to topic guides in `docs/`: install,
+Android, mail, editing, files, Org, Git, appearance, and development. Put new
+detail in the guide that owns the topic, keep the README short, and update the
+README and the guide when a change makes them wrong. Do not add Markdown
+copies or new top-level documentation files.
+
 ## Keys
 
-The source is the keymap. Do not copy key lists into documentation; the
-cheatsheet (`SPC ?`, `C-c h`), Which-Key, and Dirvish `?` show live bindings.
+The source is the keymap. The cheatsheet (`SPC ?`, `C-c h`), Which-Key, and
+Dirvish `?` show live bindings. The README's common-keys tables are the one
+deliberate key list; keep them short and change them in the same commit as the
+binding. The guides in `docs/` describe what a key does that its binding
+cannot show, not full key lists.
 
 - Meow Normal and Motion: `suderman/meow-setup-qwerty` in `suderman-meow.el`.
   It restores Meow's stock maps first, so deleting a binding there really
@@ -239,8 +250,10 @@ the request. This config has enough moving pieces.
   load, and the leader is rebuilt whole, so deleted bindings disappear.
   Bindings deleted from other packages' maps (IBuffer, Dired, Magit, global)
   stay live until restart.
-- Re-enabling global Meow unnecessarily can leak a Meow state into buffers
-  where Meow was disabled locally.
+- Re-enabling global Meow leaks a Meow state into buffers where Meow was
+  disabled locally: `meow--init-buffers` calls `meow--enable` in every buffer
+  without running `meow-mode-hook`, so `suderman/meow-off` never sees it.
+  Enable `meow-global-mode` only when it is off.
 - `unload-feature` can demote live buffers to `fundamental-mode`. The reload
   code snapshots and restores major modes to prevent this.
 - Advice, hooks, global minor modes, and frame callbacks must stay idempotent.

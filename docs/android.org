@@ -1,0 +1,43 @@
+#+title: Android
+#+startup: content
+
+The same checkout runs in native graphical Emacs on Android. [[file:install.org][Install]] covers
+building the APK and setting up the phone.
+
+* What runs on Android
+
+Android keeps the portable editing core: Meow, completion, Org, Magit,
+Dashboard, Dired and Dirvish, Markdown, and Image mode. Nix tree-sitter
+integration, automatic formatting, indent guides, PDF Tools, and Kitty graphics
+remain desktop-only. Ghostel integration is currently disabled. Dashboard and
+Dirvish only show destinations present on the current device. EPUB, audio, and
+video files open through Android's native app chooser.
+
+* Touch and keys
+
+The bottom toolbar has Ctrl, Meta, previous and next buffer, IBuffer, Dirvish,
+search, the Meow keypad, Tab, and Escape. Ctrl and Meta apply to the next key
+and can be combined. The keypad button also shows a hidden software keyboard,
+and a second press closes the keypad. Escape clears a selection and leaves
+Insert state, or cancels the current command. =F9= toggles the toolbar.
+
+Volume Up shows the software keyboard, or opens the keypad when the keyboard
+is already showing. Volume Down hides the keyboard, or closes an open keypad.
+
+Pinch scales text in every buffer. Vertical swipes scroll by pixel and keep
+going after you lift your finger. Buffers with truncated lines, such as Agenda,
+also swipe sideways; =SPC t t= turns that on or off for the current buffer.
+
+The Android config starts the Emacs server if it is not already running, so
+other apps can send files to Emacs through Open with.
+
+* Termux programs and packages
+
+The Android module adds Termux's binary directory to =PATH= and =exec-path=.
+Keep =LD_LIBRARY_PATH= unset. Check the connection with =(executable-find
+"git")=, =(executable-find "rg")=, and =(executable-find "fd")=.
+
+Android stores Emacs's bundled data under the virtual =/assets= tree, which an
+external GPG process cannot read. The package bootstrap copies the bundled GNU
+ELPA keyring to a temporary physical file for import and deletes it afterward.
+Package signature verification stays enabled.

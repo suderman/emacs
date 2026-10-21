@@ -1,0 +1,125 @@
+#+title: Development
+#+startup: content
+
+How the configuration is organized, tested, reloaded, and packaged.  AGENTS.md
+holds the rules and traps for anyone editing it.
+
+* Tinker with it
+
+Each concern has one file under =lisp/=; the [[*Repository map][repository map]] lists them. Packages
+are declared with =use-package= in the module that configures them. [[*Where keys live][Where keys
+live]] lists the files that hold keymaps.
+
+To try a change, put point inside a form and press =C-M-x=. A whole leader or
+keymap is one form, so this applies it immediately. =F5= reloads every module.
+It rebuilds Meow's Normal and Motion maps from a stock copy, so a deleted
+binding disappears too. Restart Emacs for =early-init.el=, package
+initialization, native modules, daemon settings, or a binding deleted from some
+other package's map.
+
+Run the safety net from the repository root:
+
+#+begin_src sh
+./test/run.sh
+#+end_src
+
+It loads the full configuration, runs focused checks, and exercises the Android
+setup scripts without touching a phone. Tests cover code that changes things
+outside Emacs (files, mail, clipboards, terminals, Android setup), code that
+hooks into package internals an upgrade could break, and hot reload. Keys,
+fonts, faces, and other preferences do not get tests. Git is the fallback when
+an experiment does not work.
+
+* Nix and mutability
+
+I want deterministic bootstrapping without turning every Lisp edit into a Nix
+rebuild.
+
+- =use-package= forms are the single list of Elisp packages. On NixOS,
+  [[file:../nix/packages/emacs.nix][nix/packages/emacs.nix]] reads those forms and supplies every package, so
+  =:ensure= finds them already installed. A package added locally installs
+  from MELPA through package.el until the next flake update brings it into
+  Nix. Mark built-ins such as Which-Key with =:ensure nil= so an older ELPA copy
+  does not shadow them.
+- =edger= and =meow-purrsist= come from GitHub through =package-vc= on every
+  platform. =SPC q u= upgrades them. On Android it also upgrades archive
+  packages; on Linux, Nix owns those.
+- The same Nix file supplies native modules, tree-sitter grammars, language
+  servers, formatters, and command-line tools.
+- =early-init.el=, =init.el=, =lisp/=, and =assets/= also become an immutable
+  config in the Nix store. The NixOS wrapper prefers a writable
+  =~/.config/emacs/init.el= and falls back to that bundled copy, so hosts
+  without a checkout still get a working config.
+- package.el data lives under =~/.local/share/emacs/elpa=, and runtime state
+  follows XDG paths. Neither lands in Git.
+
+My [[https://github.com/suderman/nixos][suderman/nixos]] flake owns the host side in
+=modules/home/default/options/emacs/=. It lives in the terminal layer, not the
+desktop layer, because the =em= workspace launcher, =ema=, =emd=, and =EDITOR=
+are terminal features. =modules/home/users/jon/programs.nix= enables it for me
+on every host. On desktop hosts it also starts the shared daemon, adds keyd
+window shortcuts, and exports the shared appearance.
+
+* Where keys live
+
+The source is the keymap. =SPC ?= and Which-Key show the live bindings, so the
+docs only describe keys whose behavior a binding cannot show.
+
+| Where                      | Keys                                         |
+|----------------------------+----------------------------------------------|
+| =lisp/suderman-meow.el=    | Meow Normal and Motion states                |
+| =lisp/suderman-keys.el=    | Global keys and the whole =SPC= leader       |
+| =lisp/suderman-windows.el= | Meta window keys shared by every view        |
+| =lisp/suderman-files.el=   | =suderman/dirvish-keys= for Dired/Dirvish    |
+| IBuffer, Magit, Org, Mail  | The =:config= of that module's =use-package= |
+
+A binding written as =("label" . command)= shows that label in Which-Key.
+Cheatsheet labels for any command live in =suderman/command-labels= in
+=lisp/suderman-help.el=.
+
+* Repository map
+
+| Path                           | Role                                             |
+|--------------------------------+--------------------------------------------------|
+| [[file:../flake.nix][flake.nix]]                      | Flake inputs and Blueprint outputs               |
+| =nix/=                         | Desktop and Android packages, shells, and checks |
+| =android/install.sh=           | Guided Android APK installer                     |
+| =android/install-fonts.sh=     | Copy and verify shared fonts on Android          |
+| =assets/=                      | Dashboard, toolbar, and Markdown preview assets  |
+| [[file:../early-init.el][early-init.el]]                  | Process-level startup and frame defaults         |
+| [[file:../init.el][init.el]]                        | Boring dependency-ordered module loader          |
+| =lisp/suderman-android.el=     | Android input, server, and Termux paths          |
+| =lisp/suderman-toolbar.el=     | Touch toolbar with sticky Ctrl and Meta          |
+| =lisp/suderman-paths.el=       | XDG state paths                                  |
+| =lisp/suderman-packages.el=    | package.el and use-package bootstrap             |
+| =lisp/suderman-defaults.el=    | Small built-in behavior changes                  |
+| =lisp/suderman-clipboard.el=   | Terminal clipboard via Wayland or OSC 52         |
+| =lisp/suderman-appearance.el=  | Style file, fonts, faces, and modeline           |
+| =lisp/suderman-windows.el=     | Window helpers, Meta keys, smooth jumps          |
+| =lisp/suderman-projects.el=    | Org work projects and source/data companions     |
+| =lisp/suderman-buffers.el=     | Project-grouped IBuffer                          |
+| =lisp/suderman-completion.el=  | Minibuffer completion, Corfu, and Cape           |
+| =lisp/suderman-meow.el=        | Personal editing and the Normal/Motion maps      |
+| =lisp/suderman-terminal.el=    | Ghostel integration, currently disabled          |
+| =lisp/suderman-transfer.el=    | File copy, paste, drag, and Kitty transfers      |
+| =lisp/suderman-files.el=       | Dired, Dirvish, sidebar, previews, and keys      |
+| =lisp/suderman-images.el=      | Image navigation, transforms, and gallery        |
+| =lisp/suderman-dashboard.el=   | On-demand dashboard and destinations             |
+| =lisp/suderman-markdown.el=    | Markdown editing and Pandoc preview              |
+| =lisp/suderman-org.el=         | Org agenda, capture, archive, and refile         |
+| =lisp/suderman-mail-moves.el=  | Single-message Inbox folder moves                |
+| =lisp/suderman-mail.el=        | Notmuch reading, sending, and msmtp              |
+| =lisp/suderman-mail-drafts.el= | Org-authored draft-only rich mail                |
+| =lisp/suderman-languages.el=   | Language modes, tree-sitter, and Eglot           |
+| =lisp/suderman-nix.el=         | Embedded-language highlighting in Nix strings    |
+| =lisp/suderman-git.el=         | Magit, live hunks, and conflict handling         |
+| =lisp/suderman-formatting.el=  | Project and buffer formatting commands           |
+| =lisp/suderman-help.el=        | Keyboard cheatsheets and command labels          |
+| =lisp/suderman-reload.el=      | Hot reload and configuration pull                |
+| =lisp/suderman-keys.el=        | Global keys and the SPC leader                   |
+| =test/=                        | Focused safety checks                            |
+| =docs/=                        | Topic guides linked from the README              |
+| [[file:../AGENTS.md][AGENTS.md]]                      | Rules and traps for anyone editing this repo     |
+
+The source wins when this file falls behind. This reference only covers the
+parts I use often enough to want on one page.

@@ -1,0 +1,192 @@
+#+title: Install
+#+startup: content
+
+Desktop Emacs comes from the Nix flake. The Android APK and its configuration
+checkout use a guided installer. [[file:android.org][Android]] covers daily use on the phone.
+
+* Desktop
+
+The flake packages Emacs 31 PGTK with this configuration, its Elisp packages,
+native modules, tree-sitter grammars, language servers, formatters, and
+command-line tools.
+
+#+begin_src sh
+nix run github:suderman/emacs
+#+end_src
+
+That runs the immutable configuration bundled in the Nix store. From a local
+checkout, I can build and run the same package with:
+
+#+begin_src sh
+nix run .
+#+end_src
+
+To use the flake's dependencies while loading the writable checkout instead:
+
+#+begin_src sh
+nix run . -- --init-directory "$PWD"
+#+end_src
+
+After that, =F5= reloads the modular configuration without rebuilding the
+package.
+
+The flake exposes =x86_64-linux= and =aarch64-linux= packages. I use and test
+the x86_64 build.
+
+* Android APK
+
+The same checkout also runs in native graphical GNU Emacs on Android. The APK
+is signed with the public certificate used by official Termux GitHub releases,
+so Android grants Emacs the APK's =com.termux= shared UID and Emacs can execute
+programs under =/data/data/com.termux/files/usr/bin=.
+
+The Android package uses Emacs 31.0.50 for =arm64-v8a=, requires Android API 35
+or newer, and declares target API 36. Build it on x86_64 Linux with:
+
+#+begin_src sh
+nix build .#emacs-android --out-link result-android
+#+end_src
+
+The result is
+=result-android/emacs-31.0.50-35-arm64-v8a-termux.apk=. The flake checks the
+package, version, minimum and target APIs, shared UID, debuggable manifest flag,
+ABI, certificate, unchanged manifest, and 16 KiB ZIP alignment. The Android
+tools are also available in:
+
+#+begin_src sh
+nix develop .#android
+#+end_src
+
+** Guided installation
+
+The installer builds and verifies the APK, waits for exactly one authorized
+phone, checks its API, ABI, active profile, installed Termux certificate, and
+any installed Emacs certificate, then asks before installing or updating:
+
+#+begin_src sh
+./android/install.sh
+#+end_src
+
+After Android verifies the installation, the installer discovers the app data
+directory with =run-as org.gnu.emacs pwd=. It installs any missing pinned Nerd
+Font files under =$HOME/fonts=, then checks that Termux Git runs from the Emacs
+app context before offering to clone or update this repository at
+=$HOME/.config/emacs=. A managed checkout must have =init.el=, a clean worktree,
+the expected GitHub origin, a resolvable HEAD, and no local divergence. Updates
+use =git pull --ff-only= and report the resulting commit.
+
+Every configuration change needs explicit confirmation. The launch prompt
+appears afterward, whether setup succeeds, is declined, or needs manual repair.
+The installer never installs, removes, re-signs, or changes Termux or its
+plugins. It also refuses to replace an Emacs app signed with another certificate
+and refuses a downgrade.
+
+Official Termux GitHub releases use a public test key. This APK must use that
+same key to join Termux's shared UID. The expected certificate SHA-256 is:
+
+#+begin_example
+B6:DA:01:48:0E:EF:D5:FB:F2:CD:37:71:B8:D1:02:1E:
+C7:91:30:4B:DD:6C:4B:F4:1D:3F:AA:BA:D4:8E:E5:E1
+#+end_example
+
+The key is not secret. Anyone can forge updates signed with it, so only install
+an APK built from sources you trust. GitHub and F-Droid Termux builds use
+different signing identities. Stop if the installed certificate does not match;
+do not replace or uninstall Termux to work around it.
+
+** Install the configuration
+
+For a fresh install, the installer clones into an installer-owned temporary
+directory and verifies it before moving it to =$HOME/.config/emacs=. It refuses
+non-Git, nonempty, dirty, divergent, or wrong-origin targets without changing
+them.
+
+Emacs checks =$HOME/.emacs.d= before the XDG configuration. If that legacy path
+remains, =$HOME/.config/emacs= will not load. The installer explains this and
+asks before moving the directory to:
+
+#+begin_example
+$HOME/.local/state/emacs/legacy-emacs.d-YYYYMMDD-HHMMSS
+#+end_example
+
+It never deletes the legacy directory. During a fresh migration, cloning and
+initial verification finish before the legacy directory moves. If a later move
+or verification fails, the installer removes only its temporary or newly
+installed checkout and restores =$HOME/.emacs.d=. With an existing managed
+checkout, it updates first and asks separately before moving the legacy path.
+
+If =run-as= or Termux Git is unavailable, setup is declined, or the target is
+unsafe, the successful APK installation stands and the installer prints manual
+recovery commands. Termux and Emacs share a UID, but they have different
+=$HOME= values. Use the absolute Emacs home printed by the installer when
+running the fallback from Termux. If =run-as= cannot discover it, open =M-x
+shell= in Emacs and use =$HOME= there.
+
+The complete fallback is:
+
+#+begin_src sh
+set -eu
+EMACS_HOME='/path/printed/by/the/installer'
+GIT=/data/data/com.termux/files/usr/bin/git
+CONFIG="$EMACS_HOME/.config/emacs"
+ORIGIN=https://github.com/suderman/emacs.git
+
+mkdir -p "$EMACS_HOME/.config"
+if [ -d "$CONFIG/.git" ]; then
+  test -z "$("$GIT" -C "$CONFIG" status --porcelain)"
+  case "$("$GIT" -C "$CONFIG" remote get-url origin)" in
+    https://github.com/suderman/emacs|https://github.com/suderman/emacs.git) ;;
+    *) printf '%s\n' "Refusing unexpected origin" >&2; exit 1 ;;
+  esac
+  "$GIT" -C "$CONFIG" pull --ff-only
+elif [ -e "$CONFIG" ]; then
+  printf '%s\n' "Refusing existing non-Git target: $CONFIG" >&2
+  exit 1
+else
+  "$GIT" clone "$ORIGIN" "$CONFIG"
+fi
+test -f "$CONFIG/init.el"
+test -z "$("$GIT" -C "$CONFIG" status --porcelain)"
+"$GIT" -C "$CONFIG" rev-parse --verify HEAD
+
+if [ -e "$EMACS_HOME/.emacs.d" ]; then
+  BACKUP="$EMACS_HOME/.local/state/emacs/legacy-emacs.d-$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$EMACS_HOME/.local/state/emacs"
+  mv "$EMACS_HOME/.emacs.d" "$BACKUP"
+  printf 'Legacy configuration moved to %s\n' "$BACKUP"
+fi
+#+end_src
+
+The installer and these commands never modify Termux. Restart Emacs after setup.
+
+** Fonts
+
+Android scans =$HOME/fonts= when Emacs starts, so restart Emacs after adding
+fonts. Neither font step overwrites an existing file or touches the Termux
+terminal font.
+
+The guided installer adds bootstrap fonts: JetBrains Mono Nerd Font and Symbols
+Nerd Font from Nerd Fonts 3.4.0. It checks their SHA-256 hashes before and after
+transfer and moves them into place only as a complete set. A failure leaves no
+partial set and does not undo the APK or configuration setup. Fix the reported
+problem and rerun =./android/install.sh=. Until then, Emacs uses the Android
+system font and text labels instead of icons.
+
+The shared desktop typography comes from a separate helper. It copies the font
+packages the NixOS flake already selects, and refuses an existing file with a
+different hash. Run it on the NixOS host with SSH access to =gem=:
+
+#+begin_src sh
+fonts=$(nix build --impure --no-link --print-out-paths --expr '
+  let f = builtins.getFlake "/etc/nixos";
+      p = f.nixosConfigurations.kit.pkgs;
+      fonts = f.nixosConfigurations.kit.config.stylix.fonts;
+  in p.symlinkJoin {
+    name = "emacs-android-fonts";
+    paths = [ fonts.monospace.package p.ioskeley-mono.normal fonts.serif.package p.nerd-fonts.symbols-only ];
+  }')
+./android/install-fonts.sh "$fonts"
+#+end_src
+
+The host needs =ssh=, =rsync=, and =sha256sum=. =EMACS_ANDROID_HOST= overrides
+=gem=. Save work in Emacs on the phone before running it, then restart Emacs.

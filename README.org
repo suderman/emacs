@@ -31,829 +31,107 @@ images in place, and starts animated images automatically.
 
 * Run it
 
-The flake packages Emacs 31 PGTK with this configuration, its Elisp packages,
-native modules, tree-sitter grammars, language servers, formatters, and
-command-line tools.
-
 #+begin_src sh
 nix run github:suderman/emacs
 #+end_src
 
-That runs the immutable configuration bundled in the Nix store. From a local
-checkout, I can build and run the same package with:
-
-#+begin_src sh
-nix run .
-#+end_src
-
-To use the flake's dependencies while loading the writable checkout instead:
-
-#+begin_src sh
-nix run . -- --init-directory "$PWD"
-#+end_src
-
-After that, =F5= reloads the modular configuration without rebuilding the
-package.
-
-The flake exposes =x86_64-linux= and =aarch64-linux= packages. I use and test
-the x86_64 build.
-
-* Tinker with it
-
-Each concern has one file under =lisp/=; the [[*Repository map][repository map]] lists them. Packages
-are declared with =use-package= in the module that configures them. Keys live
-where [[*Keys][Keys]] says.
-
-To try a change, put point inside a form and press =C-M-x=. A whole leader or
-keymap is one form, so this applies it immediately. =F5= reloads every module.
-It rebuilds Meow's Normal and Motion maps from a stock copy, so a deleted
-binding disappears too. Restart Emacs for =early-init.el=, package
-initialization, native modules, daemon settings, or a binding deleted from some
-other package's map.
-
-Run the safety net from the repository root:
-
-#+begin_src sh
-./test/run.sh
-#+end_src
-
-It loads the full configuration, runs focused checks, and exercises the Android
-setup scripts without touching a phone. Tests cover code that changes things
-outside Emacs (files, mail, clipboards, terminals, Android setup), code that
-hooks into package internals an upgrade could break, and hot reload. Keys,
-fonts, faces, and other preferences do not get tests. Git is the fallback when
-an experiment does not work.
-
-* Mail on kit
-
-=C-c m= or Meow =SPC e= opens Notmuch. =J= chooses saved searches; =O= chooses
-an IMAP folder. =G= starts the existing account sync services, and =g= refreshes
-the view after sync finishes. Gmail gets a second sync pass to settle All Mail
-changes after trashing. Organizational tags do not replace IMAP folders.
-
-In single-message rows and message views, =a= moves the selected message's Inbox
-copy to Archive and =x= moves it to Trash. Both ask for confirmation with the
-source account and target folder. If both accounts have Inbox copies of that
-message, choose which account to move. Changes are local until sync runs; =G=
-syncs phone folders. Thread-wide and bulk moves remain disabled, including
-=A/X= and moves directly from a thread-search row. Trash is not permanent
-local deletion, but providers apply their normal Trash retention policy.
-
-=m= composes with a sender prompt. =C-x C-s= saves a local draft, =C-c C-p= saves
-and closes it, and =e= resumes a selected draft. =C-c C-c= sends after confirmation.
-Local drafts live outside the synced account folders, so they do not appear in
-phone Drafts. msmtp uses the current From address to choose Fastmail or Gmail.
-
-Reader views follow the explorer keys. =SPC= opens Meow's keypad, =,= opens
-IBuffer, =.= opens Dirvish, =h= goes back, and =l= runs the same action as Return,
-including links and MIME buttons. =j/k= navigate, and =/= searches or filters
-mail in the current view. =C-v= pages or advances without archiving. In message
-views, =H= toggles headers and =C-c .= opens the MIME-part menu.
-
-New messages, replies, and resumed drafts use Meow and meow-purrsist, like other
-text buffers. =i= enters Insert, =<escape>= returns to Normal, and =m= starts a
-selection. Native draft and send shortcuts remain available in both
-states. Insert state and the overview's query field keep normal typing,
-including spaces and punctuation. In overview input fields, =<escape>= leaves
-input unchanged and restores reader navigation and keypad keys. =TAB= moves
-between widgets.
-
-=C-c h= or =SPC ?= opens this mail view's keyboard cheatsheet outside typing
-fields. =C-SPC ?= also works in reader command areas. =n/p= cycles through the
-other sheets. Mail sheets list saved searches, flag shortcuts, the difference
-between sync and refresh, and the limits on folder moves.
-
-** Rich drafts for humans and agents
-
-Write an Org file and run =M-x suderman/mail-draft-from-org=. Agents can call the
-same draft-only command through the running daemon:
-
-#+begin_src sh
-emacsclient --eval '(suderman/mail-draft-from-org "/absolute/path/draft.org")'
-#+end_src
-
-The file supplies explicit headers and the body. For example:
-
-#+begin_example
-,#+PROPERTY: MAIL_FROM Jon Suderman <jon@suderman.net>
-,#+PROPERTY: MAIL_TO jon@nonfiction.ca
-,#+PROPERTY: MAIL_SUBJECT Changes for review
-
-,* Changes
-The draft has *formatted text* and a [[https://example.org][link]].
-
-- Check the heading and list.
-- Review the screenshot before sending.
-
-[[file:screenshot.png]]
-
-[[file:notes.txt][Attached notes]]
-#+end_example
-
-Optional properties are =MAIL_CC=, =MAIL_BCC=, =MAIL_IN_REPLY_TO=, and
-=MAIL_REFERENCES=. Reply IDs must include angle brackets, for example
-=<original@example.org>=. File links embed images or attach other files. All files
-must be readable and inside the source directory, including symlink targets.
-Keep private source files and screenshots in a private working directory.
-
-The command adds the sender's signature, exports the whole body once as plain
-text and HTML, saves a native Notmuch draft, and returns =:id=, =:source=, and
-=:buffer=. It never sends. Find it in =J d=, then use =e= to review headers and
-edit before sending. Notmuch's message view also offers the HTML alternative.
-HTML editing in a resumed Message buffer is source editing, not WYSIWYG.
-
-Keep the Org file and screenshots to change the source and render again. Each
-command call creates a new candidate; it does not replace earlier candidates.
-Native saves of a resumed draft retain revision history. Saved MIME embeds file
-bytes, so a draft can still be resumed if its source files are later unavailable.
-
-Mail source is data. The command rejects executable export constructs, raw
-HTML/MML, remote images, unsafe links, duplicate headers, and unknown senders.
-Babel and file-local evaluation are disabled. This prevents accidental sending
-through this command, but it does not sandbox an agent running as the same Unix
-user. Such an agent can still call msmtp or other Emacs commands.
-
-* Android
-
-The same checkout also runs in native graphical GNU Emacs on Android. The APK
-is signed with the public certificate used by official Termux GitHub releases,
-so Android grants Emacs the APK's =com.termux= shared UID and Emacs can execute
-programs under =/data/data/com.termux/files/usr/bin=.
-
-The Android package uses Emacs 31.0.50 for =arm64-v8a=, requires Android API 35
-or newer, and declares target API 36. Build it on x86_64 Linux with:
-
-#+begin_src sh
-nix build .#emacs-android --out-link result-android
-#+end_src
-
-The result is
-=result-android/emacs-31.0.50-35-arm64-v8a-termux.apk=. The flake checks the
-package, version, minimum and target APIs, shared UID, debuggable manifest flag,
-ABI, certificate, unchanged manifest, and 16 KiB ZIP alignment. The Android
-tools are also available in:
-
-#+begin_src sh
-nix develop .#android
-#+end_src
-
-** Guided installation
-
-The installer builds and verifies the APK, waits for exactly one authorized
-phone, checks its API, ABI, active profile, installed Termux certificate, and
-any installed Emacs certificate, then asks before installing or updating:
-
-#+begin_src sh
-./android/install.sh
-#+end_src
-
-After Android verifies the installation, the installer discovers the app data
-directory with =run-as org.gnu.emacs pwd=. It installs any missing pinned Nerd
-Font files under =$HOME/fonts=, then checks that Termux Git runs from the Emacs
-app context before offering to clone or update this repository at
-=$HOME/.config/emacs=. A managed checkout must have =init.el=, a clean worktree,
-the expected GitHub origin, a resolvable HEAD, and no local divergence. Updates
-use =git pull --ff-only= and report the resulting commit.
-
-Every configuration change needs explicit confirmation. The launch prompt
-appears afterward, whether setup succeeds, is declined, or needs manual repair.
-The installer never installs, removes, re-signs, or changes Termux or its
-plugins. It also refuses to replace an Emacs app signed with another certificate
-and refuses a downgrade.
-
-Official Termux GitHub releases use a public test key. This APK must use that
-same key to join Termux's shared UID. The expected certificate SHA-256 is:
-
-#+begin_example
-B6:DA:01:48:0E:EF:D5:FB:F2:CD:37:71:B8:D1:02:1E:
-C7:91:30:4B:DD:6C:4B:F4:1D:3F:AA:BA:D4:8E:E5:E1
-#+end_example
-
-The key is not secret. Anyone can forge updates signed with it, so only install
-an APK built from sources you trust. GitHub and F-Droid Termux builds use
-different signing identities. Stop if the installed certificate does not match;
-do not replace or uninstall Termux to work around it.
-
-** Install the configuration
-
-For a fresh install, the installer clones into an installer-owned temporary
-directory and verifies it before moving it to =$HOME/.config/emacs=. It refuses
-non-Git, nonempty, dirty, divergent, or wrong-origin targets without changing
-them.
-
-Emacs checks =$HOME/.emacs.d= before the XDG configuration. If that legacy path
-remains, =$HOME/.config/emacs= will not load. The installer explains this and
-asks before moving the directory to:
-
-#+begin_example
-$HOME/.local/state/emacs/legacy-emacs.d-YYYYMMDD-HHMMSS
-#+end_example
-
-It never deletes the legacy directory. During a fresh migration, cloning and
-initial verification finish before the legacy directory moves. If a later move
-or verification fails, the installer removes only its temporary or newly
-installed checkout and restores =$HOME/.emacs.d=. With an existing managed
-checkout, it updates first and asks separately before moving the legacy path.
-
-If =run-as= or Termux Git is unavailable, setup is declined, or the target is
-unsafe, the successful APK installation stands and the installer prints manual
-recovery commands. Termux and Emacs share a UID, but they have different
-=$HOME= values. Use the absolute Emacs home printed by the installer when
-running the fallback from Termux. If =run-as= cannot discover it, open =M-x
-shell= in Emacs and use =$HOME= there.
-
-The complete fallback is:
-
-#+begin_src sh
-set -eu
-EMACS_HOME='/path/printed/by/the/installer'
-GIT=/data/data/com.termux/files/usr/bin/git
-CONFIG="$EMACS_HOME/.config/emacs"
-ORIGIN=https://github.com/suderman/emacs.git
-
-mkdir -p "$EMACS_HOME/.config"
-if [ -d "$CONFIG/.git" ]; then
-  test -z "$("$GIT" -C "$CONFIG" status --porcelain)"
-  case "$("$GIT" -C "$CONFIG" remote get-url origin)" in
-    https://github.com/suderman/emacs|https://github.com/suderman/emacs.git) ;;
-    *) printf '%s\n' "Refusing unexpected origin" >&2; exit 1 ;;
-  esac
-  "$GIT" -C "$CONFIG" pull --ff-only
-elif [ -e "$CONFIG" ]; then
-  printf '%s\n' "Refusing existing non-Git target: $CONFIG" >&2
-  exit 1
-else
-  "$GIT" clone "$ORIGIN" "$CONFIG"
-fi
-test -f "$CONFIG/init.el"
-test -z "$("$GIT" -C "$CONFIG" status --porcelain)"
-"$GIT" -C "$CONFIG" rev-parse --verify HEAD
-
-if [ -e "$EMACS_HOME/.emacs.d" ]; then
-  BACKUP="$EMACS_HOME/.local/state/emacs/legacy-emacs.d-$(date +%Y%m%d-%H%M%S)"
-  mkdir -p "$EMACS_HOME/.local/state/emacs"
-  mv "$EMACS_HOME/.emacs.d" "$BACKUP"
-  printf 'Legacy configuration moved to %s\n' "$BACKUP"
-fi
-#+end_src
-
-The installer and these commands never modify Termux. Restart Emacs after setup.
-The Android module adds Termux's binary directory to =PATH= and =exec-path=.
-Keep =LD_LIBRARY_PATH= unset. Check the connection with =(executable-find
-"git")=, =(executable-find "rg")=, and =(executable-find "fd")=.
-
-Android stores Emacs's bundled data under the virtual =/assets= tree, which an
-external GPG process cannot read. The package bootstrap copies the bundled GNU
-ELPA keyring to a temporary physical file for import and deletes it afterward.
-Package signature verification stays enabled.
-
-Android keeps the portable editing core: Meow, completion, Org, Magit,
-Dashboard, Dired and Dirvish, Markdown, and Image mode. Nix tree-sitter
-integration, automatic formatting, indent guides, PDF Tools, and Kitty graphics
-remain desktop-only. Ghostel integration is currently disabled. Dashboard and
-Dirvish only show destinations present on the current device. EPUB, audio, and
-video files open through Android's native app chooser.
-
-** Fonts
-
-Android scans =$HOME/fonts= when Emacs starts, so restart Emacs after adding
-fonts. Neither font step overwrites an existing file or touches the Termux
-terminal font.
-
-The guided installer adds bootstrap fonts: JetBrains Mono Nerd Font and Symbols
-Nerd Font from Nerd Fonts 3.4.0. It checks their SHA-256 hashes before and after
-transfer and moves them into place only as a complete set. A failure leaves no
-partial set and does not undo the APK or configuration setup. Fix the reported
-problem and rerun =./android/install.sh=. Until then, Emacs uses the Android
-system font and text labels instead of icons.
-
-The shared desktop typography comes from a separate helper. It copies the font
-packages the NixOS flake already selects, and refuses an existing file with a
-different hash. Run it on the NixOS host with SSH access to =gem=:
-
-#+begin_src sh
-fonts=$(nix build --impure --no-link --print-out-paths --expr '
-  let f = builtins.getFlake "/etc/nixos";
-      p = f.nixosConfigurations.kit.pkgs;
-      fonts = f.nixosConfigurations.kit.config.stylix.fonts;
-  in p.symlinkJoin {
-    name = "emacs-android-fonts";
-    paths = [ fonts.monospace.package p.ioskeley-mono.normal fonts.serif.package p.nerd-fonts.symbols-only ];
-  }')
-./android/install-fonts.sh "$fonts"
-#+end_src
-
-The host needs =ssh=, =rsync=, and =sha256sum=. =EMACS_ANDROID_HOST= overrides
-=gem=. Save work in Emacs on the phone before running it, then restart Emacs.
-
-** Touch and keys
-
-The bottom toolbar has Ctrl, Meta, previous and next buffer, IBuffer, Dirvish,
-search, the Meow keypad, Tab, and Escape. Ctrl and Meta apply to the next key
-and can be combined. The keypad button also shows a hidden software keyboard,
-and a second press closes the keypad. Escape clears a selection and leaves
-Insert state, or cancels the current command. =F9= toggles the toolbar.
-
-Volume Up shows the software keyboard, or opens the keypad when the keyboard
-is already showing. Volume Down hides the keyboard, or closes an open keypad.
-
-Pinch scales text in every buffer. Vertical swipes scroll by pixel and keep
-going after you lift your finger. Buffers with truncated lines, such as Agenda,
-also swipe sideways; =SPC t t= turns that on or off for the current buffer.
-
-The Android config starts the Emacs server if it is not already running, so
-other apps can send files to Emacs through Open with.
-
-* Nix and mutability
-
-I want deterministic bootstrapping without turning every Lisp edit into a Nix
-rebuild.
-
-- =use-package= forms are the single list of Elisp packages. On NixOS,
-  [[file:nix/packages/emacs.nix][nix/packages/emacs.nix]] reads those forms and supplies every package, so
-  =:ensure= finds them already installed. A package added locally installs
-  from MELPA through package.el until the next flake update brings it into
-  Nix. Mark built-ins such as Which-Key with =:ensure nil= so an older ELPA copy
-  does not shadow them.
-- =edger= and =meow-purrsist= come from GitHub through =package-vc= on every
-  platform. =SPC q u= upgrades them. On Android it also upgrades archive
-  packages; on Linux, Nix owns those.
-- The same Nix file supplies native modules, tree-sitter grammars, language
-  servers, formatters, and command-line tools.
-- =early-init.el=, =init.el=, =lisp/=, and =assets/= also become an immutable
-  config in the Nix store. The NixOS wrapper prefers a writable
-  =~/.config/emacs/init.el= and falls back to that bundled copy, so hosts
-  without a checkout still get a working config.
-- package.el data lives under =~/.local/share/emacs/elpa=, and runtime state
-  follows XDG paths. Neither lands in Git.
-
-My [[https://github.com/suderman/nixos][suderman/nixos]] flake owns the host side in
-=modules/home/default/options/emacs/=. It lives in the terminal layer, not the
-desktop layer, because the =em= workspace launcher, =ema=, =emd=, and =EDITOR=
-are terminal features. =modules/home/users/jon/programs.nix= enables it for me
-on every host. On desktop hosts it also starts the shared daemon, adds keyd
-window shortcuts, and exports the shared appearance.
-
-** Shared appearance
-
-NixOS/Stylix selects CommitMono for fixed text and Literata for prose. The
-=kit= Home Manager activation writes a regular, atomic, content-stable
-=~/profile/apps/emacs/style.el=. Syncthing carries it to other machines,
-including Android. Only =kit= enables =programs.emacs.exportStyle=.
-
-Emacs reads the first readable file in =suderman/system-style-files=,
-currently just that path. Without one, it uses =suderman/fallback-style=: the
-same fonts, with the Catppuccin Latte and Mocha palettes bundled in
-base16-theme. A missing font keeps the platform's family at the intended size.
-
-The file sets =suderman/system-style= to a plist with =:mono-font=,
-=:fallback-font=, =:variable-font=, =:icon-font=, and =:font-size= in points.
-Its =:palettes= contains =:light= and =:dark= Base16 plists using the Stylix
-toggle's schemes. It contains no active-mode state, so changing the desktop
-appearance does not change Android's preference.
-
-Emacs defines =suderman-light= and =suderman-dark= using the Base16 face engine
-plus a few semantic face corrections. Nix supplies colors, not face rules.
-Stylix's own Emacs target is disabled. PGTK and Android both follow
-=toolkit-theme-set-functions= and the current =toolkit-theme= at startup;
-terminal-only sessions use the dark variant. Each appearance event rereads the
-file, and =M-x suderman/apply-system-palette= applies newly synced colors now.
-
-Desktop uses Stylix's terminal point size, currently 12. Android multiplies it
-by =suderman/android-font-scale=, initially =17/12=. Org uses variable pitch for
-prose and headings, with fixed pitch for code, tables, metadata, timestamps,
-TODO states, tags, and indentation; adjust =suderman/variable-font-scale=.
-Doom Modeline keeps Normal state quiet and shows Insert, Motion, Keypad, and
-Beacon. Nerd Font fallback covers only the BMP private use area and
-=F0001= to =F1AF0=.
-
-* Keys
-
-The source is the keymap. Each view also draws its live bindings, so this
-section only orients and explains behavior that a binding cannot show.
-
-| Where                         | Keys                                        |
-|-------------------------------+---------------------------------------------|
-| =lisp/suderman-meow.el=       | Meow Normal and Motion states               |
-| =lisp/suderman-keys.el=       | Global keys and the whole =SPC= leader      |
-| =lisp/suderman-windows.el=    | Meta window keys shared by every view       |
-| =lisp/suderman-files.el=      | =suderman/dirvish-keys= for Dired/Dirvish   |
-| IBuffer, Magit, Org, Mail     | The =:config= of that module's =use-package= |
-
-A binding written as =("label" . command)= shows that label in Which-Key.
-Cheatsheet labels for any command live in =suderman/command-labels= in
-=lisp/suderman-help.el=.
-
-** Finding a command
-
-| Key       | Action                                 |
-|-----------+----------------------------------------|
-| =SPC ?=   | Draw this view's keys on a keyboard    |
-| =C-c h=   | The same, without the keypad           |
-| =SPC ...= | Which-Key shows each leader group      |
-| =?=       | Dired/Dirvish keys with labels         |
-| =C-h k=   | Describe a key                         |
-| =C-h b=   | Show effective bindings in this buffer |
-| =F5=      | Reload the modular configuration       |
-| =F6=      | Pull configuration updates             |
-
-Inside a cheatsheet, =n= and =p= cycle through Meow, Agenda, IBuffer,
-Dired/Dirvish, Magit, and the mail views. =q=, =h=, or Escape returns. Labels
-too long for a nine-column cell get a numbered note. =C-c h= leaves Magit's
-native =SPC= preview alone.
-
-** Editing grammar
-
-Meow edits by selecting first, then acting. The map borrows from Vim without
-emulating it. =hjkl= move, and movement extends an active selection. =m=
-selects a word, and each repeat grows it to the enclosing symbol, string,
-bracket, sentence, paragraph, function, or Org subtree. =M=, =MM=, =MMM= select
-a line, a rectangle, and the buffer. =z= steps a selection back. =c= copies,
-=v= pastes, =d= deletes without touching the kill ring, and =x= cuts then
-inserts. =s= is the Surround prefix.
-=/= searches literally with smartcase, then =n= and =p= continue. =;= repeats
-the last edit, or the find or till motion just before it. =u= undoes and =y=
-redoes. =,= opens IBuffer, =.= opens Dirvish, =\= toggles the sidebar, and
-=< / >= cycle buffers.
-
-=meow-purrsist= keeps selections adjustable by motion, including reversed
-selections and regions made outside Meow. =d= and =D= never fill the kill ring.
-With one character or no selection, =x= deletes without copying. =X= uses the
-selection or the current line. =I= and =A= extend an active selection to the
-smart line start or end; without one they move there and insert. Smart line
-start toggles between indentation and column zero. Smart line end stops before a
-trailing comment first.
-
-Slash search ignores case until the query has a capital letter, so =home=
-matches =Home= and =home= while =Home= matches only =Home=. The match count
-appears in the mode line. In Normal state, Return clears an active selection.
-Without one it runs the mode's own Return command, unfolding a folded line
-first.
-
-=J= and =K= move the current line, the selected lines, or an Org subtree.
-=H= and =L= outdent and indent, or promote and demote in Org.
-
-=[= and =]= move to the previous and next block at the same level, ={= to the
-block that contains point, and =}= into the first child. In Org and Markdown a
-block is a heading, list item, or body element; in code it is a line at the
-same indentation. Dirvish and IBuffer use the same keys for their rows. =o=
-folds or unfolds the heading or code block on the current line, and =SPC TAB=
-folds the whole buffer to its top level, or opens everything when it already
-is.
-
-=SPC= is both Meow's keypad and the leader. Numeric arguments fit the same
-grammar, so =SPC 3 w= moves three word starts. =SPC h= starts a =C-h= help
-sequence. Arrow keys page through Which-Key without leaving the keypad.
-
-Meta keys manage windows everywhere, including IBuffer, Dirvish, and Magit:
-=M-h/j/k/l= focus, =M-H/J/K/L= move a divider, =M-u= and =M-i= split, =M-w=
-closes a window or tab, and =M-z= zooms.
-
-** Completion
-
-Vertico handles minibuffer choices. Corfu handles editing-buffer completion in
-GUI and terminal child frames, including Android. Native mode completion stays
-first. Cape adds file paths and words from open buffers as fallbacks. =TAB=
-indents, then completes. In the minibuffer, =C-.= opens Embark actions.
-
-Corfu opens automatically while typing, but starts with no candidate selected.
-It shows documentation after a short delay and remembers previous choices.
-Buffer-word fallback starts at three characters. Shell buffers use manual
-completion instead of automatic popups.
-
-Eglot starts when the current buffer can find its language server. On desktop,
-this includes servers supplied by a project's direnv environment. Configured
-languages include PHP, Nix, Lua, HTML, CSS, JavaScript/TypeScript, JSON, YAML,
-Python, and Twig.
-Elisp, Org, and Markdown keep native completion. Android uses the same setup but
-needs server executables supplied locally; the APK does not bundle them.
-
-Phpactor needs WordPress core or project stubs to complete WordPress APIs.
-Installing the server alone does not supply those definitions. Use
-=M-x eglot-code-actions= for actions and =M-x eldoc-doc-buffer= for full hover
-documentation. Routine hover text stays on one echo-area line.
-
-** Search and bookmarks
-
-=SPC /= owns Consult searches. Bare =/= keeps Meow's literal search and
-persistent selections.
-
-Ripgrep uses =project.el='s root, including the canonical Org root for work
-projects. =C-u SPC / /= prompts for directories or files instead, so a search
-can target the source companion, the current directory, or several roots.
-Git grep uses the current checkout's root rather than its linked Org directory.
-=C-u SPC / g= still prompts for directories or files.
-Remote ripgrep needs =rg= on the remote host; =SPC / g= can use its Git instead.
-Line and Imenu searches preview immediately. Grep previews wait 0.2 seconds;
-=C-SPC= previews immediately. Bookmarks preview only on =C-SPC=, and Consult
-never opens a remote file merely to preview it.
-
-Bookmarks remember files, directories, remote paths, and locations supported by
-other modes. They save after each change under
-=~/.local/state/emacs/bookmarks=. =C-x r b= also uses Consult. During
-=consult-buffer=, =m SPC= narrows to bookmarks. =C-.= opens Embark actions,
-including bookmark rename and delete.
-
-In minibuffers, =M-r= searches the current prompt's history. =C-c C-e= exports
-results to a normal buffer, such as Grep or Dired, and =C-c C-l= collects the
-candidate list. =DEL= at a file-path slash removes one directory component;
-=M-DEL= removes a directory or word. Shadowed paths such as =/tmp/~/= tidy
-automatically. Xref results use Consult's preview and filtering too.
-
-** Remote files
-
-Open =/ssh:user@host:/path= with =C-x C-f= or bookmark it with =SPC . m=.
-The shorthand =/host:/path= defaults to SSH. For large transfers, use an
-explicit =/scp:user@host:/path= path. SCP keeps files up to 1 MiB inline before
-using its separate copy process. SSH connection sharing and TRAMP's normal
-caches remain enabled; the config does not change host keys or agent forwarding.
-TRAMP includes the host's login PATH so user-installed tools such as =rg= work
-on NixOS as they do in plain SSH.
-
-Remote buffers skip automatic Eglot startup, direnv, Apheleia formatting,
-diff-hl indicators, and Magit's after-save status refresh. The treefmt selector
-also skips remote project-root probes. Local behavior stays the same. Run
-=M-x eglot= when you want a server installed on the remote host. Use
-=SPC g m= or =SPC g f= for Git operations without opening status, and =SPC g g=
-when you want the full dashboard. Refresh remote status explicitly with =g=.
-
-=SPC . R= resets the current buffer's TRAMP connection. The next file operation
-reconnects. This stops that connection's remote processes, so do not use it
-while a remote build or shell should keep running. Visiting buffers stay open.
-Bookmarks and recent files reuse their remote paths without a second remote
-navigation system.
-
-** Git
-
-Magit is the repository dashboard. It stages files, hunks, and selected lines;
-drives commits, branches, remotes, logs, diffs, stashes, rebases, and other Git
-operations through its native Transient menus. Meow stays off in Magit buffers
-so those native single-letter commands win.
-
-diff-hl updates change indicators while editing. Its hunk commands are grouped
-under =SPC g h=.
-
-Built-in smerge-mode and Ediff handle conflict markers. Upper and lower are
-used instead of ours and theirs because those meanings reverse during rebase.
-
-Inside Magit, =j/k= and =n/p= move by section, =^= moves to the parent section,
-=TAB= expands or collapses, =RET= visits, =h= opens the dispatch menu, and =q=
-or =.= restores the previous buffer. The original =j= jump and =k= discard
-commands remain available as =h j= and =h k=. =SPC= retains Magit's diff preview;
-=C-SPC= opens the Meow keypad so the same leader maps remain available without
-enabling Meow in Magit. In Transient menus, =<escape>= returns to the parent
-menu or closes the top-level menu; =C-q= exits the entire stack.
-
-Word-level diffs appear when you move into a hunk, rather than refining every
-hunk at once. Revision buffers omit the related-ref lists. Stage and unstage
-prompts default to the current file and can select several files. Blank commit
-messages start in Meow Insert state; amend messages and templates with existing
-summaries keep Normal state. =C-c C-c= finishes a commit and =C-c C-k= cancels.
-Magit's native prompt to save modified repository buffers remains enabled.
-
-** Org
-
-=SPC o= is a global Org namespace. Direct state setters, single-subtree
-archive, planning, refile, and export use the current Org item or Agenda entry
-as appropriate. Bulk archive and subtree deletion require an Org buffer.
-
-Tasks use =TODO=, =AUTO=, =PROG=, =EVAL=, =HOLD=, and =DONE=. Agenda collects
-=inbox.org=, =todo.org=, =asana.org=, calendar files, direct files under
-=life/= and =notes/=, and canonical work files at
-=work/<domain>/<project>/<project>.org=.
-It also includes Org files directly under each work domain, but skips
-=archive.org= and archived directories. Capture goes to the inbox; refile uses
-active context files rather than scanning every task attachment directory.
-Archives go to =archive.org= beside the source file. =SPC o a= archives only
-the current heading and its children, even for headings without a TODO state.
-=SPC o A= uses Org's completed states and scans the whole current buffer,
-including outside a narrowed subtree. It asks for confirmation, unless given
-a prefix argument, and saves the source and archives. Save an unnamed buffer
-before using it. Completed parents stay in place when they contain unfinished
-tasks; completed children can still be archived. Other agenda files are untouched.
-=SPC o D= cuts one whole subtree, including when narrowed. Recover it with yank.
-
-In Dirvish or Dired, =SPC o a= moves marked files and folders, or the item at
-point when none are marked, into an =archive/= directory beside each item.
-It creates that directory when needed. Name conflicts get a timestamp before
-the file extension, such as =prompt-20261006-120345.org=. Folder names get the
-timestamp at the end. If that name also exists, a numeric suffix follows the
-timestamp. Existing entries are never overwritten. =archive.org= files and
-=archive= folders are skipped, including when marked.
-
-Agenda opens in the current window; =h= or =q= restores the previous layout.
-Its own map supplies =j/k= for rows, =l= or Return to visit, =C-SPC= to preview
-without leaving Agenda, =m= to toggle a bulk mark, =M= to clear marks, and =B=
-for native bulk actions. =SPC= still opens the Meow keypad. Comma opens IBuffer,
-period opens Dirvish for the entry's file, and Meta window keys stay available.
-=\= toggles the file sidebar, and =< / >= cycle buffers. =F= toggles follow
-mode, =C-c <= filters by category, and =|= clears filters.
-=r= refreshes the current view and =g= all views, rediscovering files first.
-=SPC ?= draws the current bindings on a keyboard, with preview, date, and
-window keys below it. =q=, =h=, or Escape closes the sheet and returns to Agenda.
-Bare =?= still shows Org's flagging note.
-
-The normal calendar shows today and the next six days. =SPC o v a w= opens a
-Monday-based week. =C-c .= returns to today and =C-c ,= changes priority.
-Displaced date, capture, log, moon-phase, and date-prompt commands remain on
-=C-c j=, =C-c k=, =C-c l=, =C-c M=, and =C-c >=.
-
-** Dashboard
-
-Dashboard is on demand, not an automatic startup screen. Its top row opens
-common source and configuration directories through Dirvish, followed by recent
-projects and recent files. Backtick opens it from Meow Normal and Motion states,
-IBuffer, or Dirvish. =M-x suderman/dashboard= works everywhere without using
-the leader map.
-
-** IBuffer and the file sidebar
-
-I use IBuffer to answer "what is open?" and the Dirvish sidebar to answer
-"where is this file?" The sidebar follows the selected file and project while
-leaving editor focus alone. Meow stays off in both views so their own maps win.
-
-Built-in =project.el= also recognizes =~/org/work/<domain>/<project>/= as a
-project. Matching =~/src/<domain>/<project>/= and
-=~/data/work/<domain>/<project>/= directories join that project when present.
-IBuffer's project groups put their buffers together and label companion paths
-with =src/= and =data/=. Normal project file searches include Org and source,
-but do not scan the data directory unless explicitly requested.
-
-*** IBuffer
-
-=,= opens IBuffer on a list of recent buffers with the previous buffer
-selected, so =, l= switches back like Alt-Tab. =;= switches to project groups
-and back. Starred buffers other than =*scratch*= and =*Messages*= stay hidden,
-along with files that were never shown in a window, such as the ones Agenda
-loads. =i= shows them. Left click visits a buffer and middle click toggles its
-mark. Non-project images get their own group. Dirvish's internal panes and
-preview buffers never appear.
-
-*** Dirvish sidebar
-
-The sidebar follows the active file and project and expands its parent
-directories. =\= from an editor toggles visibility without stealing focus. =\=
-from IBuffer uses the selected buffer or project heading as context.
-
-** Dirvish and Image mode
-
-In Dired and Dirvish, =b= opens Ripdrag with the marked files, or the current
-entry when nothing is marked. Drag individual previews or the "Drag All" handle
-into another app. The popup shows basenames and 96-pixel icons and closes after
-a successful drop. Native Dired outbound mouse dragging is disabled. If Ripdrag
-is not installed, =b= silently does nothing, including on Android. On NixOS,
-Hyprland floats the popup at 520 by 400 near the pointer and keeps it inside the
-monitor's usable area.
-
-Dirvish =c= and =x= stage the marked files, or the current file when nothing is
-marked. =v= pastes staged files before reading any external clipboard data.
-Copy and cut stages clear once the transfer starts. The next =v= imports
-clipboard files or an image. Validation errors, launch failures, and
-cancellation before launch keep the stage available to retry. Use =C-u v= to
-skip a pending stage without clearing it. External file-manager cut selections
-are copied, not moved. URI lists and GNOME/MATE file lists use Dired collision prompts and
-recursive copying. Plain text creates no file.
-
-When those local clipboard paths have no importable data, =v= can read an image
-from the computer running Kitty, including across SSH. It first queries the
-available MIME types inside Emacs. Plain text and empty clipboards do not open
-a terminal helper or leave the Dirvish screen. When =image/png= is available,
-it temporarily hands the terminal to =kitten clipboard -g --mime image/png=,
-then saves the returned PNG with the same timestamp and collision rules.
-Kitty's clipboard permission prompt remains in place. Denied access and read
-errors leave staged files alone.
-This optional backend needs =kitten= and util-linux =script= on the Emacs host,
-a local destination, and an =xterm-kitty= terminal frame. GUI frames and other
-terminals keep their existing paste behavior.
-
-Native GUI drops remain unchanged. In terminal Dired/Dirvish, bracketed paste
-imports files only when every newline-separated line is an existing absolute
-local path. Spaces and shell punctuation are literal. One empty trailing line
-is ignored; other text goes to normal terminal paste, including its usual
-read-only-buffer error. Kitty and Herdr need no special configuration for local
-path drops. A path pasted over SSH still names a file on the Emacs host, not a
-file on the computer running Kitty.
-
-For actual file transfer over SSH, press =V= in terminal Dired/Dirvish inside
-Kitty. This temporarily hands the terminal to
-=kitten dnd --drop-anywhere copy --copy-mode independent --confirm-drop-overwrite=.
-Drop files from a local file manager into that receiver. Files go into the
-currently displayed directory on the Emacs host. Emacs returns and refreshes
-after a successful drop, or when you press Escape. Drop outside Kitty's Move
-box to copy; the Move box remains Kitty's explicit move action. Copies have
-independent file data, and conflicting files require confirmation.
-
-The Emacs host needs a =kitten= version with =dnd= support and util-linux
-=script= for the terminal handoff. Both standalone Emacs and terminal
-=emacsclient= frames can use it. The selected frame must advertise terminal type
-=xterm-kitty=. GUI frames, other terminal types, missing tools, and TRAMP
-directories get a clear error before any terminal handoff. This also keeps the
-command inactive in Android's native GUI and ordinary Termux terminals.
-Kitty must support its drag-and-drop and file-transfer protocols;
-Herdr must pass them through if it sits between Kitty and Emacs. This explicit
-receive mode does not change ordinary local drops, =v= clipboard paste, or
-=b= outbound Ripdrag. No desktop helper is required to load the configuration.
-
-Dirvish =d= deletes the =m= marks, or the current entry when nothing is
-marked, after confirmation. It kills unmodified visiting buffers and asks
-before killing modified ones. =D= deletes the same selection without
-confirmation, including nonempty directories, and keeps visiting buffers alive
-so unsaved edits survive. There is no separate delete-flag step or =X= key.
-
-Period opens Dirvish in the selected window, or focuses a visible sidebar.
-Within Dirvish, Period closes the view. =f= toggles the full-frame
-parent, current, and preview layout. Close that layout before using =\= to
-open the sidebar. Comma closes a full-frame layout before opening IBuffer. From
-the sidebar, Comma opens IBuffer in an editor window and leaves the sidebar
-visible, and closing IBuffer restores that window.
-
-Dotfiles start hidden in the parent and current panes, and =i= toggles them in
-both. The preview stays unfiltered. =g= refreshes after another program changes
-the directory. =?= shows the current bindings with labels, and =;= opens
-Dirvish's own menu. Clicking a directory arrow toggles its subtree, like
-=TAB=.
-
-On Android, one tap opens a row in the current window. On desktop, single left
-click selects a row and double left click opens it. Right click opens Dired's
-file or directory context menu. PDF files open in PDF Tools; EPUB files use the
-desktop reader, and audio and video use the desktop player. NixOS currently maps
-those to Zathura and mpv. A desktop single click in the center keeps focus there
-instead of activating the preview. The left parent column is also clickable:
-directories change the center column, while files change directory and select
-that file. In that column, =j/k= move between directories and update the center,
-=h= goes up another level, and =l= returns to the center. Breadcrumb clicks run
-in the center, and =M-hjkl= skips breadcrumb and footer windows.
-
-Dirvish previews video, images, looping GIFs, audio metadata, EPUB covers,
-archives, fonts, and PDFs. Minibuffer file selection uses the same preview
-dispatchers after a short delay. Animated images opened in Image mode also
-autoplay and loop.
-
-=G= opens a full-frame Image-Dired gallery of the current directory's top-level
-images. =hjkl= move between thumbnails, =RET= opens an image, =g= refreshes, and
-=x= deletes flagged images. In the image view, =n/p= cycle through gallery images
-and =q= returns to thumbnails. From thumbnails, =q= restores the original
-Dirvish layout and selected file. Ordinary Image mode uses Motion state: =n/p=
-browse the directory, =+= and =-= zoom, =r= and =R= rotate, and =0= resets.
-
-On Wayland, Image mode's =c= copies image data. GIFs are copied as file URIs so
-receiving apps can use the animation. Dirvish =v= saves PNG, JPEG, GIF, WebP,
-TIFF, BMP, or SVG clipboard media as =clipboard-YYYY-MM-DD-HHMMSS.EXT=. A numeric
-suffix avoids collisions, and exclusive creation prevents overwrites. It uses
-Emacs selection APIs when available, with optional =wl-paste= for local Wayland
-terminal sessions. No desktop helper is required to load the configuration;
-remote SSH sessions do not read the host's Wayland clipboard. The optional
-Kitty backend reads the terminal host's clipboard across SSH and saves PNGs.
-=V= opens the separate Kitty file-drop receiver described above.
-
-** Windows and frames
-
-Edger handles Meta and =SPC w= navigation, resizing, splits, and closing. At an
-Emacs boundary, it can hand control to the surrounding terminal multiplexer.
-=suderman/window-keys= holds the Meta bindings once; every view installs it.
-
-* Repository map
-
-| Path                           | Role                                             |
-|--------------------------------+--------------------------------------------------|
-| [[file:flake.nix][flake.nix]]                      | Flake inputs and Blueprint outputs               |
-| =nix/=                         | Desktop and Android packages, shells, and checks |
-| =android/install.sh=           | Guided Android APK installer                     |
-| =android/install-fonts.sh=     | Copy and verify shared fonts on Android          |
-| =assets/=                      | Dashboard, toolbar, and Markdown preview assets  |
-| [[file:early-init.el][early-init.el]]                  | Process-level startup and frame defaults         |
-| [[file:init.el][init.el]]                        | Boring dependency-ordered module loader          |
-| =lisp/suderman-android.el=     | Android input, server, and Termux paths          |
-| =lisp/suderman-toolbar.el=     | Touch toolbar with sticky Ctrl and Meta          |
-| =lisp/suderman-paths.el=       | XDG state paths                                  |
-| =lisp/suderman-packages.el=    | package.el and use-package bootstrap             |
-| =lisp/suderman-defaults.el=    | Small built-in behavior changes                  |
-| =lisp/suderman-clipboard.el=   | Terminal clipboard via Wayland or OSC 52         |
-| =lisp/suderman-appearance.el=  | Style file, fonts, faces, and modeline           |
-| =lisp/suderman-windows.el=     | Window helpers, Meta keys, smooth jumps          |
-| =lisp/suderman-projects.el=    | Org work projects and source/data companions     |
-| =lisp/suderman-buffers.el=     | Project-grouped IBuffer                          |
-| =lisp/suderman-completion.el=  | Minibuffer completion, Corfu, and Cape           |
-| =lisp/suderman-meow.el=        | Personal editing and the Normal/Motion maps      |
-| =lisp/suderman-terminal.el=    | Ghostel integration, currently disabled          |
-| =lisp/suderman-transfer.el=    | File copy, paste, drag, and Kitty transfers      |
-| =lisp/suderman-files.el=       | Dired, Dirvish, sidebar, previews, and keys      |
-| =lisp/suderman-images.el=      | Image navigation, transforms, and gallery        |
-| =lisp/suderman-dashboard.el=   | On-demand dashboard and destinations             |
-| =lisp/suderman-markdown.el=    | Markdown editing and Pandoc preview              |
-| =lisp/suderman-org.el=         | Org agenda, capture, archive, and refile         |
-| =lisp/suderman-mail-moves.el=  | Single-message Inbox folder moves                |
-| =lisp/suderman-mail.el=        | Notmuch reading, sending, and msmtp              |
-| =lisp/suderman-mail-drafts.el= | Org-authored draft-only rich mail                |
-| =lisp/suderman-languages.el=   | Language modes, tree-sitter, and Eglot           |
-| =lisp/suderman-nix.el=         | Embedded-language highlighting in Nix strings    |
-| =lisp/suderman-git.el=         | Magit, live hunks, and conflict handling         |
-| =lisp/suderman-formatting.el=  | Project and buffer formatting commands           |
-| =lisp/suderman-help.el=        | Keyboard cheatsheets and command labels          |
-| =lisp/suderman-reload.el=      | Hot reload and configuration pull                |
-| =lisp/suderman-keys.el=        | Global keys and the SPC leader                   |
-| =test/=                        | Focused safety checks                            |
-| [[file:AGENTS.md][AGENTS.md]]                      | Rules and traps for anyone editing this repo     |
-
-The source wins when this file falls behind. This reference only covers the
-parts I use often enough to want on one page.
+That runs the configuration bundled in the Nix store. To edit it live, clone
+it to =~/.config/emacs=, or load a checkout with =nix run . -- --init-directory
+"$PWD"=, then press =F5= to reload after a change. [[file:docs/install.org][Install]] covers the
+desktop package and the Android APK.
+
+* Common keys
+
+=SPC ?= draws the current view's keys on a keyboard, and Which-Key lists each
+leader group after =SPC=. These are the keys I use most.
+
+** Getting around
+
+| Key         | Action                                   |
+|-------------+------------------------------------------|
+| =,=         | IBuffer, starting on the previous buffer |
+| =.=         | Dirvish for the current file             |
+| =\=         | Toggle the file sidebar                  |
+| =`=         | Dashboard                                |
+| =<= and =>= | Previous and next buffer                 |
+| =SPC SPC=   | =M-x=                                    |
+| =SPC ?=     | Keyboard cheatsheet for this view        |
+| =C-c m=     | Mail                                     |
+| =F5=        | Reload the configuration                 |
+
+The dashboard opens on demand rather than at startup. Its top row opens common
+source and configuration directories through Dirvish, followed by recent
+projects and recent files. Backtick opens it from IBuffer and Dirvish too.
+
+** Editing in Normal state
+
+Meow selects first, then acts. Movement extends an active selection.
+
+| Key              | Action                                                 |
+|------------------+--------------------------------------------------------|
+| =hjkl=           | Move                                                   |
+| =w= =e= =b=      | Next word start, word end, previous word               |
+| =m=              | Select a word; repeat to grow to the enclosing thing   |
+| =M=              | Select a line; repeat for a rectangle, then the buffer |
+| =z=              | Step the selection back                                |
+| =i= =a=          | Insert before or after                                 |
+| =I= =A=          | Insert at the line start or end                        |
+| =c= =v=          | Copy and paste                                         |
+| =x=              | Cut, then insert                                       |
+| =d= =D=          | Delete, or delete the line, without the kill ring      |
+| =X=              | Cut whole lines and stay in Normal                     |
+| =u= =y=          | Undo and redo                                          |
+| =;=              | Repeat the last edit                                   |
+| =/= then =n= =p= | Search, then next and previous match                   |
+| =f= =t=          | Find or move till a character                          |
+| =s=              | Surround prefix                                        |
+| =J= =K=          | Move lines or an Org subtree                           |
+| =H= =L=          | Outdent and indent, or promote and demote in Org       |
+| =o=              | Fold or unfold the block on this line                  |
+| =[= =]= ={= =}=  | Previous, next, parent, and child block                |
+| ~=~              | Format the buffer                                      |
+| =Q=              | Kill the buffer                                        |
+
+** Windows
+
+| Key         | Action                             |
+|-------------+------------------------------------|
+| =M-h/j/k/l= | Focus the window in that direction |
+| =M-H/J/K/L= | Move the divider                   |
+| =M-u= =M-i= | Split below or right               |
+| =M-w=       | Close the window                   |
+| =M-z=       | Zoom the window                    |
+| =M-n= =M-N= | New frame or tab                   |
+
+These work in every view, including IBuffer, Dirvish, and Magit. At the edge
+of Emacs they hand off to the surrounding terminal multiplexer.
+
+** Leader
+
+| Key       | Group                                    |
+|-----------+------------------------------------------|
+| =SPC ,=   | Buffers                                  |
+| =SPC .=   | Files and bookmarks                      |
+| =SPC /=   | Consult searches                         |
+| =SPC g=   | Git, hunks, and conflicts                |
+| =SPC o=   | Org states, planning, archive, and views |
+| =SPC t=   | Toggles                                  |
+| =SPC w=   | Windows                                  |
+| =SPC q=   | Quit, reload, pull, and upgrade          |
+| =SPC TAB= | Fold the whole buffer, or open it all    |
+
+* Documentation
+
+| Guide             | Covers                                                    |
+|-------------------+-----------------------------------------------------------|
+| [[file:docs/install.org][Install]]           | Nix package, Android APK, phone setup, and fonts          |
+| [[file:docs/editing.org][Editing]]           | Meow grammar, completion, search, bookmarks, and windows  |
+| [[file:docs/files.org][Buffers and files]] | IBuffer, Dirvish, Image mode, transfers, and remote files |
+| [[file:docs/org.org][Org]]               | Task states, Agenda, capture, refile, and archives        |
+| [[file:docs/git.org][Git]]               | Magit, diff-hl, and conflicts                             |
+| [[file:docs/mail.org][Mail]]              | Notmuch, folder moves, sending, and Org-authored drafts   |
+| [[file:docs/android.org][Android]]           | What runs on the phone, touch input, and Termux           |
+| [[file:docs/appearance.org][Appearance]]        | Fonts, Stylix palettes, and light and dark themes         |
+| [[file:docs/development.org][Development]]       | Tinkering, tests, hot reload, Nix, and the repository map |
+
+The source wins when the docs fall behind.

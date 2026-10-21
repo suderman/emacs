@@ -1,0 +1,30 @@
+#+title: Git
+#+startup: content
+
+* Magit, diff-hl, and conflicts
+
+Magit is the repository dashboard. It stages files, hunks, and selected lines;
+drives commits, branches, remotes, logs, diffs, stashes, rebases, and other Git
+operations through its native Transient menus. Meow stays off in Magit buffers
+so those native single-letter commands win.
+
+diff-hl updates change indicators while editing. Its hunk commands are grouped
+under =SPC g h=.
+
+Built-in smerge-mode and Ediff handle conflict markers. Upper and lower are
+used instead of ours and theirs because those meanings reverse during rebase.
+
+Inside Magit, =j/k= and =n/p= move by section, =^= moves to the parent section,
+=TAB= expands or collapses, =RET= visits, =h= opens the dispatch menu, and =q=
+or =.= restores the previous buffer. The original =j= jump and =k= discard
+commands remain available as =h j= and =h k=. =SPC= retains Magit's diff preview;
+=C-SPC= opens the Meow keypad so the same leader maps remain available without
+enabling Meow in Magit. In Transient menus, =<escape>= returns to the parent
+menu or closes the top-level menu; =C-q= exits the entire stack.
+
+Word-level diffs appear when you move into a hunk, rather than refining every
+hunk at once. Revision buffers omit the related-ref lists. Stage and unstage
+prompts default to the current file and can select several files. Blank commit
+messages start in Meow Insert state; amend messages and templates with existing
+summaries keep Normal state. =C-c C-c= finishes a commit and =C-c C-k= cancels.
+Magit's native prompt to save modified repository buffers remains enabled.

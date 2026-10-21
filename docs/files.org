@@ -1,0 +1,168 @@
+#+title: Buffers and files
+#+startup: content
+
+IBuffer answers "what is open?", Dirvish answers "where is this file?", and
+TRAMP opens files on other hosts.
+
+* IBuffer and the file sidebar
+
+I use IBuffer to answer "what is open?" and the Dirvish sidebar to answer
+"where is this file?" The sidebar follows the selected file and project while
+leaving editor focus alone. Meow stays off in both views so their own maps win.
+
+Built-in =project.el= also recognizes =~/org/work/<domain>/<project>/= as a
+project. Matching =~/src/<domain>/<project>/= and
+=~/data/work/<domain>/<project>/= directories join that project when present.
+IBuffer's project groups put their buffers together and label companion paths
+with =src/= and =data/=. Normal project file searches include Org and source,
+but do not scan the data directory unless explicitly requested.
+
+** IBuffer
+
+=,= opens IBuffer on a list of recent buffers with the previous buffer
+selected, so =, l= switches back like Alt-Tab. =;= switches to project groups
+and back. Starred buffers other than =*scratch*= and =*Messages*= stay hidden,
+along with files that were never shown in a window, such as the ones Agenda
+loads. =i= shows them. Left click visits a buffer and middle click toggles its
+mark. Non-project images get their own group. Dirvish's internal panes and
+preview buffers never appear.
+
+** Dirvish sidebar
+
+The sidebar follows the active file and project and expands its parent
+directories. =\= from an editor toggles visibility without stealing focus. =\=
+from IBuffer uses the selected buffer or project heading as context.
+
+* Dirvish and Image mode
+
+In Dired and Dirvish, =b= opens Ripdrag with the marked files, or the current
+entry when nothing is marked. Drag individual previews or the "Drag All" handle
+into another app. The popup shows basenames and 96-pixel icons and closes after
+a successful drop. Native Dired outbound mouse dragging is disabled. If Ripdrag
+is not installed, =b= silently does nothing, including on Android. On NixOS,
+Hyprland floats the popup at 520 by 400 near the pointer and keeps it inside the
+monitor's usable area.
+
+Dirvish =c= and =x= stage the marked files, or the current file when nothing is
+marked. =v= pastes staged files before reading any external clipboard data.
+Copy and cut stages clear once the transfer starts. The next =v= imports
+clipboard files or an image. Validation errors, launch failures, and
+cancellation before launch keep the stage available to retry. Use =C-u v= to
+skip a pending stage without clearing it. External file-manager cut selections
+are copied, not moved. URI lists and GNOME/MATE file lists use Dired collision prompts and
+recursive copying. Plain text creates no file.
+
+When those local clipboard paths have no importable data, =v= can read an image
+from the computer running Kitty, including across SSH. It first queries the
+available MIME types inside Emacs. Plain text and empty clipboards do not open
+a terminal helper or leave the Dirvish screen. When =image/png= is available,
+it temporarily hands the terminal to =kitten clipboard -g --mime image/png=,
+then saves the returned PNG with the same timestamp and collision rules.
+Kitty's clipboard permission prompt remains in place. Denied access and read
+errors leave staged files alone.
+This optional backend needs =kitten= and util-linux =script= on the Emacs host,
+a local destination, and an =xterm-kitty= terminal frame. GUI frames and other
+terminals keep their existing paste behavior.
+
+Native GUI drops remain unchanged. In terminal Dired/Dirvish, bracketed paste
+imports files only when every newline-separated line is an existing absolute
+local path. Spaces and shell punctuation are literal. One empty trailing line
+is ignored; other text goes to normal terminal paste, including its usual
+read-only-buffer error. Kitty and Herdr need no special configuration for local
+path drops. A path pasted over SSH still names a file on the Emacs host, not a
+file on the computer running Kitty.
+
+For actual file transfer over SSH, press =V= in terminal Dired/Dirvish inside
+Kitty. This temporarily hands the terminal to
+=kitten dnd --drop-anywhere copy --copy-mode independent --confirm-drop-overwrite=.
+Drop files from a local file manager into that receiver. Files go into the
+currently displayed directory on the Emacs host. Emacs returns and refreshes
+after a successful drop, or when you press Escape. Drop outside Kitty's Move
+box to copy; the Move box remains Kitty's explicit move action. Copies have
+independent file data, and conflicting files require confirmation.
+
+The Emacs host needs a =kitten= version with =dnd= support and util-linux
+=script= for the terminal handoff. Both standalone Emacs and terminal
+=emacsclient= frames can use it. The selected frame must advertise terminal type
+=xterm-kitty=. GUI frames, other terminal types, missing tools, and TRAMP
+directories get a clear error before any terminal handoff. This also keeps the
+command inactive in Android's native GUI and ordinary Termux terminals.
+Kitty must support its drag-and-drop and file-transfer protocols;
+Herdr must pass them through if it sits between Kitty and Emacs. This explicit
+receive mode does not change ordinary local drops, =v= clipboard paste, or
+=b= outbound Ripdrag. No desktop helper is required to load the configuration.
+
+Dirvish =d= deletes the =m= marks, or the current entry when nothing is
+marked, after confirmation. It kills unmodified visiting buffers and asks
+before killing modified ones. =D= deletes the same selection without
+confirmation, including nonempty directories, and keeps visiting buffers alive
+so unsaved edits survive. There is no separate delete-flag step or =X= key.
+
+Period opens Dirvish in the selected window, or focuses a visible sidebar.
+Within Dirvish, Period closes the view. =f= toggles the full-frame
+parent, current, and preview layout. Close that layout before using =\= to
+open the sidebar. Comma closes a full-frame layout before opening IBuffer. From
+the sidebar, Comma opens IBuffer in an editor window and leaves the sidebar
+visible, and closing IBuffer restores that window.
+
+Dotfiles start hidden in the parent and current panes, and =i= toggles them in
+both. The preview stays unfiltered. =g= refreshes after another program changes
+the directory. =?= shows the current bindings with labels, and =;= opens
+Dirvish's own menu. Clicking a directory arrow toggles its subtree, like
+=TAB=.
+
+On Android, one tap opens a row in the current window. On desktop, single left
+click selects a row and double left click opens it. Right click opens Dired's
+file or directory context menu. PDF files open in PDF Tools; EPUB files use the
+desktop reader, and audio and video use the desktop player. NixOS currently maps
+those to Zathura and mpv. A desktop single click in the center keeps focus there
+instead of activating the preview. The left parent column is also clickable:
+directories change the center column, while files change directory and select
+that file. In that column, =j/k= move between directories and update the center,
+=h= goes up another level, and =l= returns to the center. Breadcrumb clicks run
+in the center, and =M-hjkl= skips breadcrumb and footer windows.
+
+Dirvish previews video, images, looping GIFs, audio metadata, EPUB covers,
+archives, fonts, and PDFs. Minibuffer file selection uses the same preview
+dispatchers after a short delay. Animated images opened in Image mode also
+autoplay and loop.
+
+=G= opens a full-frame Image-Dired gallery of the current directory's top-level
+images. =hjkl= move between thumbnails, =RET= opens an image, =g= refreshes, and
+=x= deletes flagged images. In the image view, =n/p= cycle through gallery images
+and =q= returns to thumbnails. From thumbnails, =q= restores the original
+Dirvish layout and selected file. Ordinary Image mode uses Motion state: =n/p=
+browse the directory, =+= and =-= zoom, =r= and =R= rotate, and =0= resets.
+
+On Wayland, Image mode's =c= copies image data. GIFs are copied as file URIs so
+receiving apps can use the animation. Dirvish =v= saves PNG, JPEG, GIF, WebP,
+TIFF, BMP, or SVG clipboard media as =clipboard-YYYY-MM-DD-HHMMSS.EXT=. A numeric
+suffix avoids collisions, and exclusive creation prevents overwrites. It uses
+Emacs selection APIs when available, with optional =wl-paste= for local Wayland
+terminal sessions. No desktop helper is required to load the configuration;
+remote SSH sessions do not read the host's Wayland clipboard. The optional
+Kitty backend reads the terminal host's clipboard across SSH and saves PNGs.
+=V= opens the separate Kitty file-drop receiver described above.
+
+* Remote files
+
+Open =/ssh:user@host:/path= with =C-x C-f= or bookmark it with =SPC . m=.
+The shorthand =/host:/path= defaults to SSH. For large transfers, use an
+explicit =/scp:user@host:/path= path. SCP keeps files up to 1 MiB inline before
+using its separate copy process. SSH connection sharing and TRAMP's normal
+caches remain enabled; the config does not change host keys or agent forwarding.
+TRAMP includes the host's login PATH so user-installed tools such as =rg= work
+on NixOS as they do in plain SSH.
+
+Remote buffers skip automatic Eglot startup, direnv, Apheleia formatting,
+diff-hl indicators, and Magit's after-save status refresh. The treefmt selector
+also skips remote project-root probes. Local behavior stays the same. Run
+=M-x eglot= when you want a server installed on the remote host. Use
+=SPC g m= or =SPC g f= for Git operations without opening status, and =SPC g g=
+when you want the full dashboard. Refresh remote status explicitly with =g=.
+
+=SPC . R= resets the current buffer's TRAMP connection. The next file operation
+reconnects. This stops that connection's remote processes, so do not use it
+while a remote build or shell should keep running. Visiting buffers stay open.
+Bookmarks and recent files reuse their remote paths without a second remote
+navigation system.

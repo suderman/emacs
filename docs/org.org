@@ -1,0 +1,49 @@
+#+title: Org
+#+startup: content
+
+* Tasks, Agenda, and archives
+
+=SPC o= is a global Org namespace. Direct state setters, single-subtree
+archive, planning, refile, and export use the current Org item or Agenda entry
+as appropriate. Bulk archive and subtree deletion require an Org buffer.
+
+Tasks use =TODO=, =AUTO=, =PROG=, =EVAL=, =HOLD=, and =DONE=. Agenda collects
+=inbox.org=, =todo.org=, =asana.org=, calendar files, direct files under
+=life/= and =notes/=, and canonical work files at
+=work/<domain>/<project>/<project>.org=.
+It also includes Org files directly under each work domain, but skips
+=archive.org= and archived directories. Capture goes to the inbox; refile uses
+active context files rather than scanning every task attachment directory.
+Archives go to =archive.org= beside the source file. =SPC o a= archives only
+the current heading and its children, even for headings without a TODO state.
+=SPC o A= uses Org's completed states and scans the whole current buffer,
+including outside a narrowed subtree. It asks for confirmation, unless given
+a prefix argument, and saves the source and archives. Save an unnamed buffer
+before using it. Completed parents stay in place when they contain unfinished
+tasks; completed children can still be archived. Other agenda files are untouched.
+=SPC o D= cuts one whole subtree, including when narrowed. Recover it with yank.
+
+In Dirvish or Dired, =SPC o a= moves marked files and folders, or the item at
+point when none are marked, into an =archive/= directory beside each item.
+It creates that directory when needed. Name conflicts get a timestamp before
+the file extension, such as =prompt-20261006-120345.org=. Folder names get the
+timestamp at the end. If that name also exists, a numeric suffix follows the
+timestamp. Existing entries are never overwritten. =archive.org= files and
+=archive= folders are skipped, including when marked.
+
+Agenda opens in the current window; =h= or =q= restores the previous layout.
+Its own map supplies =j/k= for rows, =l= or Return to visit, =C-SPC= to preview
+without leaving Agenda, =m= to toggle a bulk mark, =M= to clear marks, and =B=
+for native bulk actions. =SPC= still opens the Meow keypad. Comma opens IBuffer,
+period opens Dirvish for the entry's file, and Meta window keys stay available.
+=\= toggles the file sidebar, and =< / >= cycle buffers. =F= toggles follow
+mode, =C-c <= filters by category, and =|= clears filters.
+=r= refreshes the current view and =g= all views, rediscovering files first.
+=SPC ?= draws the current bindings on a keyboard, with preview, date, and
+window keys below it. =q=, =h=, or Escape closes the sheet and returns to Agenda.
+Bare =?= still shows Org's flagging note.
+
+The normal calendar shows today and the next six days. =SPC o v a w= opens a
+Monday-based week. =C-c .= returns to today and =C-c ,= changes priority.
+Displaced date, capture, log, moon-phase, and date-prompt commands remain on
+=C-c j=, =C-c k=, =C-c l=, =C-c M=, and =C-c >=.

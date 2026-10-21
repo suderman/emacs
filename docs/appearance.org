@@ -1,0 +1,35 @@
+#+title: Appearance
+#+startup: content
+
+* Shared appearance
+
+NixOS/Stylix selects CommitMono for fixed text and Literata for prose. The
+=kit= Home Manager activation writes a regular, atomic, content-stable
+=~/profile/apps/emacs/style.el=. Syncthing carries it to other machines,
+including Android. Only =kit= enables =programs.emacs.exportStyle=.
+
+Emacs reads the first readable file in =suderman/system-style-files=,
+currently just that path. Without one, it uses =suderman/fallback-style=: the
+same fonts, with the Catppuccin Latte and Mocha palettes bundled in
+base16-theme. A missing font keeps the platform's family at the intended size.
+
+The file sets =suderman/system-style= to a plist with =:mono-font=,
+=:fallback-font=, =:variable-font=, =:icon-font=, and =:font-size= in points.
+Its =:palettes= contains =:light= and =:dark= Base16 plists using the Stylix
+toggle's schemes. It contains no active-mode state, so changing the desktop
+appearance does not change Android's preference.
+
+Emacs defines =suderman-light= and =suderman-dark= using the Base16 face engine
+plus a few semantic face corrections. Nix supplies colors, not face rules.
+Stylix's own Emacs target is disabled. PGTK and Android both follow
+=toolkit-theme-set-functions= and the current =toolkit-theme= at startup;
+terminal-only sessions use the dark variant. Each appearance event rereads the
+file, and =M-x suderman/apply-system-palette= applies newly synced colors now.
+
+Desktop uses Stylix's terminal point size, currently 12. Android multiplies it
+by =suderman/android-font-scale=, initially =17/12=. Org uses variable pitch for
+prose and headings, with fixed pitch for code, tables, metadata, timestamps,
+TODO states, tags, and indentation; adjust =suderman/variable-font-scale=.
+Doom Modeline keeps Normal state quiet and shows Insert, Motion, Keypad, and
+Beacon. Nerd Font fallback covers only the BMP private use area and
+=F0001= to =F1AF0=.

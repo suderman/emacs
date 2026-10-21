@@ -1,0 +1,127 @@
+#+title: Editing
+#+startup: content
+
+How the Meow map, completion, search, and window keys fit together.  The
+keymaps are the reference; =SPC ?= draws the current view's keys.
+
+* Finding a command
+
+| Key       | Action                                 |
+|-----------+----------------------------------------|
+| =SPC ?=   | Draw this view's keys on a keyboard    |
+| =C-c h=   | The same, without the keypad           |
+| =SPC ...= | Which-Key shows each leader group      |
+| =?=       | Dired/Dirvish keys with labels         |
+| =C-h k=   | Describe a key                         |
+| =C-h b=   | Show effective bindings in this buffer |
+| =F5=      | Reload the modular configuration       |
+| =F6=      | Pull configuration updates             |
+
+Inside a cheatsheet, =n= and =p= cycle through Meow, Agenda, IBuffer,
+Dired/Dirvish, Magit, and the mail views. =q=, =h=, or Escape returns. Labels
+too long for a nine-column cell get a numbered note. =C-c h= leaves Magit's
+native =SPC= preview alone.
+
+* Editing grammar
+
+Meow edits by selecting first, then acting. The map borrows from Vim without
+emulating it. =hjkl= move, and movement extends an active selection. =m=
+selects a word, and each repeat grows it to the enclosing symbol, string,
+bracket, sentence, paragraph, function, or Org subtree. =M=, =MM=, =MMM= select
+a line, a rectangle, and the buffer. =z= steps a selection back. =c= copies,
+=v= pastes, =d= deletes without touching the kill ring, and =x= cuts then
+inserts. =s= is the Surround prefix.
+=/= searches literally with smartcase, then =n= and =p= continue. =;= repeats
+the last edit, or the find or till motion just before it. =u= undoes and =y=
+redoes. =,= opens IBuffer, =.= opens Dirvish, =\= toggles the sidebar, and
+=< / >= cycle buffers.
+
+=meow-purrsist= keeps selections adjustable by motion, including reversed
+selections and regions made outside Meow. =d= and =D= never fill the kill ring.
+With one character or no selection, =x= deletes without copying. =X= uses the
+selection or the current line. =I= and =A= extend an active selection to the
+smart line start or end; without one they move there and insert. Smart line
+start toggles between indentation and column zero. Smart line end stops before a
+trailing comment first.
+
+Slash search ignores case until the query has a capital letter, so =home=
+matches =Home= and =home= while =Home= matches only =Home=. The match count
+appears in the mode line. In Normal state, Return clears an active selection.
+Without one it runs the mode's own Return command, unfolding a folded line
+first.
+
+=J= and =K= move the current line, the selected lines, or an Org subtree.
+=H= and =L= outdent and indent, or promote and demote in Org.
+
+=[= and =]= move to the previous and next block at the same level, ={= to the
+block that contains point, and =}= into the first child. In Org and Markdown a
+block is a heading, list item, or body element; in code it is a line at the
+same indentation. Dirvish and IBuffer use the same keys for their rows. =o=
+folds or unfolds the heading or code block on the current line, and =SPC TAB=
+folds the whole buffer to its top level, or opens everything when it already
+is.
+
+=SPC= is both Meow's keypad and the leader. Numeric arguments fit the same
+grammar, so =SPC 3 w= moves three word starts. =SPC h= starts a =C-h= help
+sequence. Arrow keys page through Which-Key without leaving the keypad.
+
+Meta keys manage windows everywhere, including IBuffer, Dirvish, and Magit:
+=M-h/j/k/l= focus, =M-H/J/K/L= move a divider, =M-u= and =M-i= split, =M-w=
+closes a window or tab, and =M-z= zooms.
+
+* Completion
+
+Vertico handles minibuffer choices. Corfu handles editing-buffer completion in
+GUI and terminal child frames, including Android. Native mode completion stays
+first. Cape adds file paths and words from open buffers as fallbacks. =TAB=
+indents, then completes. In the minibuffer, =C-.= opens Embark actions.
+
+Corfu opens automatically while typing, but starts with no candidate selected.
+It shows documentation after a short delay and remembers previous choices.
+Buffer-word fallback starts at three characters. Shell buffers use manual
+completion instead of automatic popups.
+
+Eglot starts when the current buffer can find its language server. On desktop,
+this includes servers supplied by a project's direnv environment. Configured
+languages include PHP, Nix, Lua, HTML, CSS, JavaScript/TypeScript, JSON, YAML,
+Python, and Twig.
+Elisp, Org, and Markdown keep native completion. Android uses the same setup but
+needs server executables supplied locally; the APK does not bundle them.
+
+Phpactor needs WordPress core or project stubs to complete WordPress APIs.
+Installing the server alone does not supply those definitions. Use
+=M-x eglot-code-actions= for actions and =M-x eldoc-doc-buffer= for full hover
+documentation. Routine hover text stays on one echo-area line.
+
+* Search and bookmarks
+
+=SPC /= owns Consult searches. Bare =/= keeps Meow's literal search and
+persistent selections.
+
+Ripgrep uses =project.el='s root, including the canonical Org root for work
+projects. =C-u SPC / /= prompts for directories or files instead, so a search
+can target the source companion, the current directory, or several roots.
+Git grep uses the current checkout's root rather than its linked Org directory.
+=C-u SPC / g= still prompts for directories or files.
+Remote ripgrep needs =rg= on the remote host; =SPC / g= can use its Git instead.
+Line and Imenu searches preview immediately. Grep previews wait 0.2 seconds;
+=C-SPC= previews immediately. Bookmarks preview only on =C-SPC=, and Consult
+never opens a remote file merely to preview it.
+
+Bookmarks remember files, directories, remote paths, and locations supported by
+other modes. They save after each change under
+=~/.local/state/emacs/bookmarks=. =C-x r b= also uses Consult. During
+=consult-buffer=, =m SPC= narrows to bookmarks. =C-.= opens Embark actions,
+including bookmark rename and delete.
+
+In minibuffers, =M-r= searches the current prompt's history. =C-c C-e= exports
+results to a normal buffer, such as Grep or Dired, and =C-c C-l= collects the
+candidate list. =DEL= at a file-path slash removes one directory component;
+=M-DEL= removes a directory or word. Shadowed paths such as =/tmp/~/= tidy
+automatically. Xref results use Consult's preview and filtering too.
+
+* Windows and frames
+
+Edger handles Meta and =SPC w= navigation, resizing, splits, and closing. At an
+Emacs boundary, it can hand control to the surrounding terminal multiplexer.
+=suderman/window-keys= holds the Meta bindings once; every view installs it.
