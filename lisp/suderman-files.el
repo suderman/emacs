@@ -469,7 +469,6 @@ Elsewhere open the entry clicked in EVENT in another window."
   (suderman/dired-disable-visual-line-mode)
   (suderman/dired-disable-column-indicator)
   (suderman/dired-disable-hl-line)
-  (suderman/track-tap-selection)
   (when (derived-mode-p 'dirvish-directory-view-mode)
     (setq-local context-menu-functions '(t dired-context-menu))))
 

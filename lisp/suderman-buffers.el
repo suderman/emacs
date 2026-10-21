@@ -220,7 +220,6 @@ On Android a tap anywhere on a buffer's row acts like a tap on its name."
   (add-hook 'visual-line-mode-hook
             #'suderman/ibuffer-disable-visual-line-mode nil t)
   (suderman/meow-off)
-  (suderman/track-tap-selection)
   ;; Android leaves the global line highlight off, but a list needs it.
   (unless global-hl-line-mode
     (hl-line-mode 1))

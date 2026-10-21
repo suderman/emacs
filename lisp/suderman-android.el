@@ -15,6 +15,7 @@
 (defvar touch-screen-extend-selection)
 (defvar touch-screen-delay)
 (defvar touch-screen-precision-scroll)
+(defvar touch-screen-set-point-commands)
 (defvar touch-screen-word-select)
 
 (declare-function server-running-p "server" (&optional name))
@@ -49,7 +50,9 @@ resize can therefore be mistaken for the keyboard."
     (< (cdr size) (cdr full-size))))
 
 (defvar suderman/android-blank-tap nil
-  "Time and window of the last tap below a listing's final line, or nil.")
+  "The last tap on blank space, as (TIME WINDOW POINT KEYBOARD), or nil.
+POINT is where point was before the tap, and KEYBOARD is non-nil when the
+software keyboard was showing.")
 
 (defun suderman/android-below-last-line-p (posn)
   "Return non-nil when POSN lies below the last line of its buffer's text."
@@ -62,19 +65,30 @@ resize can therefore be mistaken for the keyboard."
                (skip-chars-backward " \t\n")
                (line-end-position))))))
 
+(defun suderman/android-past-line-end-p (posn)
+  "Return non-nil when POSN lies at least two columns past its line's text."
+  (when-let* ((window (posn-window posn))
+              ((windowp window))
+              (pos (posn-point posn))
+              (end (posn-at-point pos window)))
+    (and (with-current-buffer (window-buffer window)
+           (save-excursion (goto-char pos) (eolp)))
+         (> (car (posn-x-y posn))
+            (+ (car (posn-x-y end)) (* 2 (frame-char-width)))))))
+
 (defvar-local suderman/tap-selected-point nil
-  "Point when the last command finished in an Android list buffer.
+  "Point when the last command finished in this buffer.
 A tap moves point before its command runs, so point cannot tell.")
 
-(defun suderman/remember-tap-selection ()
-  "Record point for `suderman/tap-on-selected-row-p'."
-  (setq suderman/tap-selected-point (point)))
+(defvar suderman/android-keyboard-shown nil
+  "Whether the software keyboard showed when the last command finished.")
 
-(defun suderman/track-tap-selection ()
-  "Let taps in this Android list buffer select a row before opening it."
-  (when (featurep 'android)
-    (suderman/remember-tap-selection)
-    (add-hook 'post-command-hook #'suderman/remember-tap-selection nil t)))
+(defun suderman/remember-tap-selection ()
+  "Record point and the keyboard for taps that must know them.
+A tap may already have asked for the keyboard when its command runs."
+  (setq suderman/tap-selected-point (point)
+        suderman/android-keyboard-shown
+        (suderman/android-keyboard-visible-p (selected-frame))))
 
 (defun suderman/tap-on-selected-row-p (event)
   "Move point to EVENT and return non-nil when its row was already selected."
@@ -83,6 +97,21 @@ A tap moves point before its command runs, so point cannot tell.")
        (eql (line-beginning-position)
             (save-excursion (goto-char suderman/tap-selected-point)
                             (line-beginning-position)))))
+
+(defun suderman/android-double-blank-tap (posn)
+  "Record a tap on blank space at POSN.
+Return the first tap's record when this tap completes a double tap."
+  (let ((previous suderman/android-blank-tap))
+    (setq suderman/android-blank-tap
+          (list (float-time) (posn-window posn) suderman/tap-selected-point
+                suderman/android-keyboard-shown))
+    (when (and previous
+               (eq (nth 1 previous) (posn-window posn))
+               (< (- (float-time) (car previous))
+                  (/ (if (numberp double-click-time) double-click-time 500)
+                     1000.0)))
+      (setq suderman/android-blank-tap nil)
+      previous)))
 
 (defun suderman/mouse-set-point-or-toggle-keyboard (event)
   "Set point at EVENT, or toggle the Android keyboard on a double tap.
@@ -101,17 +130,26 @@ after other taps in read-only text."
             (suderman/android-hide-keyboard)))
       (when suderman/tap-selected-point
         (goto-char suderman/tap-selected-point))
-      (let ((previous suderman/android-blank-tap))
-        (setq suderman/android-blank-tap (cons (float-time) (posn-window posn)))
-        (when (and previous
-                   (eq (cdr previous) (posn-window posn))
-                   (< (- (float-time) (car previous))
-                      (/ (if (numberp double-click-time) double-click-time 500)
-                         1000.0)))
-          (setq suderman/android-blank-tap nil)
-          (if (suderman/android-keyboard-visible-p (selected-frame))
-              (suderman/android-hide-keyboard)
-            (suderman/android-show-keyboard)))))))
+      (when (suderman/android-double-blank-tap posn)
+        (if (suderman/android-keyboard-visible-p (selected-frame))
+            (suderman/android-hide-keyboard)
+          (suderman/android-show-keyboard))))))
+
+(defun suderman/android-mouse-set-point (event &optional promote-to-region)
+  "Set point at EVENT, or hide the keyboard on a double tap on blank space.
+Blank space is past the end of a line or below the last one.  The double
+tap hides the keyboard only when it was showing, and puts point back where
+it was before the first tap.  PROMOTE-TO-REGION is as for `mouse-set-point'."
+  (interactive "e\np")
+  (let* ((posn (event-start event))
+         (first (and (or (suderman/android-past-line-end-p posn)
+                         (suderman/android-below-last-line-p posn))
+                     (suderman/android-double-blank-tap posn))))
+    (if (not (nth 3 first))
+        (mouse-set-point event promote-to-region)
+      (when (nth 2 first)
+        (goto-char (nth 2 first)))
+      (suderman/android-hide-keyboard))))
 
 (defun suderman/android-volume-up ()
   "Show the software keyboard, or with it showing, open the Meow keypad."
@@ -267,6 +305,10 @@ Instead that frame takes another frame's windows, and the other closes."
   (require 'face-remap)
   (global-set-key [touchscreen-pinch] #'suderman/android-global-pinch)
   (suderman/android-setup-touch-scrolling)
+  (add-hook 'post-command-hook #'suderman/remember-tap-selection)
+  ;; Taps still show the keyboard in editable text through this command.
+  (add-to-list 'touch-screen-set-point-commands #'suderman/android-mouse-set-point)
+  (global-set-key [remap mouse-set-point] #'suderman/android-mouse-set-point)
   (suderman/android-keyboard-visible-p (selected-frame))
   (add-hook 'window-setup-hook #'suderman/android-mark-main-frame)
   (advice-add 'delete-frame :around #'suderman/android-delete-frame)

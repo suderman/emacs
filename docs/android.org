@@ -24,7 +24,9 @@ Insert state, or cancels the current command. =F9= toggles the toolbar.
 Volume Up shows the software keyboard, or opens the keypad when the keyboard
 is already showing. Volume Down hides the keyboard, or closes an open keypad.
 In Dirvish and IBuffer, double-tap the blank space below the last entry to
-show or hide the keyboard without moving the cursor.
+show or hide the keyboard without moving the cursor. Elsewhere a tap in
+editable text shows the keyboard, and a double tap on blank space past the end
+of a line or below the last one hides it again.
 
 Pinch scales text in every buffer. Vertical swipes scroll by pixel and keep
 going after you lift your finger. Buffers with truncated lines, such as Agenda,
