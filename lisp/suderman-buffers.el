@@ -11,6 +11,8 @@
 (require 'suderman-projects)
 (require 'suderman-windows)
 
+(defvar global-hl-line-mode)
+
 (declare-function suderman/dashboard "suderman-dashboard")
 (declare-function suderman/ibuffer-dirvish "suderman-files")
 (declare-function suderman/ibuffer-dirvish-side "suderman-files")
@@ -219,6 +221,9 @@ On Android a tap anywhere on a buffer's row acts like a tap on its name."
             #'suderman/ibuffer-disable-visual-line-mode nil t)
   (suderman/meow-off)
   (suderman/track-tap-selection)
+  ;; Android leaves the global line highlight off, but a list needs it.
+  (unless global-hl-line-mode
+    (hl-line-mode 1))
   (suderman/ibuffer-disable-visual-line-mode)
   (if suderman/ibuffer-grouped
       (setq ibuffer-filter-groups
