@@ -5,10 +5,9 @@ set -uo pipefail
 readonly emacs_package="org.gnu.emacs"
 readonly config_origin="https://github.com/suderman/emacs.git"
 readonly termux_git="${TERMACS_TERMUX_GIT:-/data/data/com.termux/files/usr/bin/git}"
+# Icons only; install-fonts.sh adds the text fonts the config uses.
 readonly nerd_fonts_revision="fa7b859994228a9c8759f99c55a8d31ee92a1b5e"
 readonly -a android_fonts=(
-  "JetBrainsMonoNerdFontMono-Regular.ttf|patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFontMono-Regular.ttf|f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c"
-  "JetBrainsMonoNerdFontMono-Bold.ttf|patched-fonts/JetBrainsMono/Ligatures/Bold/JetBrainsMonoNerdFontMono-Bold.ttf|5bdd4a873f3cd32f882d2c55545089123926e27707d5880fc9eaf84eb01b6686"
   "SymbolsNerdFontMono-Regular.ttf|patched-fonts/NerdFontsSymbolsOnly/SymbolsNerdFontMono-Regular.ttf|f0f624d9b474bea1662cf7e862d44aebe1ae1f6c7f9cb7a0ca5d0e5ac9561c60"
 )
 

@@ -10,8 +10,6 @@ test_bash="$(command -v bash)"
 test_root="$(mktemp -d)"
 tests_run=0
 font_names=(
-  JetBrainsMonoNerdFontMono-Regular.ttf
-  JetBrainsMonoNerdFontMono-Bold.ttf
   SymbolsNerdFontMono-Regular.ttf
 )
 
@@ -146,12 +144,6 @@ else
   label="-"
 fi
 case "$content" in
-  *JetBrainsMonoNerdFontMono-Regular.ttf)
-    checksum=f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c
-    ;;
-  *JetBrainsMonoNerdFontMono-Bold.ttf)
-    checksum=5bdd4a873f3cd32f882d2c55545089123926e27707d5880fc9eaf84eb01b6686
-    ;;
   *SymbolsNerdFontMono-Regular.ttf)
     checksum=f0f624d9b474bea1662cf7e862d44aebe1ae1f6c7f9cb7a0ca5d0e5ac9561c60
     ;;
@@ -219,8 +211,6 @@ test_existing_font_is_not_overwritten() {
   run_setup
   [[ $(<"$emacs_home/fonts/${font_names[0]}") == custom ]] ||
     fail "existing font was overwritten"
-  assert_exists "$emacs_home/fonts/${font_names[1]}"
-  assert_exists "$emacs_home/fonts/${font_names[2]}"
 }
 
 test_bad_font_checksum_rolls_back() {

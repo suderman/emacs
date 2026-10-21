@@ -165,16 +165,17 @@ Android scans =$HOME/fonts= when Emacs starts, so restart Emacs after adding
 fonts. Neither font step overwrites an existing file or touches the Termux
 terminal font.
 
-The guided installer adds bootstrap fonts: JetBrains Mono Nerd Font and Symbols
-Nerd Font from Nerd Fonts 3.4.0. It checks their SHA-256 hashes before and after
-transfer and moves them into place only as a complete set. A failure leaves no
-partial set and does not undo the APK or configuration setup. Fix the reported
-problem and rerun =./android/install.sh=. Until then, Emacs uses the Android
-system font and text labels instead of icons.
+The guided installer adds Symbols Nerd Font from Nerd Fonts 3.4.0, which turns
+on icons in the modeline, IBuffer, and Dirvish. It checks the file's SHA-256
+hash before and after transfer. A failure leaves nothing half-installed and does
+not undo the APK or configuration setup. Fix the reported problem and rerun
+=./android/install.sh=. Until then, Emacs shows text labels instead of icons.
 
-The shared desktop typography comes from a separate helper. It copies the font
-packages the NixOS flake already selects, and refuses an existing file with a
-different hash. Run it on the NixOS host with SSH access to =gem=:
+Text uses CommitMono, Literata, and Ioskeley Mono, the same fonts as the
+desktop. Until they are installed, Emacs uses the Android system font at the
+same size. A separate helper installs them. It copies the font packages the
+NixOS flake already selects, and refuses an existing file with a different
+hash. Run it on the NixOS host with SSH access to =gem=:
 
 #+begin_src sh
 fonts=$(nix build --impure --no-link --print-out-paths --expr '
