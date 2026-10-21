@@ -48,13 +48,6 @@ resize can therefore be mistaken for the keyboard."
       (set-frame-parameter frame 'suderman/android-keyboard-full-size size))
     (< (cdr size) (cdr full-size))))
 
-(defun suderman/android-toggle-keyboard ()
-  "Show or hide the Android software keyboard for the selected frame."
-  (interactive)
-  (let ((frame (selected-frame)))
-    (frame-toggle-on-screen-keyboard
-     frame (suderman/android-keyboard-visible-p frame))))
-
 (defun suderman/android-volume-up ()
   "Show the software keyboard, or with it showing, open the Meow keypad."
   (interactive)

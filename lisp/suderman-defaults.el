@@ -57,12 +57,7 @@
 (global-auto-revert-mode 1)
 (electric-pair-mode 1)
 
-(global-visual-line-mode -1)
 (add-hook 'text-mode-hook #'visual-line-mode)
-(dolist (buffer (buffer-list))
-  (with-current-buffer buffer
-    (when (derived-mode-p 'text-mode)
-      (visual-line-mode 1))))
 
 (setq so-long-action 'so-long-minor-mode
       so-long-variable-overrides

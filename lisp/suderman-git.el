@@ -15,8 +15,6 @@
 (declare-function magit-mode-bury-buffer "magit-mode")
 (declare-function magit-section-backward "magit-section")
 (declare-function magit-section-forward "magit-section")
-(declare-function meow--disable "meow")
-(declare-function meow-mode "meow")
 (declare-function meow-insert "meow")
 (declare-function transient-quit-one "transient")
 
@@ -25,17 +23,9 @@
   :config
   (keymap-set transient-base-map "<escape>" #'transient-quit-one))
 
-(defun suderman/magit-disable-meow ()
-  "Disable Meow in the current Magit buffer."
-  (if (bound-and-true-p meow-mode)
-      (meow-mode -1)
-    (when (fboundp 'meow--disable)
-      (meow--disable))))
-
 (defun suderman/magit-setup ()
   "Let Magit's native keys own the current buffer."
-  (add-hook 'meow-mode-hook #'suderman/magit-disable-meow nil t)
-  (suderman/magit-disable-meow)
+  (suderman/meow-off)
   (keymap-local-set "j" #'magit-section-forward)
   (keymap-local-set "k" #'magit-section-backward))
 

@@ -24,6 +24,7 @@
 (defvar jit-lock-start)
 
 (declare-function suderman/dired-archive "suderman-files" ())
+(declare-function suderman/meow-off "suderman-windows" ())
 (declare-function suderman/meow-insert "suderman-meow" ())
 (declare-function meow--selection-type "meow-util" ())
 (declare-function meow-purrsist-adopt-region "meow-purrsist" (&optional line))
@@ -41,8 +42,6 @@
 (declare-function org-agenda-redo-all "org-agenda" (&optional exhaustive))
 (declare-function org-remove-subtree-entries-from-agenda "org-agenda"
                   (&optional buf beg end))
-(declare-function meow--disable "meow")
-(declare-function meow-mode "meow")
 (declare-function meow-keypad "meow-keypad")
 (declare-function org-agenda-deadline "org-agenda" (arg &optional time))
 (declare-function org-agenda-goto-today "org-agenda" ())
@@ -630,17 +629,9 @@ as the nightly archive timer; return the number of headings."
   (let ((display-buffer-overriding-action '(nil (inhibit-same-window . t))))
     (apply original args)))
 
-(defun suderman/org-agenda-disable-meow ()
-  "Let Agenda's own map take precedence over Meow."
-  (if (bound-and-true-p meow-mode)
-      (meow-mode -1)
-    (when (fboundp 'meow--disable)
-      (meow--disable))))
-
 (defun suderman/org-agenda-setup ()
   "Keep Meow off locally while retaining direct keypad access."
-  (add-hook 'meow-mode-hook #'suderman/org-agenda-disable-meow nil t)
-  (suderman/org-agenda-disable-meow))
+  (suderman/meow-off))
 
 (defun suderman/org-deadline ()
   "Set an Org item's deadline, or open the TODO list."

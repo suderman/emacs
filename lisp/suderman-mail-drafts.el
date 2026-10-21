@@ -9,8 +9,9 @@
 (require 'suderman-mail)
 (require 'org)
 (require 'ox-html)
-(eval-when-compile (require 'org-mime nil t))
 
+(declare-function mail-header-parse-addresses "mail-parse")
+(declare-function message-replace-header "message")
 (declare-function org-mime-htmlize "org-mime")
 (declare-function notmuch-mua-mail "notmuch-mua")
 (declare-function notmuch-draft-save "notmuch-draft")

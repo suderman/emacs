@@ -105,13 +105,6 @@ The recent list starts on the previous buffer, like Alt-Tab."
   (when visual-line-mode
     (visual-line-mode -1)))
 
-(defun suderman/ibuffer-disable-meow ()
-  "Disable Meow in the current IBuffer."
-  (if (bound-and-true-p meow-mode)
-      (meow-mode -1)
-    (when (fboundp 'meow--disable)
-      (meow--disable))))
-
 (defun suderman/ibuffer-open ()
   "Visit the buffer at point, or toggle the current project group."
   (interactive)
@@ -204,10 +197,9 @@ Buffers stop at the edge of their group; group headers move among groups."
 
 (defun suderman/ibuffer-setup ()
   "Apply project grouping and display defaults to IBuffer."
-  (add-hook 'meow-mode-hook #'suderman/ibuffer-disable-meow nil t)
   (add-hook 'visual-line-mode-hook
             #'suderman/ibuffer-disable-visual-line-mode nil t)
-  (suderman/ibuffer-disable-meow)
+  (suderman/meow-off)
   (suderman/ibuffer-disable-visual-line-mode)
   (if suderman/ibuffer-grouped
       (setq ibuffer-filter-groups

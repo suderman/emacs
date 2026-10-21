@@ -10,6 +10,7 @@
 (require 'suderman-mail)
 
 (ert-deftest suderman/mail-rejects-unknown-missing-and-multiple-senders ()
+  (require 'message)
   (dolist (from '("" "unknown@example.invalid"
                   "jon@suderman.net, jon@nonfiction.ca"
                   "jon@suderman.net\nFrom: jon@nonfiction.ca"))

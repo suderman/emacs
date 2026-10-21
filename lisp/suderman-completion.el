@@ -28,10 +28,8 @@
   (interactive)
   (when (bound-and-true-p isearch-mode)
     (isearch-exit))
-  (when (fboundp 'lazy-highlight-cleanup)
-    (lazy-highlight-cleanup t))
-  (when (fboundp 'isearch-dehighlight)
-    (isearch-dehighlight)))
+  (lazy-highlight-cleanup t)
+  (isearch-dehighlight))
 
 (defun suderman/consult-git-grep-in-repository (grep &rest args)
   "Run GREP in the current checkout, preserving explicit directory ARGS."

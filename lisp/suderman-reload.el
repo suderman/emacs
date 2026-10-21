@@ -53,7 +53,6 @@
         (end-of-file nil)))
     (nreverse features)))
 
-;;;###autoload
 (defun suderman/pull-config ()
   "Run `git pull' asynchronously in `user-emacs-directory'."
   (interactive)
@@ -76,7 +75,6 @@
         (with-current-buffer buffer
           (funcall mode))))))
 
-;;;###autoload
 (defun suderman/reload-config ()
   "Reload Suderman config modules without restarting Emacs."
   (interactive)

@@ -15,9 +15,7 @@
 (declare-function dirvish-curr "dirvish")
 (declare-function dirvish-quit "dirvish")
 (declare-function dv-curr-layout "dirvish")
-(declare-function meow--disable "meow")
 (declare-function meow-keypad "meow-keypad")
-(declare-function meow-mode "meow")
 (declare-function widget-get "wid-edit")
 
 (defun suderman/dashboard-move (direction)
@@ -86,17 +84,9 @@
                               (and (= (cadr a) (cadr b))
                                    (< (caddr a) (caddr b)))))))))))))
 
-(defun suderman/dashboard-disable-meow ()
-  "Disable Meow in the current Dashboard buffer."
-  (if (bound-and-true-p meow-mode)
-      (meow-mode -1)
-    (when (fboundp 'meow--disable)
-      (meow--disable))))
-
 (defun suderman/dashboard-setup ()
   "Prepare Dashboard navigation in the current buffer."
-  (add-hook 'meow-mode-hook #'suderman/dashboard-disable-meow nil t)
-  (suderman/dashboard-disable-meow)
+  (suderman/meow-off)
   (suderman/dashboard-move 'first))
 
 (defun suderman/dashboard ()

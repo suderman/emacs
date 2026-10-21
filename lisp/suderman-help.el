@@ -11,6 +11,9 @@
 (require 'subr-x)
 (require 'meow-cheatsheet)
 
+(defvar message-mode-map)
+(declare-function suderman/meow-off "suderman-windows")
+
 (defvar suderman/command-labels
   '((undefined . "")
     (self-insert-command . "")
@@ -444,19 +447,12 @@ Dired and Dirvish share a map.  Other invoking modes join this list locally.")
 (defvar-local suderman/cheatsheet-view nil
   "View currently shown in keyboard help.")
 
-(defun suderman/cheatsheet-disable-meow ()
-  "Keep the cheatsheet's own navigation and quit bindings active."
-  (if (bound-and-true-p meow-mode)
-      (meow-mode -1)
-    (meow--disable)))
-
 (define-derived-mode suderman/cheatsheet-mode special-mode "Cheatsheet"
   "Read a keyboard cheatsheet; quit returns to the invoking view."
   (setq-local truncate-lines t)
   ;; Fit the keyboard drawing; text-scale zoom still applies on top.
   (face-remap-add-relative 'default :height 0.75)
-  (add-hook 'meow-mode-hook #'suderman/cheatsheet-disable-meow nil t)
-  (suderman/cheatsheet-disable-meow))
+  (suderman/meow-off))
 
 (keymap-set suderman/cheatsheet-mode-map "SPC" #'meow-keypad)
 (keymap-set suderman/cheatsheet-mode-map "h" #'quit-window)
@@ -595,7 +591,7 @@ Dired and Dirvish share a map.  Other invoking modes join this list locally.")
                 ;; Derived-mode inheritance is installed lazily on first compose.
                 (set-keymap-parent (current-local-map) message-mode-map)
                 (meow-mode 1))
-            (suderman/cheatsheet-disable-meow))
+            (suderman/meow-off))
           (when (eq view 'magit-status-mode)
             (suderman/magit-setup))
           (suderman/cheatsheet-local-content))))))
@@ -634,7 +630,6 @@ Dired and Dirvish share a map.  Other invoking modes join this list locally.")
   (interactive)
   (suderman/cheatsheet-cycle -1))
 
-;;;###autoload
 (defun suderman/cheatsheet ()
   "Show the invoking view's keyboard bindings, with n/p sheet cycling."
   (interactive)

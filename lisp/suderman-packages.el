@@ -62,15 +62,9 @@ Git packages such as Edger and meow-purrsist upgrade everywhere."
         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
         ("melpa"  . "https://melpa.org/packages/")))
 
-(package-initialize)
-
-;; Force fresh metadata before installing anything missing.
-(setq package-archive-contents nil)
-
-(unless (package-installed-p 'use-package)
-  (unless package-archive-contents
-    (package-refresh-contents))
-  (package-install 'use-package))
+;; Activate installed packages without reading the cached archive listings.
+;; Installing a missing package fetches fresh listings on demand.
+(package-activate-all)
 
 (require 'use-package)
 

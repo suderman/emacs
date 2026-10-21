@@ -8,19 +8,41 @@
 
 (require 'use-package)
 (require 'package)
-(require 'message)
-(require 'mail-parse)
-(require 'wid-edit)
 (require 'suderman-mail-moves)
-(eval-when-compile (require 'notmuch nil t))
 
+;; Notmuch loads Message and the widget library itself.  Requiring them here
+;; would load all three on every startup, including hosts without mail.
+(defvar notmuch-fcc-dirs)
+(defvar widget-field-list)
+(declare-function mail-header-parse-addresses "mail-parse")
+(declare-function message-fetch-field "message")
+(declare-function message-narrow-to-headers "message")
+(declare-function message-remove-header "message")
+(declare-function message-send-mail-with-sendmail "message")
+(declare-function widget-field-end "wid-edit")
+(declare-function widget-field-find "wid-edit")
 (declare-function notmuch "notmuch")
+(declare-function notmuch-bury-or-kill-this-buffer "notmuch-lib")
+(declare-function notmuch-jump-search "notmuch-jump")
+(declare-function notmuch-tag-jump "notmuch-tag")
+(declare-function notmuch-search-filter "notmuch")
+(declare-function notmuch-search-next-thread "notmuch")
+(declare-function notmuch-search-previous-thread "notmuch")
+(declare-function notmuch-search-scroll-up "notmuch")
+(declare-function notmuch-show-advance "notmuch-show")
+(declare-function notmuch-show-filter-thread "notmuch-show")
+(declare-function notmuch-show-toggle-visibility-headers "notmuch-show")
+(declare-function notmuch-tree-filter "notmuch-tree")
+(declare-function notmuch-tree-next-matching-message "notmuch-tree")
+(declare-function notmuch-tree-prev-matching-message "notmuch-tree")
+(declare-function notmuch-tree-quit "notmuch-tree")
+(declare-function notmuch-tree-scroll-or-next "notmuch-tree")
 (declare-function notmuch-unthreaded "notmuch-tree")
 (declare-function notmuch-fcc-header-setup "notmuch-maildir-fcc")
 (declare-function notmuch-draft--mark-deleted "notmuch-draft")
-(declare-function meow--disable "meow")
 (declare-function meow-mode "meow")
 (declare-function suderman/ibuffer-toggle "suderman-buffers")
+(declare-function suderman/meow-off "suderman-windows")
 (declare-function suderman/dirvish "suderman-files")
 (declare-function suderman/meow-escape "suderman-meow")
 
@@ -133,24 +155,16 @@ Reject missing, multiple, and unknown senders rather than using msmtp's default.
 A Sent-copy failure must not leave a delivered message ready to resume and send."
   (notmuch-draft--mark-deleted))
 
-(defun suderman/mail-disable-meow ()
-  "Let Notmuch's native keys own the current buffer."
-  (if (bound-and-true-p meow-mode)
-      (meow-mode -1)
-    (when (fboundp 'meow--disable)
-      (meow--disable))))
-
 (defun suderman/mail-buffer-setup ()
   "Keep Notmuch reader keys usable without Meow's emulation maps."
-  (add-hook 'meow-mode-hook #'suderman/mail-disable-meow nil t)
-  (suderman/mail-disable-meow)
+  (suderman/meow-off)
   (when (eq major-mode 'notmuch-hello-mode)
     (suderman/mail-overview-field-setup)))
 
 (defun suderman/mail-compose-setup ()
   "Set up modal editing, sender signatures, and guarded sending."
   ;; Reader keys own reader buffers, but replies and drafts are text editors.
-  (remove-hook 'meow-mode-hook #'suderman/mail-disable-meow t)
+  (remove-hook 'meow-mode-hook #'suderman/meow-off t)
   (when (and (bound-and-true-p meow-global-mode)
              (not (bound-and-true-p meow-mode)))
     (meow-mode 1))
@@ -159,11 +173,12 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
   (add-hook 'message-send-hook #'suderman/mail-prepare-send -90 t))
 
 ;; The stable frontend must match the system CLI, currently Notmuch 0.40.
+;; Pin directly: `:pin' reads every cached archive listing at startup.
 (add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/"))
+(add-to-list 'package-pinned-packages '(notmuch . "melpa-stable"))
 
 (use-package notmuch
   :if (executable-find "notmuch")
-  :pin melpa-stable
   :commands (notmuch notmuch-unthreaded notmuch-mua-new-mail)
   :init
   (setq mail-user-agent 'notmuch-user-agent

@@ -226,8 +226,7 @@
 
 (defun suderman/image-dired-setup ()
   "Prepare the Image-Dired thumbnail gallery."
-  (add-hook 'meow-mode-hook #'suderman/dired-disable-meow nil t)
-  (suderman/dired-disable-meow))
+  (suderman/meow-off))
 
 (defun suderman/image-rotate-counterclockwise ()
   "Rotate the image at point 90 degrees counterclockwise."

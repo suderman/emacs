@@ -3,6 +3,8 @@
 ;;; Commentary:
 ;; Small commands used from modal and leader maps.  They intentionally wrap core
 ;; Emacs window functions so keybindings read like intent instead of plumbing.
+;; Views with their own single-letter maps, such as IBuffer and Dirvish, share
+;; the Meta window keys and `suderman/meow-off' from here.
 
 ;;; Code:
 
@@ -10,6 +12,9 @@
 (require 'tab-bar)
 (require 'use-package)
 (require 'windmove)
+
+(declare-function meow--disable "meow")
+(declare-function meow-mode "meow")
 
 (use-package edger
   :vc (:url "https://github.com/suderman/edger" :lisp-dir "emacs" :rev :newest)
@@ -45,6 +50,16 @@ Prefixes such as ESC are merged key by key, so MAP keeps its other bindings."
                       (suderman/install-keys map binding key)
                     (define-key map key binding))))
               keys))
+
+(defun suderman/meow-off ()
+  "Keep Meow off in the current buffer so its own map owns letter keys.
+Meow's emulation maps would otherwise outrank the major mode's map.
+SPC in these views calls `meow-keypad' directly."
+  (add-hook 'meow-mode-hook #'suderman/meow-off nil t)
+  (if (bound-and-true-p meow-mode)
+      (meow-mode -1)
+    (when (fboundp 'meow--disable)
+      (meow--disable))))
 
 ;; Kinetic scrolling after a touch swipe on the Android APK.
 (use-package fling
@@ -116,63 +131,6 @@ new windows there."
   (if (display-graphic-p)
       (make-frame-command)
     (tab-bar-new-tab)))
-
-(defun suderman/shrink-window-width ()
-  "Shrink the selected window horizontally."
-  (interactive)
-  (shrink-window-horizontally 5))
-
-(defun suderman/enlarge-window-width ()
-  "Enlarge the selected window horizontally."
-  (interactive)
-  (enlarge-window-horizontally 5))
-
-(defun suderman/enlarge-window-height ()
-  "Enlarge the selected window vertically."
-  (interactive)
-  (enlarge-window 3))
-
-(defun suderman/shrink-window-height ()
-  "Shrink the selected window vertically."
-  (interactive)
-  (shrink-window 3))
-
-(defun suderman/resize-window-in-direction (direction)
-  "Move a window divider in DIRECTION, favoring the selected window's edge."
-  (let* ((horizontal (memq direction '(left right)))
-         (amount (if horizontal 5 3))
-         (window (selected-window))
-         (delta (if (memq direction '(left above)) (- amount) amount))
-         (forward (if horizontal 'right 'below))
-         (backward (if horizontal 'left 'above)))
-    (if (window-in-direction forward window)
-        (adjust-window-trailing-edge window delta horizontal)
-      (if-let* ((neighbor (or (window-in-direction backward window)
-                             (let ((side (window-in-direction backward window t)))
-                               (and side (window-parameter side 'window-side)
-                                    side)))))
-          (adjust-window-trailing-edge neighbor delta horizontal)
-        (user-error "No neighboring window")))))
-
-(defun suderman/resize-window-left ()
-  "Move a vertical window divider left."
-  (interactive)
-  (suderman/resize-window-in-direction 'left))
-
-(defun suderman/resize-window-down ()
-  "Move a horizontal window divider down."
-  (interactive)
-  (suderman/resize-window-in-direction 'below))
-
-(defun suderman/resize-window-up ()
-  "Move a horizontal window divider up."
-  (interactive)
-  (suderman/resize-window-in-direction 'above))
-
-(defun suderman/resize-window-right ()
-  "Move a vertical window divider right."
-  (interactive)
-  (suderman/resize-window-in-direction 'right))
 
 (defun suderman/split-window-below-and-focus ()
   "Split the selected window below and focus the new window."

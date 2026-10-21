@@ -11,7 +11,7 @@
       inhibit-startup-echo-area-message user-login-name
       frame-inhibit-implied-resize t)
 
-;; Temporarily raise GC threshold during startup. init.el restores it.
+;; Temporarily raise GC threshold during startup. suderman-defaults restores it.
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 0.6)
 

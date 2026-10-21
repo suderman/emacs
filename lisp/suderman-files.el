@@ -75,9 +75,7 @@
 (declare-function dv-root-window "dirvish")
 (declare-function dv-type "dirvish")
 (declare-function global-hl-line-unhighlight "hl-line")
-(declare-function meow--disable "meow")
 (declare-function meow-keypad "meow-keypad")
-(declare-function meow-mode "meow")
 (declare-function pdf-loader-install "pdf-loader")
 (declare-function android-browse-url "android-win")
 (declare-function which-key-show-keymap "which-key")
@@ -89,8 +87,7 @@
 
 (defun suderman/dirvish-session ()
   "Return current Dirvish session, including a full-frame preview's session."
-  (or (and (fboundp 'dirvish-curr) (dirvish-curr))
-      (and (fboundp 'dirvish--get-session) (dirvish--get-session))))
+  (or (dirvish-curr) (dirvish--get-session)))
 
 (defun suderman/dirvish-quit-full-frame (session)
   "Quit SESSION's full-frame layout from its root window."
@@ -103,7 +100,7 @@ With no PATH, select a visible sidebar in this frame instead of opening Dirvish.
   (interactive)
   (let ((sidebar (and (null path) (dirvish-side--session-visible-p))))
     (cond
-     ((and (fboundp 'dirvish-curr) (dirvish-curr))
+     ((dirvish-curr)
       (dirvish-quit))
      (sidebar
       (suderman/dirvish-side-make-resizable sidebar)
@@ -403,13 +400,6 @@ directory."
               help-echo "mouse-1: toggle subtree")
      icon)))
 
-(defun suderman/dired-disable-meow ()
-  "Disable Meow in the current Dired or Dirvish buffer."
-  (if (bound-and-true-p meow-mode)
-      (meow-mode -1)
-    (when (fboundp 'meow--disable)
-      (meow--disable))))
-
 (defun suderman/dired-disable-line-numbers ()
   "Keep line numbers disabled in the current buffer."
   (when display-line-numbers-mode
@@ -451,7 +441,7 @@ directory."
 
 (defun suderman/dired-disable-column-indicator ()
   "Keep the fill-column indicator out of directory buffers."
-  (when display-fill-column-indicator-mode
+  (when (bound-and-true-p display-fill-column-indicator-mode)
     (display-fill-column-indicator-mode -1)))
 
 (defun suderman/dired-disable-hl-line ()
@@ -466,14 +456,13 @@ directory."
               dired-omit-extensions nil
               dired-omit-verbose nil
               mouse-1-click-follows-link nil)
-  (add-hook 'meow-mode-hook #'suderman/dired-disable-meow nil t)
   (add-hook 'display-line-numbers-mode-hook
             #'suderman/dired-disable-line-numbers nil t)
   (add-hook 'visual-line-mode-hook
             #'suderman/dired-disable-visual-line-mode nil t)
   (add-hook 'display-fill-column-indicator-mode-hook
             #'suderman/dired-disable-column-indicator nil t)
-  (suderman/dired-disable-meow)
+  (suderman/meow-off)
   (suderman/dired-disable-line-numbers)
   (suderman/dired-disable-visual-line-mode)
   (suderman/dired-disable-column-indicator)

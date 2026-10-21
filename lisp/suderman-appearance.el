@@ -354,8 +354,8 @@ rereads the style file, so newly synced colors apply without a restart."
       (cons (line-beginning-position)
             (line-beginning-position 2)))))
 
-(defun suderman/disable-line-numbers-in-special-mode ()
-  "Disable line numbers in the current special or image buffer."
+(defun suderman/disable-line-numbers (&rest _)
+  "Disable line numbers in the current buffer."
   (display-line-numbers-mode -1))
 
 (defun suderman/disable-line-numbers-in-special-buffers ()
@@ -363,7 +363,7 @@ rereads the style file, so newly synced colors apply without a restart."
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (derived-mode-p 'special-mode 'image-mode)
-        (suderman/disable-line-numbers-in-special-mode)))))
+        (suderman/disable-line-numbers)))))
 
 (defun suderman/toggle-line-numbers ()
   "Toggle line numbers globally, preserving special and image exclusions."
@@ -372,10 +372,6 @@ rereads the style file, so newly synced colors apply without a restart."
       (global-display-line-numbers-mode -1)
     (global-display-line-numbers-mode 1)
     (suderman/disable-line-numbers-in-special-buffers)))
-
-(defun suderman/disable-line-numbers-in-meow-cheatsheet (&rest _)
-  "Disable line numbers in Meow's read-only cheatsheet."
-  (display-line-numbers-mode -1))
 
 (defun suderman/meow-describe-keymap-without-line-numbers (function keymap)
   "Call FUNCTION with KEYMAP without a line-number gutter."
@@ -386,21 +382,20 @@ rereads the style file, so newly synced colors apply without a restart."
       (setq display-line-numbers line-numbers))))
 
 (setq-default hl-line-range-function #'suderman/hl-line-range)
-(add-hook 'special-mode-hook #'suderman/disable-line-numbers-in-special-mode)
-(add-hook 'image-mode-hook #'suderman/disable-line-numbers-in-special-mode)
+(add-hook 'special-mode-hook #'suderman/disable-line-numbers)
+(add-hook 'image-mode-hook #'suderman/disable-line-numbers)
 (let ((enabled (if (featurep 'android) -1 1)))
   (global-hl-line-mode enabled)
   (global-display-line-numbers-mode enabled))
 (suderman/disable-line-numbers-in-special-buffers)
 (with-eval-after-load 'meow-cheatsheet
   (advice-add 'meow-cheatsheet :after
-              #'suderman/disable-line-numbers-in-meow-cheatsheet))
+              #'suderman/disable-line-numbers))
 (with-eval-after-load 'meow-keypad
   (advice-add 'meow-describe-keymap :around
               #'suderman/meow-describe-keymap-without-line-numbers))
 
 (setq-default display-fill-column-indicator-column 100)
-(global-display-fill-column-indicator-mode -1)
 
 (use-package indent-bars
   :if (not (featurep 'android))
