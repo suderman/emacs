@@ -159,6 +159,21 @@ fi
 
 The installer and these commands never modify Termux. Restart Emacs after setup.
 
+** Tree-sitter grammars
+
+Nix files and Org source blocks for Nix, YAML, JSON, TypeScript, Markdown, and
+Dockerfile only highlight once their tree-sitter grammar exists. Desktop gets
+grammars from Nix. On the phone, the installer runs Emacs in batch mode after
+setup to build the missing grammars listed in =lisp/suderman-treesit.el= into
+=$HOME/.config/emacs/tree-sitter=, using Termux =git= and =clang=. Emacs pins
+each grammar's commit; Nix uses the commit Nixpkgs builds for the desktop.
+Opening another tree-sitter file type still offers to build its grammar.
+Inside Nix strings, languages without a grammar on the phone, such as Elisp,
+stay plain.
+
+Install =clang= in Termux first, or the installer skips this step. To build
+them later, run =M-x suderman/treesit-install-grammars= and restart Emacs.
+
 ** Fonts
 
 Android scans =$HOME/fonts= when Emacs starts, so restart Emacs after adding

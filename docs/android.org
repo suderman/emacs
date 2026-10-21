@@ -7,8 +7,8 @@ building the APK and setting up the phone.
 * What runs on Android
 
 Android keeps the portable editing core: Meow, completion, Org, Magit,
-Dashboard, Dired and Dirvish, Markdown, and Image mode. Nix tree-sitter
-integration, automatic formatting, indent guides, PDF Tools, and Kitty graphics
+Dashboard, Dired and Dirvish, Markdown, and Image mode. Tree-sitter works with
+grammars built on the phone; see [[file:install.org::*Tree-sitter grammars][Tree-sitter grammars]]. Automatic formatting, indent guides, PDF Tools, and Kitty graphics
 remain desktop-only. Ghostel integration is currently disabled. Dashboard and
 Dirvish only show destinations present on the current device. EPUB, audio, and
 video files open through Android's native app chooser.

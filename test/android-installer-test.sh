@@ -155,12 +155,30 @@ fi
 printf '%s  %s\n' "$checksum" "$label"
 EOF
 
+  cat > "$fake_bin/pm" <<'EOF'
+#!/usr/bin/env bash
+printf 'package:%s\r\n' "$FAKE_APK_DIR/base.apk"
+EOF
+
+  # Records how the installer starts batch Emacs, then builds a grammar.
+  emacs_library="$case_root/apk dir/lib/arm64/libandroid-emacs.so"
+  mkdir -p "${emacs_library%/*}"
+  cat > "$emacs_library" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${LD_LIBRARY_PATH-unset}" "$EMACS_CLASS_PATH" \
+  "$EMACS_LD_LIBRARY_PATH" "$HOME" "$*" > "$FAKE_EMACS_LOG"
+command -v clang >/dev/null
+[[ ${FAKE_FAIL_GRAMMARS:-0} == 0 ]]
+: > "$HOME/.config/emacs/tree-sitter.built"
+EOF
+
   chmod +x "$fake_bin/run-as" "$fake_bin/gum" "$fake_bin/git" \
-    "$fake_bin/curl" "$fake_bin/sha256sum"
+    "$fake_bin/curl" "$fake_bin/sha256sum" "$fake_bin/pm" "$emacs_library"
   cp "$fake_adb" "$fake_bin/adb"
   sed -i "1c #!$test_bash" \
     "$fake_bin/run-as" "$fake_bin/gum" "$fake_bin/git" "$fake_bin/curl" \
-    "$fake_bin/sha256sum" "$fake_bin/adb"
+    "$fake_bin/sha256sum" "$fake_bin/adb" "$fake_bin/pm" "$emacs_library"
   chmod +x "$fake_bin/adb"
 
   export PATH="$fake_bin:$PATH"
@@ -173,8 +191,10 @@ EOF
   export REAL_GIT="$real_git"
   export TERMACS_TERMUX_GIT="$fake_bin/git"
   export TERMACS_TIMESTAMP="20260904-120000"
+  export FAKE_APK_DIR="${emacs_library%/lib/*}"
+  export FAKE_EMACS_LOG="$case_root/emacs.log"
   unset FAKE_BAD_FONT_CHECKSUM FAKE_FAIL_CLONE FAKE_FAIL_FINAL_VERIFY \
-    FAKE_RUN_AS_UNAVAILABLE
+    FAKE_FAIL_GRAMMARS FAKE_RUN_AS_UNAVAILABLE
 }
 
 run_setup() {
@@ -338,6 +358,48 @@ test_declined_setup() {
   assert_output "Termux \$HOME is not Emacs \$HOME"
 }
 
+new_grammar_case() {
+  new_case "$1"
+  mkdir -p "$seed/lisp"
+  printf '%s\n' ';;; suderman-treesit.el' > "$seed/lisp/suderman-treesit.el"
+  "$real_git" -C "$seed" add lisp
+  "$real_git" -C "$seed" commit -q -m grammars
+  "$real_git" -C "$seed" push -q
+  printf '%s\n' '#!/bin/sh' > "$fake_bin/clang"
+  chmod +x "$fake_bin/clang"
+}
+
+test_grammars_build_in_batch_emacs() {
+  local -a log
+
+  new_grammar_case grammars
+  LD_LIBRARY_PATH=/host/lib run_setup
+  assert_exists "$emacs_home/.config/emacs/tree-sitter.built"
+  mapfile -t log < "$FAKE_EMACS_LOG"
+  [[ ${log[0]} == unset ]] || fail "batch Emacs inherited LD_LIBRARY_PATH"
+  [[ ${log[1]} == "$FAKE_APK_DIR/base.apk" ]] || fail "wrong EMACS_CLASS_PATH"
+  [[ ${log[2]} == "$FAKE_APK_DIR/lib/arm64" ]] || fail "wrong EMACS_LD_LIBRARY_PATH"
+  [[ ${log[3]} == "$emacs_home" ]] || fail "batch Emacs has the wrong HOME"
+  [[ ${log[4]} == "--batch -l $emacs_home/.config/emacs/lisp/suderman-treesit.el -f suderman/treesit-install-grammars" ]] ||
+    fail "unexpected batch Emacs arguments: ${log[4]}"
+}
+
+test_grammar_failure_keeps_configuration() {
+  new_grammar_case grammar-failure
+  export FAKE_FAIL_GRAMMARS=1
+  run_setup
+  assert_exists "$emacs_home/.config/emacs/init.el"
+  assert_output "Tree-sitter grammar setup failed; run M-x suderman/treesit-install-grammars"
+}
+
+test_grammars_need_termux_clang() {
+  new_grammar_case no-clang
+  rm "$fake_bin/clang"
+  run_setup
+  assert_absent "$FAKE_EMACS_LOG"
+  assert_output "install clang in Termux"
+}
+
 test_run_as_unavailable() {
   new_case no-run-as
   export FAKE_RUN_AS_UNAVAILABLE=1
@@ -361,6 +423,9 @@ for test_name in \
   test_wrong_origin_refusal \
   test_non_git_target_refusal \
   test_declined_setup \
+  test_grammars_build_in_batch_emacs \
+  test_grammar_failure_keeps_configuration \
+  test_grammars_need_termux_clang \
   test_run_as_unavailable; do
   "$test_name"
   ((tests_run += 1))

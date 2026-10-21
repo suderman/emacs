@@ -9,6 +9,7 @@
 (require 'cl-lib)
 (require 'face-remap)
 (require 'org-macs)
+(require 'suderman-treesit)
 (eval-when-compile (require 'org-agenda))
 
 (defvar org-done-keywords)
@@ -1523,12 +1524,7 @@ Return nil so Org continues its normal TAB action."
                       ("conf" . "src conf")
                       ("docker" . "src dockerfile")))
     (add-to-list 'org-structure-template-alist template))
-  ;; Org looks up `<lang>-mode'; these languages only have tree-sitter modes.
-  ;; Without a grammar, as on Android, their blocks stay plain.
-  (dolist (lang '(nix yaml json typescript markdown dockerfile))
-    (when (treesit-ready-p lang t)
-      (add-to-list 'org-src-lang-modes
-                   (cons (symbol-name lang) (intern (format "%s-ts" lang)))))))
+  (suderman/treesit-map-org-src))
 
 (use-package ob
   :ensure nil

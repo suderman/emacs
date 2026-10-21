@@ -157,40 +157,44 @@
             (buffer-string)))
          (settings
           `((bash . ,(symbol-value 'sh-mode--treesit-settings))
-            (elisp . ,(treesit-font-lock-rules
-                       :language 'elisp
-                       :feature 'embedded
-                       :override t
-                       elisp-query))
+            (elisp . ,(and (treesit-language-available-p 'elisp)
+                           (treesit-font-lock-rules
+                            :language 'elisp
+                            :feature 'embedded
+                            :override t
+                            elisp-query)))
             (html . ,(symbol-value 'html-ts-mode--font-lock-settings))
             (lua . ,(symbol-value 'lua-ts--font-lock-settings))
-            (org . ,(treesit-font-lock-rules
-                     :language 'org
-                     :feature 'embedded
-                     :override t
-                     '((headline (item) @suderman--nix-fontify-org-heading)
-                       (paragraph) @suderman--nix-fontify-org-indented-heading
-                       (bullet) @font-lock-builtin-face
-                       (link_desc) @org-link
-                       (expr) @suderman--nix-fontify-org-verbatim)))
+            (org . ,(and (treesit-language-available-p 'org)
+                         (treesit-font-lock-rules
+                          :language 'org
+                          :feature 'embedded
+                          :override t
+                          '((headline (item) @suderman--nix-fontify-org-heading)
+                            (paragraph) @suderman--nix-fontify-org-indented-heading
+                            (bullet) @font-lock-builtin-face
+                            (link_desc) @org-link
+                            (expr) @suderman--nix-fontify-org-verbatim))))
             (python . ,(symbol-value 'python--treesit-settings)))))
+    ;; Rules need their grammar to compile; Android may lack some.
     (cl-mapcan
      (lambda (entry)
-       (append
-        (treesit-font-lock-rules
-         :language (car entry)
-         :feature 'embedded
-         :override t
-         '((_) @suderman--nix-fontify-embedded-default))
-        (cl-mapcan
-         (lambda (setting)
-           (treesit-font-lock-rules
-            :language (car entry)
-            :feature 'embedded
-            :override t
-            (suderman--nix-embedded-query-source
-             (treesit-font-lock-setting-query setting))))
-         (cdr entry))))
+       (when (treesit-language-available-p (car entry))
+         (append
+          (treesit-font-lock-rules
+           :language (car entry)
+           :feature 'embedded
+           :override t
+           '((_) @suderman--nix-fontify-embedded-default))
+          (cl-mapcan
+           (lambda (setting)
+             (treesit-font-lock-rules
+              :language (car entry)
+              :feature 'embedded
+              :override t
+              (suderman--nix-embedded-query-source
+               (treesit-font-lock-setting-query setting))))
+           (cdr entry)))))
      settings)))
 
 (defun suderman/nix-embedded-languages-setup ()
@@ -242,11 +246,10 @@ by syntax, including those in shell code inside indented strings."
               #'treesit-hs-looking-at-block-start-p
               hs-inside-comment-predicate #'treesit-hs-inside-comment-p))
 
-(unless (featurep 'android)
-  (use-package nix-ts-mode
-    :mode "\\.nix\\'"
-    :hook ((nix-ts-mode . suderman/nix-embedded-languages-setup)
-           (nix-ts-mode . suderman/nix-folding-setup))))
+(use-package nix-ts-mode
+  :mode "\\.nix\\'"
+  :hook ((nix-ts-mode . suderman/nix-embedded-languages-setup)
+         (nix-ts-mode . suderman/nix-folding-setup)))
 
 (provide 'suderman-nix)
 ;;; suderman-nix.el ends here

@@ -134,6 +134,41 @@ install_android_fonts() {
     "${#installed[@]}" "$font_directory"
 }
 
+# Emacs builds them from the pinned recipes its modes register.
+install_tree_sitter_grammars() {
+  local config="$emacs_home/.config/emacs" termux_bin="${termux_git%/*}"
+  local manual="run M-x suderman/treesit-install-grammars in Emacs"
+  local apk library
+
+  if [[ -z $emacs_home ]] ||
+    ! emacs_shell test -f "$config/lisp/suderman-treesit.el"; then
+    return 0
+  fi
+  if ! emacs_shell test -x "$termux_bin/clang"; then
+    printf 'Tree-sitter grammars skipped: install clang in Termux, then %s.\n' "$manual"
+    return 0
+  fi
+  apk="$(device_shell pm path "$emacs_package")"
+  apk="${apk//$'\r'/}"
+  apk="${apk#package:}"
+  # shellcheck disable=SC2016 # $1 expands in the device shell.
+  library="$(emacs_shell sh -c 'for f in "$1"/lib/*/libandroid-emacs.so; do echo "$f"; done' sh "${apk%/*}")"
+  library="${library//$'\r'/}"
+  if [[ $apk != /*.apk ]] || ! emacs_shell test -f "$library"; then
+    printf 'Tree-sitter grammars skipped: Emacs binary not found; %s.\n' "$manual"
+    return 0
+  fi
+
+  printf '%s\n' "Building missing tree-sitter grammars..."
+  # shellcheck disable=SC2016 # Variables expand in the device shell.
+  if ! emacs_shell sh -c 'unset LD_LIBRARY_PATH
+export PATH="$1:$PATH" HOME="$2" EMACS_CLASS_PATH="$3" EMACS_LD_LIBRARY_PATH="${4%/*}"
+exec "$4" --batch -l "$HOME/.config/emacs/lisp/suderman-treesit.el" -f suderman/treesit-install-grammars' \
+    sh "$termux_bin" "$emacs_home" "$apk" "$library"; then
+    printf 'Tree-sitter grammar setup failed; %s.\n' "$manual" >&2
+  fi
+}
+
 print_manual_setup() {
   local reason="$1" home_value="\$HOME"
 
@@ -462,4 +497,5 @@ main() {
   clone_checkout "$target" "$legacy" "$target_was_empty"
 }
 
-main
+main || exit
+install_tree_sitter_grammars
