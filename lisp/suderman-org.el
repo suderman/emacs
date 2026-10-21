@@ -1346,21 +1346,42 @@ Return nil so Org continues its normal TAB action."
     (advice-add 'org-mouse-todo-menu :around
                 #'suderman/org-mouse-todo-menu-with-clear)))
 
+(defun suderman/org-herdr-follow-android (path)
+  "Open a Termux session attached to the Herdr pane for herdr: link PATH.
+The link's host is an ssh host in Termux, and Termux must set
+allow-external-apps = true in ~/.termux/termux.properties."
+  (let ((host (car (split-string path "/"))))
+    (with-temp-buffer
+      (unless (zerop (call-process
+                      "am" nil t nil "startservice"
+                      "-n" "com.termux/com.termux.app.RunCommandService"
+                      "-a" "com.termux.RUN_COMMAND"
+                      "--es" "com.termux.RUN_COMMAND_PATH"
+                      "/data/data/com.termux/files/usr/bin/ssh"
+                      "--esa" "com.termux.RUN_COMMAND_ARGUMENTS"
+                      (string-join (list "-t" host "herdr-link" "attach" path) ",")
+                      "--ez" "com.termux.RUN_COMMAND_BACKGROUND" "false"
+                      ;; 0 switches to the new session and shows Termux.
+                      "--es" "com.termux.RUN_COMMAND_SESSION_ACTION" "0"))
+        (message "%s" (string-trim (buffer-string)))))))
+
 (defun suderman/org-herdr-follow (path _arg)
   "Jump to the Herdr pane for the agent session in herdr: link PATH."
-  (unless (executable-find "herdr-link")
-    (user-error "herdr-link is not available here"))
-  (let ((buffer (generate-new-buffer " *herdr-link*")))
-    (make-process
-     :name "herdr-link"
-     :buffer buffer
-     :command (list "herdr-link" "jump" path)
-     :sentinel (lambda (process _event)
-                 (unless (process-live-p process)
-                   (unless (zerop (process-exit-status process))
-                     (message "%s" (with-current-buffer buffer
-                                     (string-trim (buffer-string)))))
-                   (kill-buffer buffer))))))
+  (if (featurep 'android)
+      (suderman/org-herdr-follow-android path)
+    (unless (executable-find "herdr-link")
+      (user-error "herdr-link is not available here"))
+    (let ((buffer (generate-new-buffer " *herdr-link*")))
+      (make-process
+       :name "herdr-link"
+       :buffer buffer
+       :command (list "herdr-link" "jump" path)
+       :sentinel (lambda (process _event)
+                   (unless (process-live-p process)
+                     (unless (zerop (process-exit-status process))
+                       (message "%s" (with-current-buffer buffer
+                                       (string-trim (buffer-string)))))
+                     (kill-buffer buffer)))))))
 
 (use-package org
   :ensure nil
