@@ -375,6 +375,25 @@
                (seq-position modules 'suderman-keys)))
     (should-not (memq 'suderman-reload modules))))
 
+(ert-deftest suderman/reload-keeps-meow-off-in-background-views ()
+  (let ((view (generate-new-buffer " *meow-off view*"))
+        (editor (generate-new-buffer " *meow editor*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer view
+            (special-mode)
+            (suderman/meow-off))
+          ;; Reloading from an editing buffer re-runs the Meow module there.
+          (with-current-buffer editor
+            (text-mode)
+            (meow-mode 1)
+            (load "suderman-meow" nil 'nomessage))
+          (with-current-buffer view
+            (should-not meow-mode)
+            (should-not meow--current-state)))
+      (kill-buffer view)
+      (kill-buffer editor))))
+
 ;; Shared appearance
 
 (ert-deftest suderman/base16-gnus-faces-avoid-emacs-31-inheritance-cycles ()

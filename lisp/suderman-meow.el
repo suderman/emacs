@@ -1072,7 +1072,10 @@ bindings that were deleted from source."
               #'suderman/which-key-tag-entries)
   ;; Toolbar buttons without a keypad key, such as Esc, cancel the keypad.
   (keymap-set meow-keypad-state-keymap "<tool-bar>" #'meow-keypad-quit)
-  (meow-global-mode 1)
+  ;; Enabling it again on reload calls `meow--enable' in every buffer without
+  ;; running `meow-mode-hook', so views that keep Meow off get a state.
+  (unless (bound-and-true-p meow-global-mode)
+    (meow-global-mode 1))
   (suderman/android-initialize-meow-text-conversion))
 
 (provide 'suderman-meow)
