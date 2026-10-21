@@ -118,7 +118,7 @@ of Emacs they hand off to the surrounding terminal multiplexer.
 | =SPC t=   | Toggles                                  |
 | =SPC w=   | Windows                                  |
 | =SPC q=   | Quit, reload, pull, and upgrade          |
-| =SPC TAB= | Fold the whole buffer, or open it all    |
+| =SPC TAB= | Fold the buffer, or open all but drawers |
 
 * Documentation
 

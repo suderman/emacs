@@ -277,7 +277,8 @@ open with its own blocks folded, as a lone Org heading does."
 
 (defun suderman/meow-fold-all ()
   "Fold the buffer to its top-level headings, or fold every code block.
-When everything is already folded that way, open everything instead."
+When everything is already folded that way, open everything instead,
+except Org drawers, which open only on request."
   (interactive)
   (suderman/meow--cancel-active-selection)
   (let ((before (suderman/meow--hidden-ranges)))
@@ -288,7 +289,9 @@ When everything is already folded that way, open everything instead."
      (t (user-error "Nothing to fold here")))
     (when (equal before (suderman/meow--hidden-ranges))
       (cond
-       ((derived-mode-p 'org-mode) (org-fold-show-all))
+       ((derived-mode-p 'org-mode)
+        (org-fold-show-all '(headings blocks))
+        (org-fold-hide-drawer-all))
        ((bound-and-true-p outline-minor-mode) (outline-show-all))
        (t (hs-show-all)))))
   (suderman/goto-shown-line-end))

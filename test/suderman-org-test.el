@@ -768,9 +768,12 @@
                   lines))
           (forward-line 1)))
       (should (equal (nreverse lines) '("* A" "* B"))))
-    ;; Pressed again on a fully folded buffer, it opens everything.
+    ;; Pressed again on a fully folded buffer, it opens all but the drawer.
     (suderman/meow-fold-all)
-    (should-not (suderman/meow--hidden-ranges))
+    (should (equal (mapcar (lambda (range)
+                             (buffer-substring-no-properties (car range) (cdr range)))
+                           (suderman/meow--hidden-ranges))
+                   '("\n:ID: 1\n:END:")))
     (suderman/meow-fold-all)
     ;; Point left the hidden drawer for the heading that shows it.
     (should (equal (buffer-substring-no-properties (line-beginning-position)

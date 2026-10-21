@@ -59,7 +59,7 @@ block is a heading, list item, or body element; in code it is a line at the
 same indentation. Dirvish and IBuffer use the same keys for their rows. =o=
 folds or unfolds the heading or code block on the current line, and =SPC TAB=
 folds the whole buffer to its top level, or opens everything when it already
-is.
+is. Org drawers stay folded; Tab on a drawer line opens it.
 
 =SPC= is both Meow's keypad and the leader. Numeric arguments fit the same
 grammar, so =SPC 3 w= moves three word starts. =SPC h= starts a =C-h= help
