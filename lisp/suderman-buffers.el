@@ -203,6 +203,16 @@ On Android the first tap selects its row and a tap on the selected row visits."
             (suderman/tap-on-selected-row-p event))
     (ibuffer-mouse-visit-buffer event)))
 
+(defun suderman/ibuffer-mouse-select (event)
+  "Set point at EVENT.
+On Android a tap anywhere on a buffer's row acts like a tap on its name."
+  (interactive "e")
+  (if (when-let* (((featurep 'android))
+                  (pos (posn-point (event-start event))))
+        (save-excursion (goto-char pos) (ibuffer-current-buffer)))
+      (suderman/ibuffer-mouse-visit-buffer event)
+    (suderman/mouse-set-point-or-toggle-keyboard event)))
+
 (defun suderman/ibuffer-setup ()
   "Apply project grouping and display defaults to IBuffer."
   (add-hook 'visual-line-mode-hook
@@ -251,8 +261,7 @@ On Android the first tap selects its row and a tap on the selected row visits."
   :config
   (keymap-set ibuffer-name-map "<mouse-1>" #'suderman/ibuffer-mouse-visit-buffer)
   (keymap-set ibuffer-name-map "<mouse-2>" #'ibuffer-mouse-toggle-mark)
-  (keymap-set ibuffer-mode-map "<mouse-1>"
-              #'suderman/mouse-set-point-or-toggle-keyboard)
+  (keymap-set ibuffer-mode-map "<mouse-1>" #'suderman/ibuffer-mouse-select)
   (keymap-set ibuffer-mode-map "`" #'suderman/dashboard)
   (keymap-set ibuffer-mode-map "," #'suderman/ibuffer-toggle)
   (keymap-set ibuffer-mode-map "h" #'suderman/ibuffer-toggle)

@@ -19,12 +19,12 @@ but do not scan the data directory unless explicitly requested.
 
 ** IBuffer
 
-=,= opens IBuffer on a list of recent buffers with the previous buffer
-selected, so =, l= switches back like Alt-Tab. =;= switches to project groups
-and back. Starred buffers other than =*scratch*= and =*Messages*= stay hidden,
-along with files that were never shown in a window, such as the ones Agenda
-loads. =i= shows them. Left click visits a buffer and middle click toggles its
-mark. On Android, a tap on a name selects its row, and a tap on the selected
+=,= opens IBuffer on a list of recent buffers with the previous buffer selected,
+so =, l= switches back like Alt-Tab. =;= switches to project groups and
+back. Starred buffers other than =*scratch*= and =*Messages*= stay hidden, along
+with files that were never shown in a window, such as the ones Agenda loads. =i=
+shows them. Left click visits a buffer and middle click toggles its mark. On
+Android, a tap anywhere on a buffer's row selects it, and a tap on the selected
 row visits it. Non-project images get their own group. Dirvish's internal panes
 and preview buffers never appear.
 

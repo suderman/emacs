@@ -428,7 +428,7 @@
   (with-temp-buffer
     (insert "first\nsecond\n")
     (goto-char (point-min))
-    (suderman/remember-tap-selected-line)
+    (suderman/remember-tap-selection)
     (let (opened other-window)
       (cl-letf (((symbol-function 'mouse-set-point)
                  (lambda (_event) (goto-char (point-min)) (forward-line 1)))
@@ -441,7 +441,7 @@
         (dlet ((features (cons 'android features)))
           (suderman/dired-mouse-secondary-open 'tap)
           (should-not opened)
-          (suderman/remember-tap-selected-line)
+          (suderman/remember-tap-selection)
           (suderman/dired-mouse-secondary-open 'tap)
           (should opened))))))
 

@@ -189,7 +189,7 @@ Traps that cost real debugging time:
 - On Android, a tap on Dired's highlighted filename arrives as `mouse-2`, after
   touch-screen.el has already moved point to it. A tap selects the row, and a
   tap on the row selected after the last command opens it in place; IBuffer
-  names (`mouse-1`) do the same. Do not let native Dired's other-window binding
+  rows (`mouse-1`) do the same. Do not let native Dired's other-window binding
   win there.
 - Desktop single click in Dirvish must keep focus in the root pane rather than
   activating the preview.

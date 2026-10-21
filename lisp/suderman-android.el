@@ -62,11 +62,34 @@ resize can therefore be mistaken for the keyboard."
                (skip-chars-backward " \t\n")
                (line-end-position))))))
 
+(defvar-local suderman/tap-selected-point nil
+  "Point when the last command finished in an Android list buffer.
+A tap moves point before its command runs, so point cannot tell.")
+
+(defun suderman/remember-tap-selection ()
+  "Record point for `suderman/tap-on-selected-row-p'."
+  (setq suderman/tap-selected-point (point)))
+
+(defun suderman/track-tap-selection ()
+  "Let taps in this Android list buffer select a row before opening it."
+  (when (featurep 'android)
+    (suderman/remember-tap-selection)
+    (add-hook 'post-command-hook #'suderman/remember-tap-selection nil t)))
+
+(defun suderman/tap-on-selected-row-p (event)
+  "Move point to EVENT and return non-nil when its row was already selected."
+  (mouse-set-point event)
+  (and suderman/tap-selected-point
+       (eql (line-beginning-position)
+            (save-excursion (goto-char suderman/tap-selected-point)
+                            (line-beginning-position)))))
+
 (defun suderman/mouse-set-point-or-toggle-keyboard (event)
   "Set point at EVENT, or toggle the Android keyboard on a double tap.
 Listings such as Dired and IBuffer are read-only, so a tap never shows the
-keyboard.  A double tap in the blank space below the last entry toggles it.
-A tap elsewhere hides it, as Emacs does after other taps in read-only text."
+keyboard.  A double tap in the blank space below the last entry toggles it
+and leaves point where it was.  A tap elsewhere hides it, as Emacs does
+after other taps in read-only text."
   (interactive "e")
   (let ((posn (event-start event)))
     (if (not (and (featurep 'android)
@@ -76,6 +99,8 @@ A tap elsewhere hides it, as Emacs does after other taps in read-only text."
           (mouse-set-point event)
           (when (featurep 'android)
             (suderman/android-hide-keyboard)))
+      (when suderman/tap-selected-point
+        (goto-char suderman/tap-selected-point))
       (let ((previous suderman/android-blank-tap))
         (setq suderman/android-blank-tap (cons (float-time) (posn-window posn)))
         (when (and previous
@@ -87,25 +112,6 @@ A tap elsewhere hides it, as Emacs does after other taps in read-only text."
           (if (suderman/android-keyboard-visible-p (selected-frame))
               (suderman/android-hide-keyboard)
             (suderman/android-show-keyboard)))))))
-
-(defvar-local suderman/tap-selected-line nil
-  "Start of the row selected when the last command finished.
-A tap moves point before its command runs, so point cannot tell.")
-
-(defun suderman/remember-tap-selected-line ()
-  "Record the selected row for `suderman/tap-on-selected-row-p'."
-  (setq suderman/tap-selected-line (line-beginning-position)))
-
-(defun suderman/track-tap-selection ()
-  "Let taps in this Android list buffer select a row before opening it."
-  (when (featurep 'android)
-    (suderman/remember-tap-selected-line)
-    (add-hook 'post-command-hook #'suderman/remember-tap-selected-line nil t)))
-
-(defun suderman/tap-on-selected-row-p (event)
-  "Move point to EVENT and return non-nil when its row was already selected."
-  (mouse-set-point event)
-  (eql (line-beginning-position) suderman/tap-selected-line))
 
 (defun suderman/android-volume-up ()
   "Show the software keyboard, or with it showing, open the Meow keypad."
