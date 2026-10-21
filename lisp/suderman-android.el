@@ -88,6 +88,25 @@ A tap elsewhere hides it, as Emacs does after other taps in read-only text."
               (suderman/android-hide-keyboard)
             (suderman/android-show-keyboard)))))))
 
+(defvar-local suderman/tap-selected-line nil
+  "Start of the row selected when the last command finished.
+A tap moves point before its command runs, so point cannot tell.")
+
+(defun suderman/remember-tap-selected-line ()
+  "Record the selected row for `suderman/tap-on-selected-row-p'."
+  (setq suderman/tap-selected-line (line-beginning-position)))
+
+(defun suderman/track-tap-selection ()
+  "Let taps in this Android list buffer select a row before opening it."
+  (when (featurep 'android)
+    (suderman/remember-tap-selected-line)
+    (add-hook 'post-command-hook #'suderman/remember-tap-selected-line nil t)))
+
+(defun suderman/tap-on-selected-row-p (event)
+  "Move point to EVENT and return non-nil when its row was already selected."
+  (mouse-set-point event)
+  (eql (line-beginning-position) suderman/tap-selected-line))
+
 (defun suderman/android-volume-up ()
   "Show the software keyboard, or with it showing, open the Meow keypad."
   (interactive)

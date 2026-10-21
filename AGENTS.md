@@ -186,8 +186,11 @@ Traps that cost real debugging time:
   `meow-keypad` directly without enabling a Meow state.
 - `SPC` is both Meow's keypad and the leader. Its native `h` translation starts
   a `C-h` sequence.
-- On Android, a tap on Dired's highlighted filename arrives as `mouse-2`. Do
-  not let native Dired's other-window binding win there.
+- On Android, a tap on Dired's highlighted filename arrives as `mouse-2`, after
+  touch-screen.el has already moved point to it. A tap selects the row, and a
+  tap on the row selected after the last command opens it in place; IBuffer
+  names (`mouse-1`) do the same. Do not let native Dired's other-window binding
+  win there.
 - Desktop single click in Dirvish must keep focus in the root pane rather than
   activating the preview.
 - Dirvish parent and breadcrumb buffers are sparse special modes, not Dired

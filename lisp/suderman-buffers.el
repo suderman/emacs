@@ -195,11 +195,20 @@ Buffers stop at the edge of their group; group headers move among groups."
       (user-error "Empty group"))
     (beginning-of-line)))
 
+(defun suderman/ibuffer-mouse-visit-buffer (event)
+  "Visit the buffer clicked in EVENT.
+On Android the first tap selects its row and a tap on the selected row visits."
+  (interactive "e")
+  (when (or (not (featurep 'android))
+            (suderman/tap-on-selected-row-p event))
+    (ibuffer-mouse-visit-buffer event)))
+
 (defun suderman/ibuffer-setup ()
   "Apply project grouping and display defaults to IBuffer."
   (add-hook 'visual-line-mode-hook
             #'suderman/ibuffer-disable-visual-line-mode nil t)
   (suderman/meow-off)
+  (suderman/track-tap-selection)
   (suderman/ibuffer-disable-visual-line-mode)
   (if suderman/ibuffer-grouped
       (setq ibuffer-filter-groups
@@ -240,7 +249,7 @@ Buffers stop at the edge of their group; group headers move among groups."
                 (size-h 7 -1 :right) " "
                 suderman-project-file-relative)))
   :config
-  (keymap-set ibuffer-name-map "<mouse-1>" #'ibuffer-mouse-visit-buffer)
+  (keymap-set ibuffer-name-map "<mouse-1>" #'suderman/ibuffer-mouse-visit-buffer)
   (keymap-set ibuffer-name-map "<mouse-2>" #'ibuffer-mouse-toggle-mark)
   (keymap-set ibuffer-mode-map "<mouse-1>"
               #'suderman/mouse-set-point-or-toggle-keyboard)

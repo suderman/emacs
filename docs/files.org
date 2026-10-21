@@ -24,8 +24,9 @@ selected, so =, l= switches back like Alt-Tab. =;= switches to project groups
 and back. Starred buffers other than =*scratch*= and =*Messages*= stay hidden,
 along with files that were never shown in a window, such as the ones Agenda
 loads. =i= shows them. Left click visits a buffer and middle click toggles its
-mark. Non-project images get their own group. Dirvish's internal panes and
-preview buffers never appear.
+mark. On Android, a tap on a name selects its row, and a tap on the selected
+row visits it. Non-project images get their own group. Dirvish's internal panes
+and preview buffers never appear.
 
 ** Dirvish sidebar
 
@@ -111,16 +112,17 @@ the directory. =?= shows the current bindings with labels, and =;= opens
 Dirvish's own menu. Clicking a directory arrow toggles its subtree, like
 =TAB=.
 
-On Android, one tap opens a row in the current window. On desktop, single left
-click selects a row and double left click opens it. Right click opens Dired's
-file or directory context menu. PDF files open in PDF Tools; EPUB files use the
-desktop reader, and audio and video use the desktop player. NixOS currently maps
-those to Zathura and mpv. A desktop single click in the center keeps focus there
-instead of activating the preview. The left parent column is also clickable:
-directories change the center column, while files change directory and select
-that file. In that column, =j/k= move between directories and update the center,
-=h= goes up another level, and =l= returns to the center. Breadcrumb clicks run
-in the center, and =M-hjkl= skips breadcrumb and footer windows.
+On Android, a tap on a filename selects its row, and a tap on the selected row
+opens it in the current window. On desktop, single left click selects a row and
+double left click opens it. Right click opens Dired's file or directory context
+menu. PDF files open in PDF Tools; EPUB files use the desktop reader, and audio
+and video use the desktop player. NixOS currently maps those to Zathura and
+mpv. A desktop single click in the center keeps focus there instead of
+activating the preview. The left parent column is also clickable: directories
+change the center column, while files change directory and select that file. In
+that column, =j/k= move between directories and update the center, =h= goes up
+another level, and =l= returns to the center. Breadcrumb clicks run in the
+center, and =M-hjkl= skips breadcrumb and footer windows.
 
 Dirvish previews video, images, looping GIFs, audio metadata, EPUB covers,
 archives, fonts, and PDFs. Minibuffer file selection uses the same preview

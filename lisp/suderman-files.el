@@ -383,11 +383,13 @@ directory."
   (suderman/dired-open))
 
 (defun suderman/dired-mouse-secondary-open (event)
-  "Open the Dired entry in place on Android, or in another window elsewhere."
+  "On Android, select the tapped row, or open it when already selected.
+Elsewhere open the entry clicked in EVENT in another window."
   (interactive "e")
-  (if (featurep 'android)
-      (suderman/dired-mouse-open event)
-    (dired-mouse-find-file-other-window event)))
+  (if (not (featurep 'android))
+      (dired-mouse-find-file-other-window event)
+    (when (suderman/tap-on-selected-row-p event)
+      (suderman/dired-open))))
 
 (defun suderman/dirvish-enable-subtree-mouse ()
   "Make Dirvish subtree state arrows toggle their directory on click."
@@ -467,6 +469,7 @@ directory."
   (suderman/dired-disable-visual-line-mode)
   (suderman/dired-disable-column-indicator)
   (suderman/dired-disable-hl-line)
+  (suderman/track-tap-selection)
   (when (derived-mode-p 'dirvish-directory-view-mode)
     (setq-local context-menu-functions '(t dired-context-menu))))
 
