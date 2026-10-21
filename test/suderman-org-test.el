@@ -780,5 +780,28 @@
                                                    (line-end-position))
                    "* B"))))
 
+(ert-deftest suderman/org-planning-stays-under-a-folded-heading ()
+  ;; Org inserts CLOSED where the heading's fold starts, outside the fold.
+  (dolist (text '("* TODO empty\n* next\n" "* TODO body\ntext\n** child\n* next\n"))
+    (with-temp-buffer
+      (insert text)
+      (org-mode)
+      (org-overview)
+      (goto-char (point-min))
+      (let ((org-log-done 'time))
+        (org-todo "DONE"))
+      (forward-line 1)
+      (should (looking-at-p "CLOSED:"))
+      (should (invisible-p (point)))))
+  (with-temp-buffer
+    (insert "* TODO open\ntext\n")
+    (org-mode)
+    (org-fold-show-all)
+    (goto-char (point-min))
+    (let ((org-log-done 'time))
+      (org-todo "DONE"))
+    (forward-line 1)
+    (should-not (invisible-p (point)))))
+
 (provide 'suderman-org-test)
 ;;; suderman-org-test.el ends here

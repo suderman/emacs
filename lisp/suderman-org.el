@@ -907,6 +907,20 @@ Otherwise a folded last subtree hides the empty line below it."
         `(,from ,(1- to) ,flag . ,rest)
       args)))
 
+(defun suderman/org-keep-planning-folded (add &rest args)
+  "Call ADD with ARGS, keeping new planning text hidden under a folded heading.
+Org inserts CLOSED, SCHEDULED, and DEADLINE where the heading's fold
+starts, so the line would show.  An empty heading counts as folded."
+  (let ((folded (save-excursion
+                  (org-back-to-heading t)
+                  (or (org-fold-folded-p (line-end-position) 'outline)
+                      (not (suderman/org-heading-has-content-p))))))
+    (prog1 (apply add args)
+      (when folded
+        (save-excursion
+          (org-back-to-heading t)
+          (org-fold-hide-entry))))))
+
 (defvar-local suderman/org--final-line-edit nil
   "Start of this command's edits on the line below a folded last subtree.")
 
@@ -1435,6 +1449,8 @@ Return nil so Org continues its normal TAB action."
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading)
   (advice-add 'org-fold-core-region :filter-args
               #'suderman/org-fold-keep-final-newline)
+  (advice-add 'org-add-planning-info :around
+              #'suderman/org-keep-planning-folded)
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (derived-mode-p 'org-mode)
