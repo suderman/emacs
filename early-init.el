@@ -30,10 +30,17 @@
   (add-to-list 'default-frame-alist '(alpha-background . 90))
   (add-to-list 'initial-frame-alist '(alpha-background . 90)))
 
-;; Avoid a white flash on Android before the theme loads; the theme replaces it.
+;; Start Android's first frame in the system's light or dark color until the
+;; theme loads.  The display sets `toolkit-theme' after this file but before
+;; `before-init-hook'.  Fall back to dark so a night start never flashes white.
 (when (featurep 'android)
-  (add-to-list 'initial-frame-alist '(background-color . "black"))
-  (add-to-list 'initial-frame-alist '(foreground-color . "white")))
+  (add-hook 'before-init-hook
+            (lambda ()
+              (let ((dark (not (eq toolkit-theme 'light))))
+                (push `(background-color . ,(if dark "black" "white"))
+                      initial-frame-alist)
+                (push `(foreground-color . ,(if dark "white" "black"))
+                      initial-frame-alist)))))
 
 (provide 'early-init)
 ;;; early-init.el ends here
