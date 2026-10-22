@@ -1349,7 +1349,8 @@ Return nil so Org continues its normal TAB action."
 (defun suderman/org-herdr-follow-android (path)
   "Open a Termux session attached to the Herdr pane for herdr: link PATH.
 The link's host is an ssh host in Termux, and Termux must set
-allow-external-apps = true in ~/.termux/termux.properties."
+allow-external-apps = true in ~/.termux/termux.properties.  Termux's
+ssh-unlock adds the ssh key with a fingerprint before ssh runs."
   (let ((host (car (split-string path "/"))))
     (with-temp-buffer
       (unless (zerop (call-process
@@ -1357,9 +1358,10 @@ allow-external-apps = true in ~/.termux/termux.properties."
                       "-n" "com.termux/com.termux.app.RunCommandService"
                       "-a" "com.termux.RUN_COMMAND"
                       "--es" "com.termux.RUN_COMMAND_PATH"
-                      "/data/data/com.termux/files/usr/bin/ssh"
+                      "/data/data/com.termux/files/home/bin/ssh-unlock"
                       "--esa" "com.termux.RUN_COMMAND_ARGUMENTS"
-                      (string-join (list "-t" host "herdr-link" "attach" path) ",")
+                      (string-join
+                       (list "ssh" "-t" host "herdr-link" "attach" path) ",")
                       "--ez" "com.termux.RUN_COMMAND_BACKGROUND" "false"
                       ;; 0 switches to the new session and shows Termux.
                       "--es" "com.termux.RUN_COMMAND_SESSION_ACTION" "0"))
