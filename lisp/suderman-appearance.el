@@ -39,8 +39,8 @@ Its palettes come from the named themes bundled with base16-theme.")
 A synced style file sets this; otherwise it holds `suderman/fallback-style'.")
 (defvar suderman/variable-font-scale 1.12
   "Prose size relative to the default face.")
-(defvar suderman/android-font-scale (/ 17.0 12.0)
-  "Android point-size adjustment, preserving the existing 17-point baseline.")
+(defvar suderman/android-font-scale (/ 14.0 12.0)
+  "Android point-size adjustment.  Android points are sp (1/160 inch).")
 
 (defun suderman/load-system-style (&optional file)
   "Load FILE or the first readable synced style file.

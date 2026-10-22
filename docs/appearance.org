@@ -27,9 +27,10 @@ terminal-only sessions use the dark variant. Each appearance event rereads the
 file, and =M-x suderman/apply-system-palette= applies newly synced colors now.
 
 Desktop uses Stylix's terminal point size, currently 12. Android multiplies it
-by =suderman/android-font-scale=, initially =17/12=. Org uses variable pitch for
-prose and headings, with fixed pitch for code, tables, metadata, timestamps,
-TODO states, tags, and indentation; adjust =suderman/variable-font-scale=.
+by =suderman/android-font-scale=, initially =14/12=: 14 sp, Android's body text
+size. Org uses variable pitch for prose and headings, with fixed pitch for
+code, tables, metadata, timestamps, TODO states, tags, and indentation; adjust
+=suderman/variable-font-scale=.
 Doom Modeline keeps Normal state quiet and shows Insert, Motion, Keypad, and
 Beacon. Nerd Font fallback covers only the BMP private use area and
 =F0001= to =F1AF0=.
