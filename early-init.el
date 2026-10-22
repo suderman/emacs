@@ -30,5 +30,10 @@
   (add-to-list 'default-frame-alist '(alpha-background . 90))
   (add-to-list 'initial-frame-alist '(alpha-background . 90)))
 
+;; Avoid a white flash on Android before the theme loads; the theme replaces it.
+(when (featurep 'android)
+  (add-to-list 'initial-frame-alist '(background-color . "black"))
+  (add-to-list 'initial-frame-alist '(foreground-color . "white")))
+
 (provide 'early-init)
 ;;; early-init.el ends here
