@@ -215,19 +215,5 @@
                          (lambda () read-key-empty-map))
                         suderman/meow-keypad-read-key-map))))))
 
-(ert-deftest suderman/meow-insert-escape-closes-completion-first ()
-  ;; Escape with a popup open used to leave Insert state as well.
-  (let (called)
-    (cl-letf (((symbol-function 'corfu-quit) (lambda () (push 'quit called)))
-              ((symbol-function 'meow-insert-exit) (lambda () (push 'exit called))))
-      (with-temp-buffer
-        (setq-local completion-in-region-mode t)
-        (suderman/meow-insert-escape)
-        (setq-local completion-in-region-mode nil)
-        (suderman/meow-insert-escape)))
-    (should (equal (nreverse called) '(quit exit)))
-    (should (eq (keymap-lookup meow-insert-state-keymap "<escape>")
-                #'suderman/meow-insert-escape))))
-
 (provide 'suderman-input-test)
 ;;; suderman-input-test.el ends here

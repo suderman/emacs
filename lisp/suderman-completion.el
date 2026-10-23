@@ -170,8 +170,10 @@
   (corfu-auto-prefix 2)
   (corfu-auto-delay 0.15)
   (corfu-cycle t)
+  ;; Nothing is selected until TAB or C-n; the selection shows in the text and
+  ;; further typing keeps it, so RET is optional.
   (corfu-preselect 'prompt)
-  (corfu-preview-current nil)
+  (corfu-preview-current 'insert)
   (corfu-popupinfo-delay '(0.5 . 0.5))
   :bind (:map corfu-map
               ("TAB" . corfu-next)

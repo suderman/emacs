@@ -144,12 +144,12 @@ on that entry.  Ignore clicks elsewhere and the press half of a click."
       (meow--keypad-handle-input-event (aref keys (1- (length keys)))))))
 
 (defun suderman/meow-insert-escape ()
-  "Close a completion popup, or else leave Insert state.
-Meow's Insert keymap outranks Corfu's, so Corfu never sees Escape."
+  "Close any completion popup and leave Insert state.
+Corfu inserts a previewed candidate before this runs; `C-g' discards it."
   (interactive)
-  (if (and (bound-and-true-p completion-in-region-mode) (fboundp 'corfu-quit))
-      (corfu-quit)
-    (meow-insert-exit)))
+  (when (and (bound-and-true-p completion-in-region-mode) (fboundp 'corfu-quit))
+    (corfu-quit))
+  (meow-insert-exit))
 
 (defun suderman/meow-escape ()
   "Cancel any selection, then exit Insert state or return to the top level."

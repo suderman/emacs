@@ -77,6 +77,10 @@ first. Cape adds file paths and words from open buffers as fallbacks. =TAB=
 indents, then completes. In the minibuffer, =C-.= opens Embark actions.
 
 Corfu opens automatically while typing, but starts with no candidate selected.
+=TAB= or =C-n= selects the next candidate and shows it in the text; =S-TAB= or
+=C-p= goes back. Typing on, or Escape, keeps the selection, so =RET= is
+optional. Escape always returns to Normal; =C-g= closes the popup, drops the
+selection, and stays in Insert.
 It shows documentation after a short delay and remembers previous choices.
 Buffer-word fallback starts at three characters. Shell buffers use manual
 completion instead of automatic popups.
