@@ -10,7 +10,12 @@
 (require 'use-package)
 
 (defvar hs-treesit-things)
+(defvar markdown-ts-hide-markup)
+(defvar markdown-ts-inline-images)
 (declare-function suderman/meow-toggle-fold "suderman-meow" ())
+(declare-function suderman/org-toggle-formatting "suderman-org" ())
+(declare-function markdown-ts-toggle-hide-markup "markdown-ts-mode" ())
+(declare-function markdown-ts-toggle-inline-images "markdown-ts-mode" ())
 (declare-function hs-overlay-at "hideshow" (position))
 (declare-function hs-get-first-block-on-line "hideshow" ())
 (declare-function suderman/enable-fold-taps "suderman-android" (line-p toggle))
@@ -375,10 +380,30 @@ Insert from Normal."
   (suderman/enable-fold-taps #'suderman/markdown--foldable-line-p
                              #'suderman/meow-toggle-fold))
 
+(defun suderman/markdown-toggle-formatting ()
+  "Switch this Markdown buffer between formatted and literal views.
+Literal shows markup delimiters, link targets, and image links as raw text."
+  (interactive)
+  (markdown-ts-toggle-hide-markup)
+  (unless (eq markdown-ts-inline-images markdown-ts-hide-markup)
+    (markdown-ts-toggle-inline-images))
+  (message "Markdown %s" (if markdown-ts-hide-markup "formatted" "literal")))
+
+(defun suderman/toggle-formatting ()
+  "Switch an Org or Markdown buffer between formatted and literal views."
+  (interactive)
+  (cond ((derived-mode-p 'org-mode) (suderman/org-toggle-formatting))
+        ((derived-mode-p 'markdown-ts-mode) (suderman/markdown-toggle-formatting))
+        (t (user-error "No formatted view for %s" major-mode))))
+
 (use-package markdown-ts-mode
   :ensure nil
   :mode "\\.\\(?:md\\|markdown\\)\\'"
   :hook (markdown-ts-mode . suderman/markdown-folding)
+  :custom
+  ;; Open formatted, as Org does; SPC t f shows the literal markup.
+  (markdown-ts-hide-markup t)
+  (markdown-ts-inline-images t)
   :config
   ;; TAB after a folded heading's arrow should still cycle that heading.
   (advice-add 'markdown-ts-outline-cycle :before #'suderman/goto-shown-line-end)

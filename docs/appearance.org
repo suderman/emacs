@@ -36,9 +36,14 @@ Org buffers open formatted: links show their descriptions, the equals signs
 and slashes around code and italics are hidden, entities like =\alpha= display
 as symbols, headings and lists get Superstar bullets and virtual indentation,
 and images preview inline. Only =a_{b}= and =a^{b}= become sub- and
-superscripts, so =snake_case= stays flat. =SPC t o= switches the current
+superscripts, so =snake_case= stays flat. =SPC t f= switches the current
 buffer to a literal view with all of that raw, flush left, in monospace, and
 back.
+
+Markdown buffers open formatted too, through =markdown-ts-mode='s own
+options: heading hashes, emphasis markers, backticks, link targets, and code
+fences are hidden, list items and checkboxes get symbols, and images preview
+inline. =SPC t f= shows the raw markup and back.
 Doom Modeline keeps Normal state quiet and shows Insert, Motion, Keypad, and
 Beacon. Nerd Font fallback covers only the BMP private use area and
 =F0001= to =F1AF0=.
