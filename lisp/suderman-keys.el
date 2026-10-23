@@ -183,7 +183,10 @@
    "q" (cons "quit/config"
              (define-keymap
                "p" #'suderman/pull-config
-               "q" #'kill-emacs
+               "q" '("close client" . save-buffers-kill-terminal)
+               "Q" '("stop server" . save-buffers-kill-emacs)
+               "w" '("save all and close" . suderman/save-and-quit)
+               "d" '("discard and close" . suderman/quit-without-saving)
                "r" #'suderman/reload-config
                "u" #'suderman/package-upgrade-all))
 

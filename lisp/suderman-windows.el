@@ -151,6 +151,44 @@ frame can narrow to its own heading."
 
 (add-hook 'delete-frame-functions #'suderman/kill-frame-clone)
 
+(defun suderman/save-and-quit ()
+  "Save every modified file, then close this client without asking.
+A standalone Emacs exits instead."
+  (interactive)
+  (save-some-buffers t)
+  (let ((confirm-kill-emacs nil)
+        (confirm-kill-processes nil))
+    (save-buffers-kill-terminal)))
+
+(defun suderman/quit-without-saving ()
+  "Discard unsaved changes to this client's files, then close it.
+A client's files are the ones it opened and those shown in its frames,
+so edits in other frames survive.  A standalone Emacs discards all."
+  (interactive)
+  (let* ((client (frame-parameter nil 'client))
+         (buffers
+          (if client
+              (append (and (processp client) (process-get client 'buffers))
+                      (seq-mapcat
+                       (lambda (frame)
+                         (when (eq (frame-parameter frame 'client) client)
+                           (mapcar #'window-buffer (window-list frame 'no-minibuf))))
+                       (frame-list)))
+            (buffer-list)))
+         (discard (seq-filter (lambda (buffer)
+                                (and (buffer-file-name buffer)
+                                     (buffer-modified-p buffer)))
+                              (delete-dups buffers))))
+    (dolist (buffer discard)
+      (with-current-buffer buffer
+        (delete-auto-save-file-if-necessary t)
+        (set-buffer-modified-p nil)))
+    ;; Close the client first: killing its buffers would end it early.
+    (let ((confirm-kill-emacs nil)
+          (confirm-kill-processes nil))
+      (save-buffers-kill-terminal))
+    (mapc #'kill-buffer discard)))
+
 (defun suderman/split-window-below-and-focus ()
   "Split the selected window below and focus the new window."
   (interactive)

@@ -60,6 +60,16 @@ are terminal features. =modules/home/users/jon/programs.nix= enables it for me
 on every host. On desktop hosts it also starts the shared daemon, adds keyd
 window shortcuts, and exports the shared appearance.
 
+Super+E and =em= outside a multiplexer both open frames on that shared
+daemon. =em= inside tmux or Herdr uses a daemon owned by the workspace, which
+stops when the workspace closes. =ema= and =emd= run a standalone Emacs. In any
+of them, =SPC q q= closes only the current frame or client, and a standalone
+Emacs exits. =SPC q w= first saves every modified file without asking, like
+Vim's =:wqa=. =SPC q d= is Vim's =:qa!=: it closes the buffers of the files
+this client opened or shows, throwing away their unsaved changes, so the
+daemon keeps nothing half-edited. =SPC q Q= stops the whole server, so in a
+shared-daemon frame it ends the systemd service.
+
 * Where keys live
 
 The source is the keymap. =SPC ?= and Which-Key show the live bindings, so the
