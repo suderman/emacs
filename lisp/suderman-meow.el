@@ -184,16 +184,34 @@ Enter Insert when Return edited the buffer."
                  (/= tick (buffer-chars-modified-tick)))
         (suderman/meow-insert)))))
 
+(defun suderman/meow--line-hidden-p ()
+  "Return non-nil when no text of the line at point shows.
+Hidden markup, such as a Markdown heading's leading hashes, leaves the
+rest of its line shown."
+  (save-excursion
+    (forward-line 0)
+    (let ((eol (pos-eol)))
+      (if (= (point) eol)
+          (invisible-p (point))
+        (catch 'shown
+          (while (< (point) eol)
+            (unless (invisible-p (point))
+              (throw 'shown nil))
+            (goto-char (next-single-char-property-change (point) 'invisible
+                                                         nil eol)))
+          t)))))
+
 (defun suderman/goto-shown-line-end ()
   "Move from a hidden line to the end of the shown line above it.
 A click after a fold's arrow leaves point at the end of the hidden text,
 or on a line that starts right after it and so shows on the fold's line."
-  (let ((bol (pos-bol)))
+  (let ((bol (pos-bol))
+        (hidden (suderman/meow--line-hidden-p)))
     (when (and (> bol (point-min))
-               (or (invisible-p bol) (invisible-p (1- bol))))
-      (goto-char (if (invisible-p bol) bol (1- bol)))
+               (or hidden (invisible-p (1- bol))))
+      (goto-char (if hidden bol (1- bol)))
       (forward-line 0)
-      (while (and (not (bobp)) (invisible-p (point)))
+      (while (and (not (bobp)) (suderman/meow--line-hidden-p))
         (forward-line -1))
       (end-of-line))))
 
