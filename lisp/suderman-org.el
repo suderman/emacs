@@ -1525,7 +1525,8 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
            ((org-agenda-span 7) (org-agenda-start-on-weekday 1)))))
   (auto-save-visited-mode 1)
   :config
-  (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow)
+  (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow
+                           :face '(org-link suderman/fixed-pitch-text))
   (keymap-set org-mode-map "RET" #'suderman/org-return)
   (keymap-set org-mode-map "<remap> <org-meta-return>" #'suderman/org-meta-return)
   (keymap-set org-mode-map "<remap> <org-insert-heading-respect-content>"
