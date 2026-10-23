@@ -17,6 +17,8 @@
 (defvar org-archive-subtree-save-file-p)
 (defvar org-archive-from-agenda)
 (defvar org-tag-line-re)
+(defvar org-indent-indentation-per-level)
+(defvar markdown-ts-unordered-list-marker)
 (defvar org-state)
 (defvar org-file-tags)
 (defvar org-highlight-links)
@@ -25,6 +27,7 @@
 (defvar jit-lock-start)
 
 (declare-function suderman/dired-archive "suderman-files" ())
+(declare-function suderman/theme-blend "suderman-appearance" (face alpha))
 (declare-function suderman/meow-off "suderman-windows" ())
 (declare-function suderman/meow-insert "suderman-meow" ())
 (declare-function meow--selection-type "meow-util" ())
@@ -99,6 +102,10 @@
   "Remove display callbacks before `suderman-org' functions are unloaded."
   ;; These callback lists are not ordinary hooks known to `unload-feature'.
   (remove-hook 'enable-theme-functions #'suderman/org-apply-heading-faces)
+  (remove-hook 'enable-theme-functions #'suderman/org-apply-log-entry-faces)
+  (remove-hook 'enable-theme-functions #'suderman/org-apply-date-faces)
+  (when (timerp suderman/org-date-timer)
+    (cancel-timer suderman/org-date-timer))
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (derived-mode-p 'org-mode)
@@ -112,8 +119,54 @@
 
 (add-hook 'org-mode-hook #'suderman/org-enable-tag-face)
 
+(defface suderman/org-date '((t :inherit org-date :underline nil))
+  "Active timestamp more than a week away, shown as a shaded chip."
+  :group 'org-faces)
+
+(defface suderman/org-date-soon '((t :inherit org-date :underline nil))
+  "Active timestamp from today through six days ahead."
+  :group 'org-faces)
+
+(defface suderman/org-date-past '((t :inherit shadow :underline nil))
+  "Active timestamp that has passed and does not repeat."
+  :group 'org-faces)
+
+(defface suderman/org-date-inactive '((t :inherit font-lock-doc-face :underline nil))
+  "Inactive timestamp, a record rather than a plan."
+  :group 'org-faces)
+
+(defun suderman/org-apply-date-faces (&rest _)
+  "Shade timestamp chips with their own color blended into the background."
+  (pcase-dolist (`(,face ,color ,alpha)
+                 '((suderman/org-date org-date 0.12)
+                   (suderman/org-date-soon org-date 0.28)
+                   (suderman/org-date-past shadow 0.06)
+                   (suderman/org-date-inactive font-lock-doc-face 0.08)))
+    (set-face-background face (or (suderman/theme-blend color alpha) 'unspecified))))
+
+(add-hook 'org-mode-hook #'suderman/org-apply-date-faces)
+(add-hook 'enable-theme-functions #'suderman/org-apply-date-faces)
+(suderman/org-apply-date-faces)
+
+(defun suderman/org-date-face ()
+  "Return the chip face for the timestamp or range Org just matched."
+  (save-match-data
+    (let ((text (match-string 0)))
+      (if (eq (aref text 0) ?\[)
+          'suderman/org-date-inactive
+        (let* ((last (and (string-match ".*\\([0-9]\\{4\\}-[0-9][0-9]-[0-9][0-9]\\)" text)
+                          (match-string 1 text)))
+               (days (and last (- (org-time-string-to-absolute last) (org-today)))))
+          (cond ((null days) 'suderman/org-date)
+                ;; A repeating timestamp comes around again.
+                ((and (< days 0) (not (string-match-p "[.+]?\\+[0-9]+[hdwmy]" text)))
+                 'suderman/org-date-past)
+                ((= days 0) '((:weight bold) suderman/org-date-soon))
+                ((<= 0 days 6) 'suderman/org-date-soon)
+                (t 'suderman/org-date)))))))
+
 (defun suderman/org-enable-date-faces ()
-  "Keep timestamps distinct from headings and mute inactive timestamps."
+  "Show timestamps as chips: muted when inactive or past, stronger when soon."
   ;; Keep Org's matcher, after heading states but before code and comments.
   (setq org-font-lock-extra-keywords
         (cl-loop for rule in (assq-delete-all 'org-activate-dates
@@ -121,22 +174,104 @@
                  when (and (memq 'date org-highlight-links)
                            (eq (car-safe rule) 'org-font-lock-add-priority-faces))
                  collect '(org-activate-dates
-                           (0 (if (eq (char-after (match-beginning 0)) ?\[)
-                                  '(font-lock-doc-face org-date)
-                                'org-date)
+                           (0 (or (ignore-errors (suderman/org-date-face)) 'org-date)
                               prepend))
                  collect rule)))
 
 (add-hook 'org-font-lock-set-keywords-hook #'suderman/org-enable-date-faces)
 
+(defun suderman/org-repeater-label (count unit)
+  "Describe a repeater of COUNT UNITs, such as \"↻ weekly\"."
+  (let ((name (cdr (assoc unit '(("h" . "hour") ("d" . "day") ("w" . "week")
+                                 ("m" . "month") ("y" . "year"))))))
+    (concat "↻ " (if (equal count "1")
+                     (if (equal unit "d") "daily" (concat name "ly"))
+                   (format "every %s %ss" count name)))))
+
+(defun suderman/org-fontify-repeaters (limit)
+  "Show timestamp repeaters from point to LIMIT in words."
+  (remove-overlays (point) limit 'suderman/org-repeater t)
+  (unless suderman/org-literal
+    (while (re-search-forward
+            (concat "[[<][0-9]\\{4\\}-[0-9][0-9]-[0-9][0-9] [^]>\n]*?"
+                    ;; +, ++, and .+ differ only in how Org catches up.
+                    "\\([.+]?\\+\\([0-9]+\\)\\([hdwmy]\\)\\(?:/[0-9]+[hdwmy]\\)?\\)")
+            limit t)
+      (let ((overlay (make-overlay (match-beginning 1) (match-end 1) nil t nil)))
+        (overlay-put overlay 'suderman/org-repeater t)
+        (overlay-put overlay 'evaporate t)
+        (overlay-put overlay 'display (suderman/org-repeater-label
+                                       (match-string-no-properties 2)
+                                       (match-string-no-properties 3))))))
+  nil)
+
+(defun suderman/org-fontify-date-brackets (limit)
+  "Hide the angle brackets of active timestamps from point to LIMIT.
+They hide like link brackets, so literal view shows them again."
+  (remove-overlays (point) limit 'suderman/org-date-bracket t)
+  (unless suderman/org-literal
+    (while (re-search-forward org-ts-regexp limit t)
+      (dolist (position (list (match-beginning 0) (1- (match-end 0))))
+        (let ((overlay (make-overlay position (1+ position) nil t nil)))
+          (overlay-put overlay 'suderman/org-date-bracket t)
+          (overlay-put overlay 'evaporate t)
+          (overlay-put overlay 'invisible 'org-link)))))
+  nil)
+
+(defun suderman/org-list-bullets ()
+  "Return Markdown's unordered list glyphs by depth, so Org lists match."
+  (require 'markdown-ts-mode)
+  (mapcar (lambda (marker)
+            (if (stringp (car marker)) (string-trim (car marker)) "•"))
+          markdown-ts-unordered-list-marker))
+
+(defun suderman/org-fontify-list-bullets (limit)
+  "Show unordered list bullets from point to LIMIT as Markdown does, by depth."
+  (unless suderman/org-literal
+    (let ((bullets (suderman/org-list-bullets))
+          struct parents)
+      (while (re-search-forward "^\\(?:[ \t]*\\([-+]\\)\\|[ \t]+\\(\\*\\)\\)[ \t]+" limit t)
+        (let ((bullet (or (match-beginning 1) (match-beginning 2)))
+              (end (match-end 0)))
+          (save-excursion
+            (goto-char bullet)
+            (when (org-at-item-p)
+              (let ((item (line-beginning-position))
+                    (depth 0))
+                ;; One structure serves every item of the same list.
+                (unless (assq item struct)
+                  (setq struct (org-list-struct)
+                        parents (org-list-parents-alist struct)))
+                (while (setq item (cdr (assq item parents)))
+                  (setq depth (1+ depth)))
+                (compose-region bullet (1+ bullet)
+                                (nth (mod depth (length bullets)) bullets)))))
+          (goto-char end)))))
+  nil)
+
+(defvar suderman/org-date-timer nil
+  "Timer that refreshes past and soon timestamps after midnight.")
+
+(defun suderman/org-refresh-dates ()
+  "Refontify Org buffers so timestamp chips follow the new day."
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (derived-mode-p 'org-mode)
+        (font-lock-flush)))))
+
+(when (timerp suderman/org-date-timer)
+  (cancel-timer suderman/org-date-timer))
+(setq suderman/org-date-timer
+      (run-at-time "00:01" (* 24 60 60) #'suderman/org-refresh-dates))
+
 (defface suderman/org-drawer-block
   '((t (:extend t)))
-  "Source-block background for property and logbook drawers."
+  "Source-block background for the contents of property and logbook drawers."
   :group 'org-faces)
 
 (defface suderman/org-drawer-label
-  '((t (:inherit org-block-begin-line :extend nil)))
-  "Muted compact face for property and logbook drawer labels."
+  '((t (:inherit shadow :extend nil)))
+  "Muted face, without a background, for drawer labels and their :END:."
   :group 'org-faces)
 
 (defun suderman/org-apply-block-face-geometry ()
@@ -190,13 +325,17 @@
                    (body-begin (save-excursion
                                  (goto-char begin)
                                  (line-end-position))))
-              ;; Folding hides the extending newline, leaving only the compact
-              ;; label.  Expanded drawers show the full-width body underneath.
-              (add-face-text-property body-begin end
+              ;; Only the contents get a background; the label and :END: lines
+              ;; stay plain, open or folded.
+              (add-face-text-property (min (1+ body-begin) end-begin) end-begin
                                       'suderman/org-drawer-block)
               (add-face-text-property begin body-begin
                                       'suderman/org-drawer-label)
-              (add-face-text-property end-begin end 'org-block-end-line)
+              ;; A prose-font newline would make the label line taller only
+              ;; while the drawer is open.
+              (add-face-text-property body-begin (min (1+ body-begin) end)
+                                      'suderman/fixed-pitch-text t)
+              (add-face-text-property end-begin end 'suderman/org-drawer-label)
               (put-text-property begin end 'font-lock-multiline t)
               (goto-char end)
               (throw 'found t)))))
@@ -214,9 +353,176 @@
         (setq font-lock-beg begin)
         t))))
 
+(defconst suderman/org-log-state-re
+  (concat "^\\([ \t]*\\)- State \"\\([^\"\n]+\\)\"[ \t]+from"
+          "\\(?:[ \t]+\"\\([^\"\n]*\\)\"\\)?[ \t]+\\[\\([^]\n]+\\)\\]"
+          "\\(?:[ \t]*\\\\\\\\\\)?[ \t]*$")
+  "A LOGBOOK state change: indentation, new state, old state, timestamp.")
+
+(defface suderman/org-log-odd '((t :extend t))
+  "Background for the first and every other LOGBOOK entry."
+  :group 'org-faces)
+
+(defface suderman/org-drawer-entry '((t :height 0.9))
+  "Text size of PROPERTIES and LOGBOOK entries, relative to their usual size."
+  :group 'org-faces)
+
+(defface suderman/org-log-even '((t :extend t))
+  "Background for the second and every other LOGBOOK entry."
+  :group 'org-faces)
+
+(defun suderman/org-apply-log-entry-faces (&rest _)
+  "Shade LOGBOOK entries 5% and 10% from the drawer toward the foreground.
+Both differ from the drawer's own label and :END: lines."
+  (let ((background (face-background 'suderman/org-drawer-block nil t))
+        (foreground (face-foreground 'default nil t)))
+    (when-let* (((and (stringp background) (stringp foreground)))
+                (background-rgb (color-name-to-rgb background))
+                (foreground-rgb (color-name-to-rgb foreground)))
+      (pcase-dolist (`(,face . ,alpha) '((suderman/org-log-odd . 0.05)
+                                         (suderman/org-log-even . 0.10)))
+        (set-face-background face (apply #'color-rgb-to-hex
+                                         (append (color-blend foreground-rgb
+                                                              background-rgb alpha)
+                                                 '(2))))))))
+
+(add-hook 'org-mode-hook #'suderman/org-apply-log-entry-faces)
+(add-hook 'enable-theme-functions #'suderman/org-apply-log-entry-faces)
+(suderman/org-apply-log-entry-faces)
+
+(defun suderman/org-log-overlay (begin end &rest properties)
+  "Add a LOGBOOK display overlay from BEGIN to END with PROPERTIES."
+  (let ((overlay (make-overlay begin end nil t nil)))
+    (overlay-put overlay 'suderman/org-log t)
+    (overlay-put overlay 'evaporate t)
+    (while properties
+      (overlay-put overlay (pop properties) (pop properties)))))
+
+(defun suderman/org-log-state-display (to from stamp quiet background)
+  "Return the compact LOGBOOK line for TO from FROM at STAMP.
+QUIET mutes the whole line.  BACKGROUND is the entry's background face,
+which overlay faces would not otherwise give a display string."
+  (let ((state (lambda (keyword)
+                 (propertize keyword 'face
+                             ;; State faces carry their own heading background.
+                             ;; The relative size must precede the absolute one.
+                             (list background 'suderman/org-drawer-entry
+                                   (if quiet 'shadow (or (org-get-todo-face keyword) 'org-todo))
+                                   'suderman/fixed-pitch-text))))
+        (muted (lambda (text)
+                 (propertize text 'face (list background 'suderman/org-drawer-entry
+                                              'shadow 'suderman/fixed-pitch-text)))))
+    (concat (if (string-empty-p from) "" (concat (funcall state from) (funcall muted " → ")))
+            (funcall state to) (funcall muted (concat "  " stamp)))))
+
+(defun suderman/org-decorate-log-entry (end prefix background)
+  "Decorate the LOGBOOK entry whose state line was just matched, up to END.
+PREFIX is the org-indent width in columns.  BACKGROUND shades the entry."
+  (let* ((line (match-beginning 0))
+         (to (match-string 2))
+         (from (or (match-string 3) ""))
+         (stamp (match-string 4))
+         (bullet (match-end 1))
+         (state-end (match-end 0))
+         (notes (progn (forward-line 1) (point))))
+    (while (and (< (point) end)
+                (not (looking-at-p "^[ \t]*\\(?:- \\|CLOCK:\\|:END:\\)")))
+      (forward-line 1))
+    (let* ((notes-end (point))
+           (text (replace-regexp-in-string
+                  org-link-bracket-re ""
+                  (buffer-substring-no-properties notes notes-end)))
+           (quiet (string-match-p "\\`[ \t\n]*no changes?\\.?[ \t\n]*\\'"
+                                  (downcase text))))
+      ;; Above the per-line overlays, so its relative size scales their text.
+      (suderman/org-log-overlay line notes-end
+                                'face (list background 'suderman/org-drawer-entry)
+                                'priority 1)
+      (suderman/org-log-overlay
+       bullet state-end
+       'display (suderman/org-log-state-display to from stamp quiet background))
+      (goto-char notes)
+      (while (< (point) notes-end)
+        ;; Monospace up to the note text, so its column is predictable.
+        (let ((lead (point))
+              (column (+ prefix (skip-chars-forward " \t"))))
+          (when (looking-at org-link-bracket-re)
+            ;; Link markup is hidden, so only its label takes columns.
+            (setq column (+ column (length (or (match-string 2) (match-string 1)))))
+            (goto-char (match-end 0))
+            (setq column (+ column (skip-chars-forward " \t"))))
+          (suderman/org-log-overlay lead (point) 'face 'suderman/fixed-pitch-text)
+          ;; Keep org-indent's margin, then the entry's background to the text.
+          ;; Monospace spaces, since a prefix string ignores :align-to.
+          (suderman/org-log-overlay
+           lead (line-end-position)
+           'wrap-prefix (concat (propertize (make-string prefix ?\s)
+                                            'face '(org-indent suderman/fixed-pitch-text))
+                                (propertize (make-string (- column prefix) ?\s)
+                                            'face (list background 'suderman/org-drawer-entry
+                                                        'suderman/fixed-pitch-text)))
+           'face (and quiet 'shadow)))
+        (forward-line 1))
+      (goto-char notes-end))))
+
+(defun suderman/org-decorate-logbook (begin end)
+  "Show state changes in the LOGBOOK body from BEGIN to END compactly.
+Notes of \"No change.\" runs are muted, entries alternate two shades, and
+wrapped notes hang under their text.  Literal view shows the raw text."
+  (remove-overlays begin end 'suderman/org-log t)
+  (unless suderman/org-literal
+    (save-excursion
+      (goto-char begin)
+      (let ((prefix (if (bound-and-true-p org-indent-mode)
+                        (* (or (org-current-level) 0) org-indent-indentation-per-level)
+                      0))
+            (odd t))
+        (while (re-search-forward suderman/org-log-state-re end t)
+          (suderman/org-decorate-log-entry
+           end prefix (if odd 'suderman/org-log-odd 'suderman/org-log-even))
+          (setq odd (not odd)))))))
+
+(defun suderman/org-stripe-properties (begin end)
+  "Shade property lines from BEGIN to END like LOGBOOK entries."
+  (remove-overlays begin end 'suderman/org-log t)
+  (unless suderman/org-literal
+    (save-excursion
+      (goto-char begin)
+      (let ((odd t))
+        (while (< (point) end)
+          (suderman/org-log-overlay
+           (point) (min (line-beginning-position 2) end)
+           'face (list (if odd 'suderman/org-log-odd 'suderman/org-log-even)
+                       'suderman/org-drawer-entry))
+          (setq odd (not odd))
+          (forward-line 1))))))
+
+(defun suderman/org-fontify-drawer-entries (limit)
+  "Decorate each LOGBOOK and PROPERTIES drawer from point to LIMIT."
+  (let ((case-fold-search t))
+    (while (re-search-forward "^[ \t]*:\\(LOGBOOK\\|PROPERTIES\\):[ \t]*$" limit t)
+      (let* ((begin (match-beginning 0))
+             (element (save-excursion (goto-char begin) (org-element-at-point)))
+             (type (org-element-type element))
+             (contents-begin (org-element-property :contents-begin element)))
+        (when (and (memq type '(drawer property-drawer))
+                   (= begin (org-element-property :post-affiliated element))
+                   ;; An empty drawer has no contents to decorate.
+                   contents-begin)
+          (funcall (if (eq type 'drawer)
+                       #'suderman/org-decorate-logbook
+                     #'suderman/org-stripe-properties)
+                   contents-begin (org-element-property :contents-end element)))
+        (goto-char (max (point) (org-element-property :end element))))))
+  nil)
+
 (defconst suderman/org-block-font-lock-keywords
   '((suderman/org-fontify-source-block-openers)
-    (suderman/org-fontify-drawer-blocks)))
+    (suderman/org-fontify-drawer-blocks)
+    (suderman/org-fontify-drawer-entries)
+    (suderman/org-fontify-repeaters)
+    (suderman/org-fontify-date-brackets)
+    (suderman/org-fontify-list-bullets)))
 
 (defun suderman/org-enable-drawer-blocks ()
   "Append collapsible block backgrounds after Org's fontification."
@@ -1643,7 +1949,10 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
 
 (use-package org-superstar
   :after org
-  :hook (org-mode . org-superstar-mode))
+  :hook (org-mode . org-superstar-mode)
+  :custom
+  ;; `suderman/org-fontify-list-bullets' draws list bullets like Markdown's.
+  (org-superstar-prettify-item-bullets nil))
 
 ;; Scroll wide tables sideways while the surrounding text keeps wrapping.
 (use-package phscroll

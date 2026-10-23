@@ -579,8 +579,8 @@
         (let ((faces (ensure-list (get-text-property (1- (point)) 'face))))
           (should (eq (car faces) 'suderman/org-drawer-label))
           (should-not (memq 'suderman/org-drawer-block faces)))
-        (should (memq 'suderman/org-drawer-block
-                      (ensure-list (get-text-property (point) 'face))))
+        (should-not (memq 'suderman/org-drawer-block
+                          (ensure-list (get-text-property (point) 'face))))
         (org-fold-hide-drawer-toggle t)
         (search-forward (cadr drawer))
         (should (org-invisible-p (1- (point))))
@@ -593,14 +593,15 @@
                       (ensure-list (get-text-property (1- (point)) 'face))))
         (search-forward ":END:")
         (let ((faces (ensure-list (get-text-property (1- (point)) 'face))))
-          (should (eq (car faces) 'org-block-end-line))
-          (should (memq 'suderman/org-drawer-block faces))))
+          (should (eq (car faces) 'suderman/org-drawer-label))
+          (should-not (memq 'suderman/org-drawer-block faces))))
       (goto-char (point-min))
       (search-forward ":CREATED:")
       (should (memq 'org-special-keyword
                     (ensure-list (get-text-property (1- (point)) 'face))))
       (search-forward "2026-09-17")
-      (should (memq 'org-date (ensure-list (get-text-property (1- (point)) 'face))))
+      (should (memq 'suderman/org-date-inactive
+                    (ensure-list (get-text-property (1- (point)) 'face))))
       (search-forward "a link")
       (should (memq 'org-link (ensure-list (get-text-property (1- (point)) 'face))))
       (search-forward "Outside")
