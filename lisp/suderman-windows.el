@@ -126,11 +126,30 @@ SPC in these views calls `meow-keypad' directly."
 (defun suderman/new-frame ()
   "Open a new graphical frame, or a new tab in a terminal.
 A terminal frame would only hide the current one; the multiplexer owns
-new windows there."
+new windows there.  An Org buffer opens as an indirect clone so each
+frame can narrow to its own heading."
   (interactive)
   (if (display-graphic-p)
-      (make-frame-command)
+      (let* ((buffer (window-buffer))
+             (clone (with-current-buffer buffer
+                      (when (derived-mode-p 'org-mode)
+                        (clone-indirect-buffer nil nil))))
+             (frame (make-frame-command)))
+        (when clone
+          (set-window-buffer (frame-selected-window frame) clone)
+          (set-frame-parameter frame 'suderman/clone clone)))
     (tab-bar-new-tab)))
+
+(defun suderman/kill-frame-clone (frame)
+  "Kill FRAME's indirect clone unless another frame shows it."
+  (let ((clone (frame-parameter frame 'suderman/clone)))
+    (when (and (buffer-live-p clone)
+               (not (seq-some (lambda (window)
+                                (not (eq (window-frame window) frame)))
+                              (get-buffer-window-list clone nil t))))
+      (kill-buffer clone))))
+
+(add-hook 'delete-frame-functions #'suderman/kill-frame-clone)
 
 (defun suderman/split-window-below-and-focus ()
   "Split the selected window below and focus the new window."

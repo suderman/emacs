@@ -125,3 +125,8 @@ automatically. Xref results use Consult's preview and filtering too.
 Edger handles Meta and =SPC w= navigation, resizing, splits, and closing. At an
 Emacs boundary, it can hand control to the surrounding terminal multiplexer.
 =suderman/window-keys= holds the Meta bindings once; every view installs it.
+
+=M-n= opens a new frame, or a new tab in a terminal. From an Org buffer the new
+frame shows an indirect clone (=file.org<2>=). The two share text but keep
+separate narrowing, folding, point, and undo, so each frame can narrow to its
+own heading. Saving either saves the file. Closing the frame kills its clone.
