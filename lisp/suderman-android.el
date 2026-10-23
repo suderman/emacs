@@ -385,6 +385,8 @@ Instead that frame takes another frame's windows, and the other closes."
   (require 'face-remap)
   (global-set-key [touchscreen-pinch] #'suderman/android-global-pinch)
   (global-set-key [touchscreen-hold] #'suderman/android-hold-toggle-keyboard)
+  ;; A stray tap on the buffer name would switch to the previous buffer.
+  (keymap-unset mode-line-buffer-identification-keymap "<mode-line> <mouse-1>" t)
   (suderman/android-setup-touch-scrolling)
   (add-hook 'post-command-hook #'suderman/remember-tap-selection)
   (add-hook 'meow-insert-enter-hook #'suderman/android-insert-show-keyboard)

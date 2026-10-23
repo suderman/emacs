@@ -39,6 +39,9 @@ fences. A second tap on the same link opens it, and a second tap on the same
 foldable line toggles its fold. In Insert state, those taps only move the
 cursor.
 
+A tap on the buffer name in the mode line does nothing, so a stray tap cannot
+switch to the previous buffer.
+
 Pinch scales text in every buffer. Vertical swipes scroll by pixel and keep
 going after you lift your finger. Buffers with truncated lines, such as Agenda,
 also swipe sideways; =SPC t t= turns that on or off for the current buffer.
