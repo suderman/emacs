@@ -507,7 +507,9 @@ wrapped notes hang under their text.  Literal view shows the raw text."
 (defun suderman/org-fontify-drawer-entries (limit)
   "Decorate each LOGBOOK and PROPERTIES drawer from point to LIMIT."
   (let ((case-fold-search t))
-    (while (re-search-forward "^[ \t]*:\\(LOGBOOK\\|PROPERTIES\\):[ \t]*$" limit t)
+    ;; A decorated drawer can end past LIMIT when fontification splits it.
+    (while (and (< (point) limit)
+                (re-search-forward "^[ \t]*:\\(LOGBOOK\\|PROPERTIES\\):[ \t]*$" limit t))
       (let* ((begin (match-beginning 0))
              (element (save-excursion (goto-char begin) (org-element-at-point)))
              (type (org-element-type element))
