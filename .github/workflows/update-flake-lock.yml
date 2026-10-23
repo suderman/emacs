@@ -21,14 +21,18 @@ jobs:
       - name: Update flake
         run: nix flake update
 
-      - name: Commit and push if flake.lock changed
+      # Moves packages added to use-package forms into Nix.
+      - name: Update use-package list
+        run: nix run .#update-use-packages
+
+      - name: Commit and push if anything changed
         run: |
-          if git diff --quiet flake.lock; then
-            echo "No changes to flake.lock"
+          if git diff --quiet flake.lock nix/packages/use-packages.json; then
+            echo "No changes to flake.lock or use-packages.json"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add flake.lock
+          git add flake.lock nix/packages/use-packages.json
           git commit -m "Automated flake.lock update"
           git push

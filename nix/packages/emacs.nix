@@ -63,78 +63,84 @@
     '';
   };
 
-  emacsWithDependencies = pkgs.emacsWithPackagesFromUsePackage {
-    package = emacsBase;
-    config = lib.concatMapStringsSep "\n" builtins.readFile configFiles;
+  # Parsing the config in Nix takes about 9 GB, so every consumer reads
+  # use-packages.json instead. `nix run .#update-use-packages` refreshes it.
+  parsedUsePackages = lib.unique ((pkgs.callPackage "${inputs.emacs-overlay}/parse.nix" {}).parsePackagesFromUsePackage {
+    configText = lib.concatMapStringsSep "\n" builtins.readFile configFiles;
     alwaysEnsure = true;
-    extraEmacsPackages = epkgs:
-      let
-        kitty-graphics = epkgs.trivialBuild {
-          pname = "kitty-graphics";
-          version = inputs.kitty-graphics.shortRev;
-          src = inputs.kitty-graphics;
-          packageRequires = [];
-        };
-      in
-        (with epkgs; [
-          kitty-graphics
-          jinx
-          treesit-grammars.with-all-grammars
-        ])
-      ++ lib.optionals (!tty) (
-        [epkgs.pdf-tools]
-        ++ (with pkgs; [
-          wl-clipboard
-          # Kitty graphics inline video and video thumbnails in terminal frames.
-          # Headless variants skip ffplay, yt-dlp, and their GUI stacks.
-          ffmpeg-headless
-          ffmpegthumbnailer
-          mpv-unwrapped
-          clang-tools
-          pandoc
-        ])
-      )
-      ++ (with pkgs; [
-        fd
-        ripgrep
-        git
-        rsync
-        python3
-        vips
-        mediainfo
-        epubThumbnailer
-        poppler-utils
-        imagemagick
-        p7zip
-        enchant
-        hunspell
-        hunspellDicts.en_US
-        bash-language-server
-        basedpyright
-        gopls
-        lua-language-server
-        marksman
-        nil
-        phpactor
-        ruby-lsp
-        rust-analyzer
-        taplo
-        tree-sitter
-        twiggyLanguageServer
-        typescript-language-server
-        vscode-langservers-extracted
-        yaml-language-server
-        alejandra
-        prettier
-        ruff
-        shellcheck
-        shfmt
-        sqlfluff
-        stylua
-        treefmt
-        yamlfmt
-      ]);
-  };
+  });
+
+  emacsWithDependencies = (pkgs.emacsPackagesFor emacsBase).emacsWithPackages (epkgs:
+    # A name missing from epkgs falls back to package.el, as upstream does.
+      map (name: epkgs.${name} or null) (lib.importJSON ./use-packages.json)
+      ++ (
+        let
+          kitty-graphics = epkgs.trivialBuild {
+            pname = "kitty-graphics";
+            version = inputs.kitty-graphics.shortRev;
+            src = inputs.kitty-graphics;
+            packageRequires = [];
+          };
+        in
+          (with epkgs; [
+            kitty-graphics
+            jinx
+            treesit-grammars.with-all-grammars
+          ])
+          ++ lib.optionals (!tty) (
+            [epkgs.pdf-tools]
+            ++ (with pkgs; [
+              wl-clipboard
+              # Kitty graphics inline video and video thumbnails in terminal frames.
+              # Headless variants skip ffplay, yt-dlp, and their GUI stacks.
+              ffmpeg-headless
+              ffmpegthumbnailer
+              mpv-unwrapped
+              clang-tools
+              pandoc
+            ])
+          )
+          ++ (with pkgs; [
+            fd
+            ripgrep
+            git
+            rsync
+            python3
+            vips
+            mediainfo
+            epubThumbnailer
+            poppler-utils
+            imagemagick
+            p7zip
+            enchant
+            hunspell
+            hunspellDicts.en_US
+            bash-language-server
+            basedpyright
+            gopls
+            lua-language-server
+            marksman
+            nil
+            phpactor
+            ruby-lsp
+            rust-analyzer
+            taplo
+            tree-sitter
+            twiggyLanguageServer
+            typescript-language-server
+            vscode-langservers-extracted
+            yaml-language-server
+            alejandra
+            prettier
+            ruff
+            shellcheck
+            shfmt
+            sqlfluff
+            stylua
+            treefmt
+            yamlfmt
+          ])
+      ));
 in
   pkgs.symlinkJoin {
     inherit (emacsWithDependencies) name;
@@ -148,5 +154,6 @@ in
         --add-flags "--init-directory ${configSource}" \
         --set-default DICPATH "${pkgs.hunspellDicts.en_US}/share/hunspell"
     '';
+    passthru = {inherit parsedUsePackages;};
     meta = emacsWithDependencies.meta // {mainProgram = "emacs";};
   }

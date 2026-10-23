@@ -70,9 +70,13 @@ behavior, fonts, tree-sitter grammars, language servers, or external tools.
 Package ownership:
 
 - `use-package` forms are the one list of Elisp packages. On NixOS the flake
-  reads them and supplies each package, so `:ensure` finds it installed.
+  supplies each package, so `:ensure` finds it installed. It reads their names
+  from the generated `nix/packages/use-packages.json`, because parsing the
+  config in Nix takes about 9 GB and would run in every host evaluation.
 - A package added locally installs through package.el into
   `~/.local/share/emacs/elpa` until the next flake update moves it into Nix.
+  That nightly workflow runs `nix run .#update-use-packages`; run it yourself
+  to move a package sooner.
 - `edger` and `meow-purrsist` install from GitHub through `package-vc` on every
   platform, and `fling` does on the Android APK. `SPC q u` upgrades Git
   packages everywhere and archive packages only on Android.
