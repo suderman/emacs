@@ -21,6 +21,8 @@
 (defvar touch-screen-word-select)
 
 (declare-function server-running-p "server" (&optional name))
+(declare-function touch-screen-hold "touch-screen" (event))
+(declare-function touch-screen-inhibit-drag "touch-screen")
 (declare-function suderman/sync-fixed-pitch-height "suderman-appearance")
 
 (defconst suderman/android-termux-bin
@@ -135,8 +137,11 @@ PROMOTE-TO-REGION is as for `mouse-set-point'."
    (t (mouse-set-point event promote-to-region))))
 
 (defun suderman/fold-tap-keyboard-p ()
-  "Keep the Android keyboard hidden for a tap that toggles a fold."
-  (not (suderman/fold-tap-p (point))))
+  "Leave the Android keyboard as it was for a tap in Normal state.
+Org and Markdown read like reference material, so only Insert state taps
+show it.  A long press toggles it."
+  (or (bound-and-true-p meow-insert-mode)
+      (suderman/android-keyboard-visible-p (selected-frame))))
 
 (defun suderman/enable-fold-taps (line-p toggle)
   "Let a second tap toggle folds in this buffer.
@@ -198,6 +203,33 @@ it was before the first tap.  PROMOTE-TO-REGION is as for `mouse-set-point'."
       (when (nth 2 first)
         (goto-char (nth 2 first)))
       (suderman/android-hide-keyboard))))
+
+(defun suderman/android-hold-toggle-keyboard (event)
+  "Move point to the long press EVENT and toggle the keyboard.
+Outside Insert state, selection belongs to Meow's keys, so the press selects
+nothing and a following drag does nothing.  In Insert state it selects a
+word and drags the selection as usual."
+  (interactive "e")
+  (let* ((posn (event-start event))
+         (window (posn-window posn)))
+    (cond
+     ((not (windowp window)))
+     ((buffer-local-value 'meow-insert-mode (window-buffer window))
+      (touch-screen-hold event))
+     ((or (not (window-minibuffer-p window))
+          (minibuffer-window-active-p window))
+      (touch-screen-inhibit-drag)
+      (select-window window)
+      (when (posn-point posn)
+        (goto-char (posn-point posn)))
+      (if (suderman/android-keyboard-visible-p (selected-frame))
+          (suderman/android-hide-keyboard)
+        (suderman/android-show-keyboard))))))
+
+(defun suderman/android-insert-show-keyboard ()
+  "Show the keyboard when the selected buffer enters Insert state."
+  (when (eq (current-buffer) (window-buffer))
+    (suderman/android-show-keyboard)))
 
 (defun suderman/android-volume-up ()
   "Show the software keyboard, or with it showing, open the Meow keypad."
@@ -352,8 +384,10 @@ Instead that frame takes another frame's windows, and the other closes."
                        path-separator))
   (require 'face-remap)
   (global-set-key [touchscreen-pinch] #'suderman/android-global-pinch)
+  (global-set-key [touchscreen-hold] #'suderman/android-hold-toggle-keyboard)
   (suderman/android-setup-touch-scrolling)
   (add-hook 'post-command-hook #'suderman/remember-tap-selection)
+  (add-hook 'meow-insert-enter-hook #'suderman/android-insert-show-keyboard)
   ;; Taps still show the keyboard in editable text through this command.
   (add-to-list 'touch-screen-set-point-commands #'suderman/android-mouse-set-point)
   (add-to-list 'touch-screen-set-point-commands #'suderman/mouse-set-point-or-fold)
