@@ -2,7 +2,9 @@
   description = "Suderman's Emacs configuration";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Pin until nixos-unstable builds diff-cover (for sqlfluff) again.
+    # Matches nixpkgs-unstable in suderman/nixos.
+    nixpkgs.url = "github:NixOS/nixpkgs/fe13242281a67641c0102cdb1087f0ebe586c7df";
     blueprint.url = "github:numtide/blueprint";
     blueprint.inputs.nixpkgs.follows = "nixpkgs";
     emacs-overlay.url = "github:nix-community/emacs-overlay";
