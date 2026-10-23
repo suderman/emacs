@@ -26,6 +26,7 @@
 (declare-function suderman/meow-insert "suderman-meow" ())
 (declare-function markdown-ts-insert-list-item "markdown-ts-mode" ())
 (declare-function markdown-ts-newline "markdown-ts-mode" ())
+(declare-function suderman/variable-pitch-available-p "suderman-appearance" ())
 
 (defconst suderman/markdown-preview-css
   (with-temp-buffer
@@ -380,6 +381,41 @@ Insert from Normal."
   (suderman/enable-fold-taps #'suderman/markdown--foldable-line-p
                              #'suderman/meow-toggle-fold))
 
+(defvar-local suderman/markdown-fixed-pitch-cookies nil)
+
+(defun suderman/markdown-enable-mixed-pitch ()
+  "Use proportional prose with fixed-width code and tables, as Org does.
+Literal view stays fixed-width throughout."
+  (mapc #'face-remap-remove-relative suderman/markdown-fixed-pitch-cookies)
+  (setq suderman/markdown-fixed-pitch-cookies nil)
+  (if (not (and markdown-ts-hide-markup (suderman/variable-pitch-available-p)))
+      (variable-pitch-mode -1)
+    (variable-pitch-mode 1)
+    (setq suderman/markdown-fixed-pitch-cookies
+          (mapcar (lambda (face)
+                    (face-remap-add-relative face 'suderman/fixed-pitch-text))
+                  '(markdown-ts-code-span markdown-ts-code-block
+                    markdown-ts-code-block-markup-hidden markdown-ts-indented-code-block
+                    markdown-ts-in-code-block markdown-ts-language-keyword
+                    markdown-ts-table markdown-ts-in-table markdown-ts-table-header
+                    markdown-ts-table-cell markdown-ts-table-delimiter-cell
+                    markdown-ts-html-block markdown-ts-html-tag markdown-ts-latex
+                    markdown-ts-link-destination markdown-ts-delimiter
+                    markdown-ts-task-checked markdown-ts-task-unchecked
+                    markdown-ts-thematic-break)))))
+
+(defun suderman/markdown-refresh-mixed-pitch (&optional frame)
+  "Enable mixed typography in existing Markdown buffers when GUI FRAME is created."
+  (when (display-graphic-p frame)
+    (with-selected-frame (or frame (selected-frame))
+      (dolist (buffer (buffer-list))
+        (with-current-buffer buffer
+          (when (derived-mode-p 'markdown-ts-mode)
+            (suderman/markdown-enable-mixed-pitch)))))))
+
+(add-hook 'after-make-frame-functions #'suderman/markdown-refresh-mixed-pitch)
+(suderman/markdown-refresh-mixed-pitch)
+
 (defun suderman/markdown-toggle-formatting ()
   "Switch this Markdown buffer between formatted and literal views.
 Literal shows markup delimiters, link targets, and image links as raw text."
@@ -387,6 +423,7 @@ Literal shows markup delimiters, link targets, and image links as raw text."
   (markdown-ts-toggle-hide-markup)
   (unless (eq markdown-ts-inline-images markdown-ts-hide-markup)
     (markdown-ts-toggle-inline-images))
+  (suderman/markdown-enable-mixed-pitch)
   (message "Markdown %s" (if markdown-ts-hide-markup "formatted" "literal")))
 
 (defun suderman/toggle-formatting ()
@@ -399,12 +436,18 @@ Literal shows markup delimiters, link targets, and image links as raw text."
 (use-package markdown-ts-mode
   :ensure nil
   :mode "\\.\\(?:md\\|markdown\\)\\'"
-  :hook (markdown-ts-mode . suderman/markdown-folding)
+  :hook ((markdown-ts-mode . suderman/markdown-folding)
+         (markdown-ts-mode . suderman/markdown-enable-mixed-pitch))
   :custom
   ;; Open formatted, as Org does; SPC t f shows the literal markup.
   (markdown-ts-hide-markup t)
   (markdown-ts-inline-images t)
   :config
+  ;; Share Org's heading colors and sizes, level for level.
+  (require 'org-faces)
+  (dotimes (level 6)
+    (set-face-attribute (intern (format "markdown-ts-heading-%d" (1+ level))) nil
+                        :inherit (intern (format "org-level-%d" (1+ level)))))
   ;; TAB after a folded heading's arrow should still cycle that heading.
   (advice-add 'markdown-ts-outline-cycle :before #'suderman/goto-shown-line-end)
   :bind (:map markdown-ts-mode-map

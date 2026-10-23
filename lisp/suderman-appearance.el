@@ -124,6 +124,12 @@ Do not map its non-PUA symbols or the unused supplementary PUA blocks.")
   "Fixed-width text in mixed-pitch buffers, at each frame's default height."
   :group 'faces)
 
+(defun suderman/variable-pitch-available-p ()
+  "Return non-nil when this frame can show the system prose font."
+  (and (display-graphic-p)
+       (when-let* ((family (plist-get suderman/system-style :variable-font)))
+         (find-font (font-spec :family family)))))
+
 (defun suderman/sync-fixed-pitch-height (&optional frame)
   "Match `suderman/fixed-pitch-text' to the default height of FRAME.
 Without FRAME, update every frame."

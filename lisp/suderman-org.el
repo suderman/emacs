@@ -28,6 +28,7 @@
 
 (declare-function suderman/dired-archive "suderman-files" ())
 (declare-function suderman/theme-blend "suderman-appearance" (face alpha))
+(declare-function suderman/variable-pitch-available-p "suderman-appearance" ())
 (declare-function suderman/meow-off "suderman-windows" ())
 (declare-function suderman/meow-insert "suderman-meow" ())
 (declare-function meow--selection-type "meow-util" ())
@@ -97,6 +98,9 @@
 
 (add-hook 'org-mode-hook #'suderman/org-apply-heading-faces)
 (add-hook 'enable-theme-functions #'suderman/org-apply-heading-faces)
+;; Markdown headings inherit these, sometimes before any Org buffer opens.
+(with-eval-after-load 'org-faces
+  (suderman/org-apply-heading-faces))
 
 (defun suderman-org-unload-function ()
   "Remove display callbacks before `suderman-org' functions are unloaded."
@@ -543,18 +547,14 @@ wrapped notes hang under their text.  Literal view shows the raw text."
 
 (suderman/org-refresh-drawer-blocks)
 
-(defvar suderman/system-style)
 (defvar-local suderman/org-fixed-pitch-cookies nil)
 (defvar-local suderman/org-literal nil
   "Non-nil when `suderman/org-toggle-formatting' shows raw Org syntax.")
 
 (defun suderman/org-enable-mixed-pitch ()
   "Use proportional prose with fixed-width structural text in GUI Org buffers."
-  (when (and (display-graphic-p)
-             (not suderman/org-literal)
-             (plist-get suderman/system-style :variable-font)
-             (find-font (font-spec :family
-                                  (plist-get suderman/system-style :variable-font))))
+  (when (and (not suderman/org-literal)
+             (suderman/variable-pitch-available-p))
     (variable-pitch-mode 1)
     (mapc #'face-remap-remove-relative suderman/org-fixed-pitch-cookies)
     ;; Base16 gives block delimiters their own faces instead of org-meta-line.

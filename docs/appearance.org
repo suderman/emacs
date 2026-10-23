@@ -43,7 +43,8 @@ back.
 Markdown buffers open formatted too, through =markdown-ts-mode='s own
 options: heading hashes, emphasis markers, backticks, link targets, and code
 fences are hidden, list items and checkboxes get symbols, and images preview
-inline. =SPC t f= shows the raw markup and back.
+inline. Headings take Org's color and size for their level, and Org lists use
+Markdown's bullets. =SPC t f= shows the raw markup and back.
 Doom Modeline keeps Normal state quiet and shows Insert, Motion, Keypad, and
 Beacon. Nerd Font fallback covers only the BMP private use area and
 =F0001= to =F1AF0=.
