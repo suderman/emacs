@@ -120,11 +120,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1792716212,
-        "narHash": "sha256-GU/7eiYReRD+O1QCTsz1Jk2m6d79LtFQf1Cm0DTFZR0=",
+        "lastModified": 1792723509,
+        "narHash": "sha256-Z3ZBIWjPzDYCnenyqDt+buJSUN8mWLD8lYlpr4V5u+Q=",
         "owner": "suderman",
         "repo": "pins",
-        "rev": "7dee95b1fdb2a1d6acb9d882332395475f0bb080",
+        "rev": "860c9cd2dfc6046c1e4a3474c05f337fe5b15a2c",
         "type": "github"
       },
       "original": {
