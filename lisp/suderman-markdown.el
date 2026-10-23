@@ -11,6 +11,12 @@
 
 (defvar hs-treesit-things)
 (declare-function suderman/meow-toggle-fold "suderman-meow" ())
+(declare-function hs-overlay-at "hideshow" (position))
+(declare-function hs-get-first-block-on-line "hideshow" ())
+(declare-function suderman/enable-fold-taps "suderman-android" (line-p toggle))
+(declare-function suderman/tap-repeats-p "suderman-android" (beg end))
+(declare-function touch-screen-track-tap "touch-screen"
+                  (event &optional update data threshold))
 (declare-function suderman/goto-shown-line-end "suderman-meow" ())
 (declare-function suderman/meow-insert "suderman-meow" ())
 (declare-function markdown-ts-insert-list-item "markdown-ts-mode" ())
@@ -186,6 +192,28 @@ and updates only after a save changes the preview."
   (mouse-set-point event)
   (suderman/meow-toggle-fold))
 
+(defun suderman/markdown-push-button (&optional pos use-mouse-action)
+  "Push the button at POS, as `push-button' does with USE-MOUSE-ACTION.
+On Android the first tap on a link only moves point; a second tap follows
+it, as in Org.  A touch that turns into a swipe still scrolls."
+  (interactive
+   (list (if (integerp last-command-event) (point) last-command-event)))
+  (if (not (and (featurep 'android) (consp pos)))
+      (push-button pos use-mouse-action)
+    (let* ((posn (event-start pos))
+           (target (posn-point posn)))
+      (when (and target
+                 (or (not (eq (car pos) 'touchscreen-down))
+                     (touch-screen-track-tap pos nil nil t)))
+        (when (windowp (posn-window posn))
+          (select-window (posn-window posn)))
+        (let ((button (button-at target)))
+          (if (and button
+                   (suderman/tap-repeats-p (button-start button)
+                                           (button-end button)))
+              (push-button target t)
+            (goto-char target)))))))
+
 (defun suderman/markdown-fold-arrow-press ()
   "Ignore a press on a fold arrow; the click toggles it."
   (interactive))
@@ -200,6 +228,21 @@ and updates only after a save changes the preview."
     (define-key map [mouse-2] #'suderman/markdown-mouse-toggle-fold)
     map)
   "Mouse bindings on trailing Markdown heading arrows.")
+
+(defun suderman/markdown--heading-has-content-p ()
+  "Return non-nil when the heading at point has non-blank text below it."
+  (let ((end (save-excursion (outline-end-of-subtree) (point))))
+    (save-excursion
+      (end-of-line)
+      (re-search-forward "[^ \t\n]" end t))))
+
+(defun suderman/markdown--foldable-line-p ()
+  "Return non-nil on a heading with content or a fenced code block's start."
+  (if (outline-on-heading-p t)
+      (suderman/markdown--heading-has-content-p)
+    (and (bound-and-true-p hs-minor-mode)
+         (or (hs-overlay-at (pos-eol))
+             (save-excursion (forward-line 0) (hs-get-first-block-on-line))))))
 
 (defun suderman/markdown-fontify-fold-arrows (beg end)
   "Show fold arrows after headings with content between BEG and END.
@@ -216,8 +259,7 @@ The arrow replaces Outline's ellipsis, as in Org."
       (outline-next-heading))
     (while (and (< (point) end) (not (eobp)))
       (let ((eol (pos-eol)))
-        (when (and (> eol (pos-bol))
-                   (< eol (save-excursion (outline-end-of-subtree) (point))))
+        (when (suderman/markdown--heading-has-content-p)
           (let* ((pos (1- eol))
                  ;; Inherit the face; copying it would scale the heading twice.
                  (char (buffer-substring-no-properties pos eol))
@@ -329,7 +371,9 @@ Insert from Normal."
               hs-looking-at-block-start-predicate
               #'treesit-hs-looking-at-block-start-p
               hs-inside-comment-predicate #'ignore)
-  (hs-minor-mode 1))
+  (hs-minor-mode 1)
+  (suderman/enable-fold-taps #'suderman/markdown--foldable-line-p
+                             #'suderman/meow-toggle-fold))
 
 (use-package markdown-ts-mode
   :ensure nil
@@ -341,6 +385,8 @@ Insert from Normal."
   :bind (:map markdown-ts-mode-map
               ("RET" . suderman/markdown-return)
               ("M-RET" . suderman/markdown-meta-return)
+              ("<mouse-1>" . suderman/mouse-set-point-or-fold)
+              ([remap push-button] . suderman/markdown-push-button)
               ("C-c C-p" . suderman/markdown-preview-buffer)))
 
 (provide 'suderman-markdown)

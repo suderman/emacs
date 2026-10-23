@@ -36,12 +36,10 @@
 (declare-function suderman/meow--cancel-active-selection "suderman-meow" ())
 (declare-function suderman/meow--fold-move "suderman-meow" (bounce start fold))
 (defvar meow-use-clipboard)
-(defvar meow-insert-mode)
 (defvar org-mouse-map)
-(defvar suderman/tap-selected-point)
-(defvar touch-screen-keyboard-function)
-(defvar touch-screen-set-point-commands)
-(declare-function suderman/android-mouse-set-point "suderman-android"
+(declare-function suderman/enable-fold-taps "suderman-android" (line-p toggle))
+(declare-function suderman/tap-repeats-p "suderman-android" (beg end))
+(declare-function suderman/mouse-set-point-or-fold "suderman-android"
                   (event &optional promote-to-region))
 (declare-function org-open-at-mouse "org" (ev))
 (declare-function org-indent-mode "org-indent" (&optional arg))
@@ -1025,12 +1023,6 @@ ends.  An edit that starts a heading leaves the subtree folded."
   (mouse-set-point event)
   (suderman/org-toggle-fold))
 
-(defun suderman/org--repeat-tap-p (beg end)
-  "Return non-nil on Android when point was between BEG and END before a tap."
-  (and (featurep 'android)
-       suderman/tap-selected-point
-       (<= beg suderman/tap-selected-point end)))
-
 (defun suderman/org--drawer-start-p ()
   "Return non-nil when point is on the opening line of a drawer."
   (let ((element (org-element-at-point)))
@@ -1042,30 +1034,16 @@ ends.  An edit that starts a heading leaves the subtree folded."
   "Return non-nil when point is on a #+begin_ or #+end_ line."
   (org-match-line "[ \t]*#\\+\\(?:begin\\|end\\)_"))
 
-(defun suderman/org--fold-tap-p (pos)
-  "Return non-nil when a tap at POS repeats on a selected foldable line.
-That is a heading, a drawer's first line, or a block delimiter.  Insert
-state keeps taps for placing the cursor."
-  (and (not (bound-and-true-p meow-insert-mode))
-       (save-excursion
-         (goto-char pos)
-         (and (or (org-at-heading-p)
-                  (suderman/org--drawer-start-p)
-                  (suderman/org--block-delimiter-p))
-              (suderman/org--repeat-tap-p (line-beginning-position)
-                                          (line-end-position))))))
+(defun suderman/org--foldable-line-p ()
+  "Return non-nil on a heading, a drawer's first line, or a block delimiter."
+  (or (org-at-heading-p)
+      (suderman/org--drawer-start-p)
+      (suderman/org--block-delimiter-p)))
 
-(defun suderman/org-mouse-set-point (event &optional promote-to-region)
-  "Set point at EVENT, or toggle a fold on a second Android tap.
-PROMOTE-TO-REGION is as for `mouse-set-point'."
-  (interactive "e\np")
-  (cond
-   ((suderman/org--fold-tap-p (posn-point (event-start event)))
-    (mouse-set-point event)
-    (suderman/org-toggle-fold))
-   ((featurep 'android)
-    (suderman/android-mouse-set-point event promote-to-region))
-   (t (mouse-set-point event promote-to-region))))
+(defun suderman/org-enable-fold-taps ()
+  "Let a second Android tap on a foldable line toggle it."
+  (suderman/enable-fold-taps #'suderman/org--foldable-line-p
+                             #'suderman/org-toggle-fold))
 
 (defun suderman/org-mouse-open (event)
   "Open the link or timestamp clicked in EVENT.
@@ -1074,19 +1052,11 @@ On Android the first tap only moves point onto it; a second tap opens it."
   (let ((pos (posn-point (event-start event))))
     (if (or (not (featurep 'android))
             (and (get-char-property pos 'mouse-face)
-                 (suderman/org--repeat-tap-p
+                 (suderman/tap-repeats-p
                   (previous-single-char-property-change (1+ pos) 'mouse-face)
                   (next-single-char-property-change pos 'mouse-face))))
         (org-open-at-mouse event)
       (mouse-set-point event))))
-
-(defun suderman/org-fold-tap-keyboard-p ()
-  "Keep the Android keyboard hidden for a tap that toggles a fold."
-  (not (suderman/org--fold-tap-p (point))))
-
-(defun suderman/org-enable-fold-tap-keyboard ()
-  "Let fold taps skip the Android keyboard in this Org buffer."
-  (setq-local touch-screen-keyboard-function #'suderman/org-fold-tap-keyboard-p))
 
 (defun suderman/org-fold-arrow-press ()
   "Ignore a press on a fold arrow; the click toggles it."
@@ -1571,12 +1541,10 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
   (define-key org-mode-map [remap suderman/meow-paste] #'suderman/org-paste)
   (define-key org-mode-map [remap suderman/meow-indent] #'suderman/org-demote)
   (define-key org-mode-map [remap suderman/meow-outdent] #'suderman/org-promote)
-  (keymap-set org-mode-map "<mouse-1>" #'suderman/org-mouse-set-point)
+  (keymap-set org-mode-map "<mouse-1>" #'suderman/mouse-set-point-or-fold)
   ;; Android taps on links arrive as mouse-2.
   (keymap-set org-mouse-map "<mouse-2>" #'suderman/org-mouse-open)
-  (with-eval-after-load 'touch-screen
-    (add-to-list 'touch-screen-set-point-commands #'suderman/org-mouse-set-point))
-  (add-hook 'org-mode-hook #'suderman/org-enable-fold-tap-keyboard)
+  (add-hook 'org-mode-hook #'suderman/org-enable-fold-taps)
   (add-hook 'org-cycle-tab-first-hook #'suderman/org-cycle-adjacent-heading)
   (advice-add 'org-fold-core-region :filter-args
               #'suderman/org-fold-keep-final-newline)

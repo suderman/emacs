@@ -28,10 +28,11 @@ show or hide the keyboard without moving the cursor. Elsewhere a tap in
 editable text shows the keyboard, and a double tap on blank space past the end
 of a line or below the last one hides it again.
 
-In Org, a tap on a link or a foldable line (heading, drawer, or block
-delimiter) only moves the cursor there, like the first tap on an IBuffer or
-Dirvish row. A second tap on the same link opens it, and a second tap on the
-same foldable line toggles its fold without showing the keyboard. In Insert
+In Org and Markdown, a tap on a link or a foldable line only moves the cursor
+there, like the first tap on an IBuffer or Dirvish row. Foldable lines are
+headings with content, Org drawers and block delimiters, and Markdown code
+fences. A second tap on the same link opens it, and a second tap on the same
+foldable line toggles its fold without showing the keyboard. In Insert
 state, those taps only move the cursor.
 
 Pinch scales text in every buffer. Vertical swipes scroll by pixel and keep

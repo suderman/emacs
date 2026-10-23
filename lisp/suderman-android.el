@@ -16,6 +16,8 @@
 (defvar touch-screen-delay)
 (defvar touch-screen-precision-scroll)
 (defvar touch-screen-set-point-commands)
+(defvar touch-screen-keyboard-function)
+(defvar meow-insert-mode)
 (defvar touch-screen-word-select)
 
 (declare-function server-running-p "server" (&optional name))
@@ -97,6 +99,52 @@ A tap may already have asked for the keyboard when its command runs."
        (eql (line-beginning-position)
             (save-excursion (goto-char suderman/tap-selected-point)
                             (line-beginning-position)))))
+
+(defun suderman/tap-repeats-p (beg end)
+  "Return non-nil on Android when point was between BEG and END before a tap."
+  (and (featurep 'android)
+       suderman/tap-selected-point
+       (<= beg suderman/tap-selected-point end)))
+
+(defvar-local suderman/fold-tap-line-p nil
+  "Function returning non-nil when the line at point can fold.")
+
+(defvar-local suderman/fold-tap-toggle nil
+  "Command that toggles the fold on the line at point.")
+
+(defun suderman/fold-tap-p (pos)
+  "Return non-nil when a tap at POS repeats on a selected foldable line.
+Insert state keeps taps for placing the cursor."
+  (and suderman/fold-tap-line-p
+       (not (bound-and-true-p meow-insert-mode))
+       (save-excursion
+         (goto-char pos)
+         (and (suderman/tap-repeats-p (pos-bol) (pos-eol))
+              (funcall suderman/fold-tap-line-p)))))
+
+(defun suderman/mouse-set-point-or-fold (event &optional promote-to-region)
+  "Set point at EVENT, or toggle a fold on a second Android tap.
+PROMOTE-TO-REGION is as for `mouse-set-point'."
+  (interactive "e\np")
+  (cond
+   ((suderman/fold-tap-p (posn-point (event-start event)))
+    (mouse-set-point event)
+    (funcall suderman/fold-tap-toggle))
+   ((featurep 'android)
+    (suderman/android-mouse-set-point event promote-to-region))
+   (t (mouse-set-point event promote-to-region))))
+
+(defun suderman/fold-tap-keyboard-p ()
+  "Keep the Android keyboard hidden for a tap that toggles a fold."
+  (not (suderman/fold-tap-p (point))))
+
+(defun suderman/enable-fold-taps (line-p toggle)
+  "Let a second tap toggle folds in this buffer.
+LINE-P says whether the line at point folds, and TOGGLE toggles it.
+Bind `suderman/mouse-set-point-or-fold' to mouse-1 in the mode's map."
+  (setq-local suderman/fold-tap-line-p line-p
+              suderman/fold-tap-toggle toggle
+              touch-screen-keyboard-function #'suderman/fold-tap-keyboard-p))
 
 (defun suderman/android-double-blank-tap (posn)
   "Record a tap on blank space at POSN.
@@ -308,6 +356,7 @@ Instead that frame takes another frame's windows, and the other closes."
   (add-hook 'post-command-hook #'suderman/remember-tap-selection)
   ;; Taps still show the keyboard in editable text through this command.
   (add-to-list 'touch-screen-set-point-commands #'suderman/android-mouse-set-point)
+  (add-to-list 'touch-screen-set-point-commands #'suderman/mouse-set-point-or-fold)
   (global-set-key [remap mouse-set-point] #'suderman/android-mouse-set-point)
   (suderman/android-keyboard-visible-p (selected-frame))
   (add-hook 'window-setup-hook #'suderman/android-mark-main-frame)
