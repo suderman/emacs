@@ -528,7 +528,7 @@
       (dlet ((features (cons 'android features)))
         (suderman/apply-system-fonts)
         (should (= (font-get (plist-get (caddr (assq 'default calls)) :font) :size)
-                   17.0))
+                   (* 12.0 suderman/android-font-scale)))
         (should (equal (seq-filter (lambda (args) (null (nth 1 args)))
                                    (nreverse fontsets))
                        (list (list t nil (font-spec :family "Mono") nil 'append)
@@ -542,7 +542,8 @@
       (dlet ((features (cons 'android features)))
         (cl-letf (((symbol-function 'find-font) (lambda (&rest _) nil)))
           (suderman/apply-system-fonts)
-          (should (equal (assq 'default calls) '(default nil (:height 170))))
+          (should (equal (assq 'default calls)
+                         `(default nil (:height ,(round (* 120 suderman/android-font-scale))))))
           (should-not fontsets))))))
 
 (provide 'suderman-core-test)
