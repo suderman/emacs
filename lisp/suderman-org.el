@@ -224,10 +224,13 @@ They hide like link brackets, so literal view shows them again."
 
 (defun suderman/org-list-bullets ()
   "Return Markdown's unordered list glyphs by depth, so Org lists match."
-  (require 'markdown-ts-mode)
-  (mapcar (lambda (marker)
-            (if (stringp (car marker)) (string-trim (car marker)) "•"))
-          markdown-ts-unordered-list-marker))
+  (require 'markdown-ts-mode nil t)
+  ;; The Android APK's markdown-ts-mode lacks this option; use its default.
+  (if (boundp 'markdown-ts-unordered-list-marker)
+      (mapcar (lambda (marker)
+                (if (stringp (car marker)) (string-trim (car marker)) "•"))
+              markdown-ts-unordered-list-marker)
+    '("●" "○" "◼" "•")))
 
 (defun suderman/org-fontify-list-bullets (limit)
   "Show unordered list bullets from point to LIMIT as Markdown does, by depth."
