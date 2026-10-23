@@ -185,7 +185,7 @@
                "p" #'suderman/pull-config
                "q" '("close client" . save-buffers-kill-terminal)
                "Q" '("stop server" . save-buffers-kill-emacs)
-               "w" '("save all and close" . suderman/save-and-quit)
+               "s" '("save all and close" . suderman/save-and-quit)
                "d" '("discard and close" . suderman/quit-without-saving)
                "r" #'suderman/reload-config
                "u" #'suderman/package-upgrade-all))
@@ -238,6 +238,7 @@
                "n" '("new frame" . suderman/new-frame)
                "N" '("new tab" . tab-bar-new-tab)
                "o" #'delete-other-windows
+               "s" #'save-buffer
                "w" #'edger-close))
 
    "RET" (and (fboundp 'ghostel-project) #'ghostel-project)))
