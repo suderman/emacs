@@ -31,6 +31,14 @@ by =suderman/android-font-scale=, initially =14/12=: 14 sp, Android's body text
 size. Org uses variable pitch for prose and headings, with fixed pitch for
 code, tables, metadata, timestamps, TODO states, tags, and indentation; adjust
 =suderman/variable-font-scale=.
+
+Org buffers open formatted: links show their descriptions, the equals signs
+and slashes around code and italics are hidden, entities like =\alpha= display
+as symbols, headings and lists get Superstar bullets and virtual indentation,
+and images preview inline. Only =a_{b}= and =a^{b}= become sub- and
+superscripts, so =snake_case= stays flat. =SPC t o= switches the current
+buffer to a literal view with all of that raw, flush left, in monospace, and
+back.
 Doom Modeline keeps Normal state quiet and shows Insert, Motion, Keypad, and
 Beacon. Nerd Font fallback covers only the BMP private use area and
 =F0001= to =F1AF0=.

@@ -212,7 +212,7 @@
                "h" '("current line" . hl-line-mode)
                "m" '("menu bar" . menu-bar-mode)
                "n" '("line numbers" . suderman/toggle-line-numbers)
-               "o" '("org indentation" . org-indent-mode)
+               "o" '("org formatting" . suderman/org-toggle-formatting)
                "r" '("read only" . read-only-mode)
                "s" (and (fboundp 'jinx-mode) '("spelling" . jinx-mode))
                "t" '("sideways scroll" . suderman/toggle-sideways-scroll)

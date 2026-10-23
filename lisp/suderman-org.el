@@ -36,6 +36,10 @@
 (declare-function suderman/meow--cancel-active-selection "suderman-meow" ())
 (declare-function suderman/meow--fold-move "suderman-meow" (bounce start fold))
 (defvar meow-use-clipboard)
+(declare-function org-indent-mode "org-indent" (&optional arg))
+(declare-function org-restart-font-lock "org" ())
+(declare-function org-link-preview-region "ol" (&optional include-linked refresh beg end))
+(declare-function org-link-preview-clear "ol" (&optional beg end))
 (declare-function consult-org-agenda "consult-org" (&optional match))
 (declare-function consult-org-heading "consult-org" (&optional match scope))
 (declare-function org-agenda "org-agenda" (&optional arg keys restriction))
@@ -229,10 +233,13 @@
 
 (defvar suderman/system-style)
 (defvar-local suderman/org-fixed-pitch-cookies nil)
+(defvar-local suderman/org-literal nil
+  "Non-nil when `suderman/org-toggle-formatting' shows raw Org syntax.")
 
 (defun suderman/org-enable-mixed-pitch ()
   "Use proportional prose with fixed-width structural text in GUI Org buffers."
   (when (and (display-graphic-p)
+             (not suderman/org-literal)
              (plist-get suderman/system-style :variable-font)
              (find-font (font-spec :family
                                   (plist-get suderman/system-style :variable-font))))
@@ -262,6 +269,32 @@
 (add-hook 'org-mode-hook #'suderman/org-enable-mixed-pitch)
 (add-hook 'after-make-frame-functions #'suderman/org-refresh-mixed-pitch)
 (suderman/org-refresh-mixed-pitch)
+
+(defun suderman/org-toggle-formatting ()
+  "Switch this Org buffer between formatted and literal views.
+Literal shows link targets, emphasis markers, entities, stars, and images
+as raw text, flush left and in monospace."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "Not an Org buffer"))
+  (setq suderman/org-literal (not suderman/org-literal))
+  (let ((formatted (not suderman/org-literal)))
+    (setq-local org-link-descriptive formatted
+                org-hide-emphasis-markers formatted
+                org-pretty-entities formatted)
+    (unless formatted
+      (decompose-region (point-min) (point-max)))
+    (org-indent-mode (if formatted 1 -1))
+    (when (fboundp 'org-superstar-mode)
+      (org-superstar-mode (if formatted 1 -1)))
+    (if formatted
+        (suderman/org-enable-mixed-pitch)
+      (variable-pitch-mode -1))
+    (org-restart-font-lock)
+    (if formatted
+        (org-link-preview-region)
+      (org-link-preview-clear))
+    (message "Org %s" (if formatted "formatted" "literal"))))
 
 (defun suderman/org-auto-save-visited-p ()
   "Return non-nil when the current Org file is safe to save automatically."
@@ -1401,6 +1434,10 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
         org-startup-indented t
         org-startup-folded 'fold
         org-ellipsis " ▾"
+        org-hide-emphasis-markers t
+        org-pretty-entities t
+        ;; Only a_{b} and a^{b} raise or lower text, not snake_case names.
+        org-use-sub-superscripts '{}
         org-hide-drawer-startup t
         org-startup-with-link-previews t
         org-tags-column 0
