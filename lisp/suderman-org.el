@@ -1031,18 +1031,32 @@ ends.  An edit that starts a heading leaves the subtree folded."
        suderman/tap-selected-point
        (<= beg suderman/tap-selected-point end)))
 
+(defun suderman/org--drawer-start-p ()
+  "Return non-nil when point is on the opening line of a drawer."
+  (let ((element (org-element-at-point)))
+    (and (memq (org-element-type element) '(drawer property-drawer))
+         (= (line-beginning-position)
+            (org-element-property :post-affiliated element)))))
+
+(defun suderman/org--block-delimiter-p ()
+  "Return non-nil when point is on a #+begin_ or #+end_ line."
+  (org-match-line "[ \t]*#\\+\\(?:begin\\|end\\)_"))
+
 (defun suderman/org--fold-tap-p (pos)
-  "Return non-nil when a tap at POS repeats on the selected heading.
-Insert state keeps taps for placing the cursor."
+  "Return non-nil when a tap at POS repeats on a selected foldable line.
+That is a heading, a drawer's first line, or a block delimiter.  Insert
+state keeps taps for placing the cursor."
   (and (not (bound-and-true-p meow-insert-mode))
        (save-excursion
          (goto-char pos)
-         (and (org-at-heading-p)
+         (and (or (org-at-heading-p)
+                  (suderman/org--drawer-start-p)
+                  (suderman/org--block-delimiter-p))
               (suderman/org--repeat-tap-p (line-beginning-position)
                                           (line-end-position))))))
 
 (defun suderman/org-mouse-set-point (event &optional promote-to-region)
-  "Set point at EVENT, or toggle the heading fold on a second Android tap.
+  "Set point at EVENT, or toggle a fold on a second Android tap.
 PROMOTE-TO-REGION is as for `mouse-set-point'."
   (interactive "e\np")
   (cond
@@ -1067,7 +1081,7 @@ On Android the first tap only moves point onto it; a second tap opens it."
       (mouse-set-point event))))
 
 (defun suderman/org-fold-tap-keyboard-p ()
-  "Keep the Android keyboard hidden for a tap that toggles a heading fold."
+  "Keep the Android keyboard hidden for a tap that toggles a fold."
   (not (suderman/org--fold-tap-p (point))))
 
 (defun suderman/org-enable-fold-tap-keyboard ()
@@ -1107,14 +1121,8 @@ On Android the first tap only moves point onto it; a second tap opens it."
                              end t)
       (let* ((eol (line-end-position))
              (pos (1- eol))
-             (kind (if (suderman/org-heading-has-content-p)
-                       'outline
-                     (let ((element (org-element-at-point)))
-                       (when (and (memq (org-element-type element)
-                                        '(drawer property-drawer))
-                                  (= (line-beginning-position)
-                                     (org-element-property :post-affiliated element)))
-                         'drawer)))))
+             (kind (cond ((suderman/org-heading-has-content-p) 'outline)
+                         ((suderman/org--drawer-start-p) 'drawer))))
         (when kind
           ;; Put the display on visible label text, not the folded newline or
           ;; hidden link brackets.  After-strings at the newline disappear folded.
@@ -1210,7 +1218,7 @@ line that cannot fold a press at the end moves to the start."
                   (org-fold-hide-subtree))
                 t))
              ;; Only the delimiter lines toggle; a line inside the block just moves.
-             ((org-match-line "[ \t]*#\\+\\(?:begin\\|end\\)_")
+             ((suderman/org--block-delimiter-p)
               (org-fold-hide-block-toggle nil t)
               t))))
       (suderman/meow--fold-move
