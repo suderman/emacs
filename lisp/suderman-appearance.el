@@ -384,9 +384,9 @@ rereads the style file, so newly synced colors apply without a restart."
 (setq-default hl-line-range-function #'suderman/hl-line-range)
 (add-hook 'special-mode-hook #'suderman/disable-line-numbers)
 (add-hook 'image-mode-hook #'suderman/disable-line-numbers)
-(let ((enabled (if (featurep 'android) -1 1)))
-  (global-hl-line-mode enabled)
-  (global-display-line-numbers-mode enabled))
+;; Current-line highlighting is opt-in per buffer with SPC t h.
+(global-hl-line-mode -1)
+(global-display-line-numbers-mode (if (featurep 'android) -1 1))
 (suderman/disable-line-numbers-in-special-buffers)
 (with-eval-after-load 'meow-cheatsheet
   (advice-add 'meow-cheatsheet :after
