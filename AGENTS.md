@@ -326,8 +326,9 @@ is pre-existing before calling it harmless.
 
 ## Git and generated state
 
-The ignored `projects` file is mutable Emacs project history. The running
-editor rewrites it. Treat it as user-owned runtime state.
+The ignored `projects.eld` file and `elpa/` directory appear when an Emacs
+skips `init.el`, such as `emacs -Q`, and falls back to default paths. Treat
+them as runtime state.
 
 Other agents or the user may change the worktree while work is in progress.
 Do not undo unrelated changes. If a concurrent change conflicts with the same
