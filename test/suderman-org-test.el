@@ -639,20 +639,21 @@
     (should (memq 'suderman/org-drawer-block
                   (ensure-list (get-text-property (1- (point)) 'face))))))
 
-(ert-deftest suderman/org-task-gap-follows-the-task-fold ()
+(ert-deftest suderman/org-heading-gap-follows-the-fold ()
   ;; Redisplay asks the predicate, so folding changes the gap, never the text.
   (let ((text (concat "* TODO Task\n** Scope\nBody\n\n** Sessions\n- link\n\n"
-                      "* TODO Next\n** Child\n*** TODO Deep\nText\n** Sibling\n")))
+                      "* TODO Next\n** Child\n*** TODO Deep\nText\n** Sibling\n"
+                      "* Plain\n** People\nText\n\n*** Last\n- item\n\n** Events\n")))
     (with-temp-buffer
       (insert text)
       (org-mode)
-      (suderman/org-fontify-task-gaps (point-min) (point-max))
+      (suderman/org-fontify-heading-gaps (point-min) (point-max))
       (cl-flet ((gap (heading)
                   (goto-char (point-min))
                   (re-search-forward (concat "^" (regexp-quote heading) "$"))
-                  (suderman/org-task-gap-p
+                  (suderman/org-heading-gap-p
                    (seq-find (lambda (overlay)
-                               (overlay-get overlay 'suderman/org-task-gap))
+                               (overlay-get overlay 'suderman/org-heading-gap))
                              (overlays-at (1- (line-beginning-position)))))))
         (org-overview)
         (should-not (gap "* TODO Next"))
@@ -661,6 +662,13 @@
         (suderman/org-show-children)
         (should (gap "* TODO Next"))
         (should-not (gap "** Sessions"))
+        ;; Any open heading counts: People shows its folded children.
+        (re-search-forward "^\\* Plain$")
+        (suderman/org-show-children)
+        (re-search-forward "^\\*\\* People$")
+        (suderman/org-show-children)
+        (should-not (gap "*** Last"))
+        (should (gap "** Events"))
         ;; Fully open, the blank line in the file already separates them.
         (org-fold-show-all)
         (should-not (gap "* TODO Next"))

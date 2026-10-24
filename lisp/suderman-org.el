@@ -1527,13 +1527,11 @@ On Android the first tap only moves point onto it; a second tap opens it."
 
 (add-hook 'org-mode-hook #'suderman/org-enable-fold-arrows)
 
-(defun suderman/org-task-gap-p (overlay)
-  "Return non-nil when an open task subtree ends at OVERLAY.
-OVERLAY covers the newline above a heading.  A task is a heading with a
-TODO keyword, open when its fold is.  A visible blank line there already
-separates them."
-  (let ((newline (overlay-start overlay))
-        (case-fold-search nil))
+(defun suderman/org-heading-gap-p (overlay)
+  "Return non-nil when an open subtree ends at OVERLAY.
+OVERLAY covers the newline above a heading.  A visible blank line there
+already separates them."
+  (let ((newline (overlay-start overlay)))
     (save-excursion
       (save-match-data
         (goto-char (1+ newline))
@@ -1551,9 +1549,7 @@ separates them."
                 (let ((depth (- (match-end 0) (match-beginning 0) 1)))
                   (when (< depth level)
                     (throw 'gap nil))
-                  (when (and (looking-at org-todo-line-regexp)
-                             (match-beginning 2)
-                             (not (invisible-p (match-beginning 2)))
+                  (when (and (not (invisible-p (match-end 0)))
                              (< (pos-eol) newline)
                              (not (org-fold-folded-p (pos-eol) 'outline)))
                     (throw 'gap t))
@@ -1561,9 +1557,9 @@ separates them."
                     (throw 'gap nil))
                   (setq regexp (format "^\\*\\{1,%d\\} " (1- depth))))))))))))
 
-(defun suderman/org-fontify-task-gaps (beg end)
+(defun suderman/org-fontify-heading-gaps (beg end)
   "Mark the newline above each heading between BEG and END for a gap.
-The newline shows as a blank line too while `suderman/org-task-gap-p'
+The newline shows as a blank line too while `suderman/org-heading-gap-p'
 holds.  Redisplay checks that, so folding needs no hook."
   (save-excursion
     (goto-char end)
@@ -1571,35 +1567,35 @@ holds.  Redisplay checks that, so folding needs no hook."
     (goto-char beg)
     (setq beg (line-beginning-position))
     (goto-char beg)
-    (remove-overlays (max (point-min) (1- beg)) (1- end) 'suderman/org-task-gap t)
+    (remove-overlays (max (point-min) (1- beg)) (1- end) 'suderman/org-heading-gap t)
     (while (re-search-forward org-outline-regexp-bol end t)
       (when (> (match-beginning 0) (point-min))
         ;; Typing at the end of the line above stays outside the overlay.
         (let ((overlay (make-overlay (1- (match-beginning 0)) (match-beginning 0)
                                      nil t nil)))
-          (overlay-put overlay 'suderman/org-task-gap t)
+          (overlay-put overlay 'suderman/org-heading-gap t)
           (overlay-put overlay 'evaporate t)
           ;; The space carries the cursor, which Emacs would otherwise
           ;; draw on the blank line instead of at the end of this one.
           (overlay-put overlay 'display
-                       `(when (suderman/org-task-gap-p ,overlay)
+                       `(when (suderman/org-heading-gap-p ,overlay)
                           . ,(concat (propertize " " 'cursor t) "\n\n"))))))))
 
-(defun suderman/org-remove-task-gaps ()
-  "Remove task gaps when leaving Org mode."
-  (jit-lock-unregister #'suderman/org-fontify-task-gaps)
+(defun suderman/org-remove-heading-gaps ()
+  "Remove heading gaps when leaving Org mode."
+  (jit-lock-unregister #'suderman/org-fontify-heading-gaps)
   (save-restriction
     (widen)
-    (remove-overlays (point-min) (point-max) 'suderman/org-task-gap t)))
+    (remove-overlays (point-min) (point-max) 'suderman/org-heading-gap t)))
 
-(defun suderman/org-enable-task-gaps ()
-  "Show a blank line below open task subtrees without adding one to the file.
-Folded tasks stay adjacent."
-  (jit-lock-register #'suderman/org-fontify-task-gaps)
+(defun suderman/org-enable-heading-gaps ()
+  "Show a blank line below open subtrees without adding one to the file.
+Folded siblings stay adjacent."
+  (jit-lock-register #'suderman/org-fontify-heading-gaps)
   (jit-lock-refontify)
-  (add-hook 'change-major-mode-hook #'suderman/org-remove-task-gaps nil t))
+  (add-hook 'change-major-mode-hook #'suderman/org-remove-heading-gaps nil t))
 
-(add-hook 'org-mode-hook #'suderman/org-enable-task-gaps)
+(add-hook 'org-mode-hook #'suderman/org-enable-heading-gaps)
 
 (defun suderman/org-show-children ()
   "Show the heading's body and its direct child headings, like Org's
@@ -2005,7 +2001,7 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
     (with-current-buffer buffer
       (when (derived-mode-p 'org-mode)
         (suderman/org-enable-fold-arrows)
-        (suderman/org-enable-task-gaps)
+        (suderman/org-enable-heading-gaps)
         (suderman/org-enable-final-line-reveal)))))
 
 (use-package org-agenda
