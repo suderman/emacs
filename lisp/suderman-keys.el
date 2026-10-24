@@ -177,6 +177,7 @@
                          (define-keymap
                            "a" '("agenda" . org-agenda)
                            "t" '("TODO list" . org-todo-list)
+                           "c" '("closed" . suderman/org-closed)
                            "d" '("daily" . suderman/org-daily)
                            "i" '("inbox" . suderman/org-inbox)))))
 

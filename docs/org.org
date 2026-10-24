@@ -44,6 +44,10 @@ window keys below it. =q=, =h=, or Escape closes the sheet and returns to Agenda
 Bare =?= still shows Org's flagging note.
 
 The normal calendar shows today and the next six days. =SPC o v a w= opens a
-Monday-based week. =C-c .= returns to today and =C-c ,= changes priority.
+Monday-based week. =SPC o v c= shows only what was closed this week, day by
+day, archived tasks included under their original category. It reads just the
+archives written in the last 35 days, since an older one cannot hold a task
+closed since then, so =p= reaches back about a month. Other views never read
+archives. =C-c .= returns to today and =C-c ,= changes priority.
 Displaced date, capture, log, moon-phase, and date-prompt commands remain on
 =C-c j=, =C-c k=, =C-c l=, =C-c M=, and =C-c >=.

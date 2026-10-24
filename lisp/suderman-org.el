@@ -789,6 +789,37 @@ On a heading, open a line directly below it instead."
    (suderman/org--direct-org-files (expand-file-name "calendar" org-directory))
    (suderman/org-context-files)))
 
+(defun suderman/org-closed-files (days)
+  "Return Agenda files plus archives written in the last DAYS days.
+A task closed in that window reached its archive afterwards, so an older
+archive cannot hold one."
+  (let ((cutoff (time-subtract nil (days-to-time days)))
+        (root (file-name-as-directory org-directory))
+        dirs archives)
+    (dolist (file (org-agenda-files))
+      (let ((dir (file-name-directory file)))
+        (while (and dir (file-in-directory-p dir root) (not (member dir dirs)))
+          (push dir dirs)
+          (setq dir (and (not (equal dir root))
+                         (file-name-directory (directory-file-name dir)))))))
+    (dolist (dir dirs)
+      (let ((file (expand-file-name "archive.org" dir))
+            (subdir (expand-file-name "archive" dir)))
+        (when (file-regular-p file) (push file archives))
+        (when (file-directory-p subdir)
+          (setq archives (append (directory-files-recursively subdir "\\.org\\'")
+                                 archives)))))
+    (append (org-agenda-files)
+            (seq-filter (lambda (file)
+                          (and (not (string-search ".sync-conflict-" file))
+                               (time-less-p cutoff (file-attribute-modification-time
+                                                    (file-attributes file)))))
+                        archives))))
+
+(defun suderman/org-closed-category ()
+  "Return the category an archived entry had before it was archived."
+  (concat (or (org-entry-get nil "ARCHIVE_CATEGORY") (org-get-category)) ":"))
+
 (defun suderman/org-agenda-refresh (&optional all)
   "Rediscover Agenda files and rebuild the current view, or ALL views."
   (interactive "P")
@@ -968,6 +999,11 @@ as the nightly archive timer; return the number of headings."
   "Show today's calendar and tasks in progress."
   (interactive)
   (org-agenda nil "D"))
+
+(defun suderman/org-closed ()
+  "Show tasks closed this week, archived ones included."
+  (interactive)
+  (org-agenda nil "c"))
 
 (defun suderman/org-inbox ()
   "Open the Inbox for processing tasks, notes, and ideas."
@@ -1833,7 +1869,17 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
            ((agenda "" ((org-agenda-span 1)))
             (todo "PROG" ((org-agenda-overriding-header "In progress")))))
           ("w" "Monday-based week" agenda ""
-           ((org-agenda-span 7) (org-agenda-start-on-weekday 1)))))
+           ((org-agenda-span 7) (org-agenda-start-on-weekday 1)))
+          ;; Archives are read only here, and only those written recently,
+          ;; so p reaches back about a month.
+          ("c" "Closed" agenda ""
+           ((org-agenda-span 7)
+            (org-agenda-start-on-weekday 1)
+            (org-agenda-files (suderman/org-closed-files 35))
+            (org-agenda-start-with-log-mode 'only)
+            (org-agenda-log-mode-items '(closed))
+            (org-agenda-prefix-format
+             " %-12(suderman/org-closed-category)%?-12t% s")))))
   (auto-save-visited-mode 1)
   :config
   (org-link-set-parameters "herdr" :follow #'suderman/org-herdr-follow
