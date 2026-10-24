@@ -1,6 +1,12 @@
 #+title: Org
 #+startup: content
 
+* Source layout
+
+Org files keep one physical line per paragraph and per list item, and the window wraps them at word boundaries, so the same file reads well on a wide desktop and a narrow phone. =M-q= follows that: it joins the paragraph or list item at point onto one line instead of filling to =fill-column=, or each one in the selection. It leaves tables, drawers, planning, and blocks alone and refuses a selection that includes a source block.
+
+A heading sits directly on its content, and one blank line closes a finished paragraph, list, or block before the next section. That blank line folds with its subtree, so folded tasks sit together. An open task still shows a blank line below its subtree before the next heading, even when its last section is folded. A task here is any heading with a TODO keyword. That line is display only. It never enters the file, the undo history, or the modified flag.
+
 * Tasks, Agenda, and archives
 
 =SPC o= is a global Org namespace. Direct state setters, single-subtree

@@ -728,6 +728,24 @@ On a heading, open a line directly below it instead."
   (when (bound-and-true-p meow-normal-mode)
     (suderman/meow-insert)))
 
+(defun suderman/org-unfill-paragraph ()
+  "Join the paragraph or list item at point onto one line.
+With an active region, join each one in it.  Org prose keeps one line
+per paragraph and lets the window wrap it.  Tables, drawers, planning,
+and other blocks keep their lines; a source block fills by its language."
+  (interactive)
+  (when (and (use-region-p)
+             (let ((end (region-end)))
+               (save-excursion
+                 (goto-char (region-beginning))
+                 (or (org-in-src-block-p)
+                     (re-search-forward "^[ \t]*#\\+begin_src" end t)))))
+    (user-error "Region includes a source block, which Org would refill"))
+  ;; Bind the local value, so source edit buffers keep their own width.
+  (make-local-variable 'fill-column)
+  (let ((fill-column most-positive-fixnum))
+    (call-interactively #'fill-paragraph)))
+
 (defun suderman/org-inhibit-electric-angle-pairing ()
   "Keep Org structure-template shortcuts from gaining a closing angle bracket."
   (let ((inhibit-predicate electric-pair-inhibit-predicate))
@@ -1509,6 +1527,80 @@ On Android the first tap only moves point onto it; a second tap opens it."
 
 (add-hook 'org-mode-hook #'suderman/org-enable-fold-arrows)
 
+(defun suderman/org-task-gap-p (overlay)
+  "Return non-nil when an open task subtree ends at OVERLAY.
+OVERLAY covers the newline above a heading.  A task is a heading with a
+TODO keyword, open when its fold is.  A visible blank line there already
+separates them."
+  (let ((newline (overlay-start overlay))
+        (case-fold-search nil))
+    (save-excursion
+      (save-match-data
+        (goto-char (1+ newline))
+        (when (and (eq (char-after newline) ?\n)
+                   (looking-at org-outline-regexp)
+                   (not (and (eq (char-before newline) ?\n)
+                             (not (invisible-p (1- newline))))))
+          (let ((level (- (match-end 0) (match-beginning 0) 1))
+                (regexp org-outline-regexp-bol))
+            (goto-char newline)
+            ;; Climb the headings whose subtrees end here: the one above,
+            ;; then each shallower one, until the sibling of the heading.
+            (catch 'gap
+              (while (re-search-backward regexp nil t)
+                (let ((depth (- (match-end 0) (match-beginning 0) 1)))
+                  (when (< depth level)
+                    (throw 'gap nil))
+                  (when (and (looking-at org-todo-line-regexp)
+                             (match-beginning 2)
+                             (not (invisible-p (match-beginning 2)))
+                             (< (pos-eol) newline)
+                             (not (org-fold-folded-p (pos-eol) 'outline)))
+                    (throw 'gap t))
+                  (when (= depth level)
+                    (throw 'gap nil))
+                  (setq regexp (format "^\\*\\{1,%d\\} " (1- depth))))))))))))
+
+(defun suderman/org-fontify-task-gaps (beg end)
+  "Mark the newline above each heading between BEG and END for a gap.
+The newline shows as a blank line too while `suderman/org-task-gap-p'
+holds.  Redisplay checks that, so folding needs no hook."
+  (save-excursion
+    (goto-char end)
+    (setq end (min (point-max) (1+ (line-end-position))))
+    (goto-char beg)
+    (setq beg (line-beginning-position))
+    (goto-char beg)
+    (remove-overlays (max (point-min) (1- beg)) (1- end) 'suderman/org-task-gap t)
+    (while (re-search-forward org-outline-regexp-bol end t)
+      (when (> (match-beginning 0) (point-min))
+        ;; Typing at the end of the line above stays outside the overlay.
+        (let ((overlay (make-overlay (1- (match-beginning 0)) (match-beginning 0)
+                                     nil t nil)))
+          (overlay-put overlay 'suderman/org-task-gap t)
+          (overlay-put overlay 'evaporate t)
+          ;; The space carries the cursor, which Emacs would otherwise
+          ;; draw on the blank line instead of at the end of this one.
+          (overlay-put overlay 'display
+                       `(when (suderman/org-task-gap-p ,overlay)
+                          . ,(concat (propertize " " 'cursor t) "\n\n"))))))))
+
+(defun suderman/org-remove-task-gaps ()
+  "Remove task gaps when leaving Org mode."
+  (jit-lock-unregister #'suderman/org-fontify-task-gaps)
+  (save-restriction
+    (widen)
+    (remove-overlays (point-min) (point-max) 'suderman/org-task-gap t)))
+
+(defun suderman/org-enable-task-gaps ()
+  "Show a blank line below open task subtrees without adding one to the file.
+Folded tasks stay adjacent."
+  (jit-lock-register #'suderman/org-fontify-task-gaps)
+  (jit-lock-refontify)
+  (add-hook 'change-major-mode-hook #'suderman/org-remove-task-gaps nil t))
+
+(add-hook 'org-mode-hook #'suderman/org-enable-task-gaps)
+
 (defun suderman/org-show-children ()
   "Show the heading's body and its direct child headings, like Org's
 children cycling state.  Deeper levels stay folded."
@@ -1886,6 +1978,7 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
                            :face '(org-link suderman/fixed-pitch-text))
   (keymap-set org-mode-map "RET" #'suderman/org-return)
   (keymap-set org-mode-map "<remap> <org-meta-return>" #'suderman/org-meta-return)
+  (keymap-set org-mode-map "<remap> <fill-paragraph>" #'suderman/org-unfill-paragraph)
   (keymap-set org-mode-map "<remap> <org-insert-heading-respect-content>"
               #'suderman/org-insert-heading-after-subtree)
   ;; `keymap-set' rejects the slash in these command names.
@@ -1912,6 +2005,7 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
     (with-current-buffer buffer
       (when (derived-mode-p 'org-mode)
         (suderman/org-enable-fold-arrows)
+        (suderman/org-enable-task-gaps)
         (suderman/org-enable-final-line-reveal)))))
 
 (use-package org-agenda

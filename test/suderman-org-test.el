@@ -639,6 +639,36 @@
     (should (memq 'suderman/org-drawer-block
                   (ensure-list (get-text-property (1- (point)) 'face))))))
 
+(ert-deftest suderman/org-task-gap-follows-the-task-fold ()
+  ;; Redisplay asks the predicate, so folding changes the gap, never the text.
+  (let ((text (concat "* TODO Task\n** Scope\nBody\n\n** Sessions\n- link\n\n"
+                      "* TODO Next\n** Child\n*** TODO Deep\nText\n** Sibling\n")))
+    (with-temp-buffer
+      (insert text)
+      (org-mode)
+      (suderman/org-fontify-task-gaps (point-min) (point-max))
+      (cl-flet ((gap (heading)
+                  (goto-char (point-min))
+                  (re-search-forward (concat "^" (regexp-quote heading) "$"))
+                  (suderman/org-task-gap-p
+                   (seq-find (lambda (overlay)
+                               (overlay-get overlay 'suderman/org-task-gap))
+                             (overlays-at (1- (line-beginning-position)))))))
+        (org-overview)
+        (should-not (gap "* TODO Next"))
+        ;; An open task whose last section is folded hides its blank line.
+        (goto-char (point-min))
+        (suderman/org-show-children)
+        (should (gap "* TODO Next"))
+        (should-not (gap "** Sessions"))
+        ;; Fully open, the blank line in the file already separates them.
+        (org-fold-show-all)
+        (should-not (gap "* TODO Next"))
+        (should-not (gap "** Child"))
+        (should (gap "** Sibling"))
+        (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                       text))))))
+
 (ert-deftest suderman/org-todo-change-leaves-previous-heading-alone ()
   ;; The fold-arrow change hook once clobbered `replace-match' data,
   ;; upcasing the heading above.
