@@ -49,6 +49,9 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 
+;; Agenda membership follows the Org tree, not Custom's saved snapshot.
+(setq org-agenda-files (suderman/org-agenda-files))
+
 (message "Loaded Suderman's modular Emacs config")
 
 (provide 'init)
