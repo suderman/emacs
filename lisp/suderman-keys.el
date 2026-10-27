@@ -159,16 +159,18 @@
                "h" '("HOLD" . suderman/org-todo-hold)
                "l" #'suderman/org-insert-link
                "L" #'org-store-link
-               "m" '("AUTO" . suderman/org-todo-auto)
                "n" #'org-toggle-narrow-to-subtree
                "o" '("dashboard" . suderman/org-dashboard)
                "p" '("PROG" . suderman/org-todo-prog)
                "q" '("tags" . org-set-tags-command)
                "r" #'suderman/org-refile
                "t" '("TODO" . suderman/org-todo-todo)
+               "T" '("AUTO" . suderman/org-todo-auto)
                "w" '("track Asana task" . suderman/org-asana-track)
                "W" '("add agent step to Asana task" . suderman/org-asana-delegate)
                "x" #'suderman/org-toggle-checkbox
+               "TAB" '("fold task" . suderman/org-fold-task)
+               "[" '("go to task" . suderman/org-goto-task)
                "s" (cons "planning"
                          (define-keymap
                            "s" '("schedule" . suderman/org-schedule)

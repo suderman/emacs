@@ -1186,25 +1186,67 @@ Without STATE, open the TODO list outside Org or Agenda."
     (suderman/org--call-contextually
      #'org-todo #'org-agenda-todo #'org-todo-list)))
 
+(defun suderman/org--goto-task ()
+  "Move to the nearest heading at or above point with a TODO state.
+Return non-nil when one exists; otherwise leave point alone."
+  (when-let* ((task (save-excursion
+                      (unless (org-before-first-heading-p)
+                        (org-back-to-heading t)
+                        (while (and (not (org-get-todo-state))
+                                    (org-up-heading-safe)))
+                        (and (org-get-todo-state) (point))))))
+    (goto-char task)))
+
+(defun suderman/org-todo-task (state &optional fold)
+  "Change the enclosing task heading to STATE, folding it when FOLD.
+The task is the heading at point or its nearest ancestor that already
+has a state.  Without one, do nothing.  Agenda entries change directly."
+  (suderman/org--call-contextually
+   (lambda ()
+     (interactive)
+     (if fold
+         (when (suderman/org--goto-task)
+           (org-todo state)
+           (org-fold-hide-subtree))
+       (save-excursion
+         (when (suderman/org--goto-task)
+           (org-todo state)))))
+   (lambda () (interactive) (org-agenda-todo state))))
+
+(defun suderman/org-goto-task ()
+  "Move to the heading at point, or its nearest ancestor, that has a state."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "This command requires an Org buffer"))
+  (suderman/org--goto-task))
+
+(defun suderman/org-fold-task ()
+  "Fold the heading at point, or its nearest ancestor, that has a state."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "This command requires an Org buffer"))
+  (when (suderman/org--goto-task)
+    (org-fold-hide-subtree)))
+
 (defun suderman/org-todo-todo ()
   "Set the current Org heading or Agenda entry to TODO."
   (interactive)
   (suderman/org-todo "TODO"))
 
 (defun suderman/org-todo-prog ()
-  "Set the current Org heading or Agenda entry to PROG."
+  "Set the enclosing Org task or Agenda entry to PROG."
   (interactive)
-  (suderman/org-todo "PROG"))
+  (suderman/org-todo-task "PROG"))
 
 (defun suderman/org-todo-eval ()
-  "Set the current Org heading or Agenda entry to EVAL."
+  "Set the enclosing Org task or Agenda entry to EVAL."
   (interactive)
-  (suderman/org-todo "EVAL"))
+  (suderman/org-todo-task "EVAL"))
 
 (defun suderman/org-todo-hold ()
-  "Set the current Org heading or Agenda entry to HOLD."
+  "Set the enclosing Org task or Agenda entry to HOLD."
   (interactive)
-  (suderman/org-todo "HOLD"))
+  (suderman/org-todo-task "HOLD"))
 
 (defun suderman/org-todo-auto ()
   "Set the current Org heading or Agenda entry to AUTO for org-dispatch."
@@ -1248,9 +1290,9 @@ and batch state changes pass through untouched."
 (add-hook 'org-after-todo-state-change-hook #'suderman/org-auto-setup)
 
 (defun suderman/org-todo-done ()
-  "Set the current Org heading or Agenda entry to DONE."
+  "Set the enclosing Org task or Agenda entry to DONE and fold it."
   (interactive)
-  (suderman/org-todo "DONE"))
+  (suderman/org-todo-task "DONE" t))
 
 (defun suderman/org-delete-subtree ()
   "Discard the current Org subtree, keeping it in the kill ring."

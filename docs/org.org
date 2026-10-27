@@ -13,6 +13,13 @@ A heading sits directly on its content, and one blank line closes a finished par
 archive, planning, refile, and export use the current Org item or Agenda entry
 as appropriate. Bulk archive and subtree deletion require an Org buffer.
 
+=SPC o d=, =h=, =e=, and =p= only change a heading that already has a state.
+They act on the heading at point, or on the nearest ancestor with a state, and
+do nothing when there is none. =SPC o d= also folds that task. =SPC o TAB=
+folds the same enclosing task without changing it, and =SPC o [= moves to its
+heading. =SPC o t= (TODO) and =SPC o T= (AUTO) still turn any heading into a
+task.
+
 Tasks use =TODO=, =AUTO=, =PROG=, =EVAL=, =HOLD=, and =DONE=. Agenda collects
 =inbox.org=, =todo.org=, =asana.org=, calendar files, direct files under
 =life/= and =notes/=, and canonical work files at
