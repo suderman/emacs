@@ -329,6 +329,13 @@ on a large Org heading, and redisplay then recenters the window."
                   (window-body-height nil t))))
     (vertical-motion -1)))
 
+(defun suderman/android-touch-keep-start (&rest _)
+  "Force the window start that `pixel-scroll' just chose.
+It leaves a start partway through a wrapped line unforced, and during a
+swipe redisplay can move that start a screen line down, so scrolling up
+past it shakes in place.  The forced start keeps its vertical scroll."
+  (set-window-start nil (window-start)))
+
 (defun suderman/android-setup-touch-scrolling ()
   "Configure Android touch input idempotently.
 The `fling' package continues swipes; see `suderman-windows'."
@@ -342,6 +349,9 @@ The `fling' package continues swipes; see `suderman-windows'."
               #'suderman/android-touch-hscroll)
   (advice-add 'pixel-scroll-precision-scroll-up-page :after
               #'suderman/android-touch-lift-point)
+  (dolist (scroll '(pixel-scroll-precision-scroll-up-page
+                    pixel-scroll-precision-scroll-down-page))
+    (advice-add scroll :after #'suderman/android-touch-keep-start))
   (setq touch-screen-enable-hscroll nil
         touch-screen-precision-scroll t
         touch-screen-word-select t
