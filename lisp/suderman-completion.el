@@ -6,6 +6,7 @@
 ;;; Code:
 
 (require 'use-package)
+(require 'suderman-projects)
 
 (defvar vertico--scroll)
 (defvar vertico-count)
@@ -36,6 +37,17 @@
   ;; A logical work project has an Org root, not necessarily a Git root.
   (let ((consult-project-function (lambda (_) (vc-root-dir 'Git))))
     (apply grep args)))
+
+(defun suderman/consult-ripgrep-with-source (grep &optional dir initial)
+  "Run GREP over a work project's Org and source directories when DIR is nil."
+  (let ((project (and (null dir) (project-current))))
+    (when (suderman/project-p project)
+      (let ((source (suderman/project--directory
+                     suderman/project-source-root project)))
+        (setq dir (if (file-directory-p source)
+                      (list (project-root project) source)
+                    (project-root project)))))
+    (funcall grep dir initial)))
 
 ;; https://github.com/minad/vertico/discussions/615#discussioncomment-13872270
 ;; This relies on private Vertico scrolling and mouse APIs.
@@ -138,6 +150,8 @@
   (require 'consult-compile)
   (advice-add 'consult-git-grep :around
               #'suderman/consult-git-grep-in-repository)
+  (advice-add 'consult-ripgrep :around
+              #'suderman/consult-ripgrep-with-source)
   ;; Keep in-buffer previews immediate; avoid opening files on every keypress.
   (consult-customize
    consult-ripgrep consult-git-grep consult-grep
