@@ -1186,31 +1186,57 @@ Without STATE, open the TODO list outside Org or Agenda."
     (suderman/org--call-contextually
      #'org-todo #'org-agenda-todo #'org-todo-list)))
 
-(defun suderman/org--goto-task ()
+(defun suderman/org--goto-task (&optional create)
   "Move to the nearest heading at or above point with a TODO state.
-Return non-nil when one exists; otherwise leave point alone."
+With CREATE and no such heading, move to the heading at point instead.
+Return non-nil when there is a heading; otherwise leave point alone."
   (when-let* ((task (save-excursion
                       (unless (org-before-first-heading-p)
                         (org-back-to-heading t)
-                        (while (and (not (org-get-todo-state))
-                                    (org-up-heading-safe)))
-                        (and (org-get-todo-state) (point))))))
+                        (let ((start (point)))
+                          (while (and (not (org-get-todo-state))
+                                      (org-up-heading-safe)))
+                          (cond ((org-get-todo-state) (point))
+                                (create start)))))))
     (goto-char task)))
 
-(defun suderman/org-todo-task (state &optional fold)
+(defun suderman/org--new-task-line-p ()
+  "Return non-nil where a new top-level task should be typed.
+That is the empty line after the final newline, or a blank line before
+the first heading."
+  (or (and (eobp) (bolp))
+      (and (org-before-first-heading-p)
+           (save-excursion
+             (beginning-of-line)
+             (looking-at-p "[ \t]*$")))))
+
+(defun suderman/org-todo-task (state &optional fold create)
   "Change the enclosing task heading to STATE, folding it when FOLD.
 The task is the heading at point or its nearest ancestor that already
-has a state.  Without one, do nothing.  Agenda entries change directly."
+has a state.  Without one, do nothing, or with CREATE make the heading
+at point the task.  With CREATE on a line from
+`suderman/org--new-task-line-p', start a new STATE heading there in
+Insert.  Agenda entries change directly."
   (suderman/org--call-contextually
    (lambda ()
      (interactive)
-     (if fold
-         (when (suderman/org--goto-task)
-           (org-todo state)
-           (org-fold-hide-subtree))
+     (cond
+      ((and create (suderman/org--new-task-line-p))
+       (delete-region (line-beginning-position) (line-end-position))
+       (insert "* " state " ")
+       ;; The line after the final newline is not real until it ends in one.
+       (when (eobp)
+         (save-excursion (insert "\n")))
+       (when (bound-and-true-p meow-normal-mode)
+         (suderman/meow-insert)))
+      (fold
+       (when (suderman/org--goto-task create)
+         (org-todo state)
+         (org-fold-hide-subtree)))
+      (t
        (save-excursion
-         (when (suderman/org--goto-task)
-           (org-todo state)))))
+         (when (suderman/org--goto-task create)
+           (org-todo state))))))
    (lambda () (interactive) (org-agenda-todo state))))
 
 (defun suderman/org-goto-task ()
@@ -1229,9 +1255,10 @@ has a state.  Without one, do nothing.  Agenda entries change directly."
     (org-fold-hide-subtree)))
 
 (defun suderman/org-todo-todo ()
-  "Set the current Org heading or Agenda entry to TODO."
+  "Set the enclosing Org task, or else the heading at point, to TODO.
+In Agenda, set the entry at point."
   (interactive)
-  (suderman/org-todo "TODO"))
+  (suderman/org-todo-task "TODO" nil t))
 
 (defun suderman/org-todo-prog ()
   "Set the enclosing Org task or Agenda entry to PROG."
@@ -1249,9 +1276,10 @@ has a state.  Without one, do nothing.  Agenda entries change directly."
   (suderman/org-todo-task "HOLD"))
 
 (defun suderman/org-todo-auto ()
-  "Set the current Org heading or Agenda entry to AUTO for org-dispatch."
+  "Set the enclosing Org task, or else the heading at point, to AUTO.
+In Agenda, set the entry at point.  org-dispatch runs AUTO tasks."
   (interactive)
-  (suderman/org-todo "AUTO"))
+  (suderman/org-todo-task "AUTO" nil t))
 
 (defvar suderman/org-dispatch-hosts '(("kit" . ?k) ("cog" . ?c) ("lux" . ?l))
   "Host tags org-dispatch recognizes, with their fast-selection keys.

@@ -17,8 +17,11 @@ as appropriate. Bulk archive and subtree deletion require an Org buffer.
 They act on the heading at point, or on the nearest ancestor with a state, and
 do nothing when there is none. =SPC o d= also folds that task. =SPC o TAB=
 folds the same enclosing task without changing it, and =SPC o [= moves to its
-heading. =SPC o t= (TODO) and =SPC o T= (AUTO) still turn any heading into a
-task.
+heading. =SPC o t= (TODO) and =SPC o T= (AUTO) change the same enclosing task
+when there is one, since tasks never nest. Otherwise they turn the heading at
+point into a task. On a blank line before the first heading, or on the empty
+line after the end of the file, they start a new top-level task there and enter
+Insert after its keyword.
 
 Tasks use =TODO=, =AUTO=, =PROG=, =EVAL=, =HOLD=, and =DONE=. Agenda collects
 =inbox.org=, =todo.org=, =asana.org=, calendar files, direct files under
