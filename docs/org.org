@@ -23,13 +23,9 @@ point into a task. On a blank line before the first heading, or on the empty
 line after the end of the file, they start a new top-level task there and enter
 Insert after its keyword.
 
-Tasks use =TODO=, =AUTO=, =PROG=, =EVAL=, =HOLD=, and =DONE=. Agenda collects
-=inbox.org=, =todo.org=, =asana.org=, calendar files, direct files under
-=life/= and =notes/=, and canonical work files at
-=work/<domain>/<project>/<project>.org=.
-It also includes Org files directly under each work domain, but skips
-=archive.org= and archived directories. Capture goes to the inbox; refile uses
-active context files rather than scanning every task attachment directory.
+Tasks use =TODO=, =AUTO=, =PROG=, =EVAL=, =HOLD=, and =DONE=. Agenda collects =inbox.org=, =todo.org=, =asana.org=, direct files under =calendar/=, =life/= and =notes/=, and all =.org= files recursively under =work/=. Discovery skips =archive.org=, =archive/= directories, hidden files and hidden directories. Work discovery does not follow directory symlinks. Capture goes to the inbox; refile uses active life, notes, and work files, including nested work files. Org task notes and attachments saved as =.org= under =work/= therefore appear in Agenda and refile unless hidden or archived.
+
+Asana tracking still selects only canonical project files at =work/<domain>/<project>/<project>.org=, not sibling or nested notes. The dispatcher uses the same Agenda discovery when it next rebuilds its cached file list, so eligible AUTO tasks in the newly included work files can launch.
 
 Agenda membership is recomputed after =custom.el= loads, so a list saved by =C-c [= or =C-c ]= cannot replace discovery at startup. During a session, =r= and =g= in Agenda rediscover files before refreshing; hot reload also recomputes the list. Add files through the directory conventions above rather than saving an agenda list in Custom.
 

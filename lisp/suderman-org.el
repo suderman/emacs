@@ -774,23 +774,22 @@ and other blocks keep their lines; a source block fills by its language."
                   (directory-files directory t "\\`[^.].*\\.org\\'")))))
 
 (defun suderman/org-work-agenda-files (directory)
-  "Return agenda files selected by the work hierarchy under DIRECTORY."
-  (let (files)
-    (dolist (domain (when (file-directory-p directory)
-                      (directory-files directory t "\\`[^.]")))
-      (when (file-directory-p domain)
-        (setq files (append (suderman/org--direct-org-files domain) files))
-        (dolist (project (directory-files domain t "\\`[^.]"))
-          (when (file-directory-p project)
-            (let ((file (expand-file-name
-                         (concat (file-name-nondirectory
-                                  (directory-file-name project))
-                                 ".org")
-                         project)))
-              (when (and (file-regular-p file)
-                         (not (suderman/org--archived-path-p file)))
-                (push file files)))))))
-    (sort files #'string<)))
+  "Return sorted active Org files recursively under DIRECTORY.
+Skip hidden files, hidden directories, and archives.  Do not follow
+symlinks to directories."
+  (when (file-directory-p directory)
+    (sort
+     (seq-filter
+      (lambda (file)
+        (and (file-regular-p file)
+             (not (suderman/org--archived-path-p file))))
+      (directory-files-recursively
+       directory "\\`[^.].*\\.org\\'" nil
+       (lambda (dir)
+         (let ((name (file-name-nondirectory dir)))
+           (not (or (string-prefix-p "." name)
+                    (equal name "archive")))))))
+     #'string<)))
 
 (defun suderman/org-context-files ()
   "Return active Org files from life, notes, and work contexts."
@@ -800,7 +799,7 @@ and other blocks keep their lines; a source block fills by its language."
    (suderman/org-work-agenda-files (expand-file-name "work" org-directory))))
 
 (defun suderman/org-agenda-files ()
-  "Return the current Agenda file set without scanning task directories."
+  "Return the current Agenda file set, including active work subdirectories."
   (append
    (mapcar (lambda (file) (expand-file-name file org-directory))
            '("inbox.org" "todo.org" "asana.org"))
@@ -1114,8 +1113,11 @@ links to the task yet, so the Agenda lists the Asana task once."
                ;; files sit directly in DOMAIN.
                (projects (seq-filter
                           (lambda (file)
-                            (= 3 (length (file-name-split
-                                          (file-relative-name file work)))))
+                            (let ((parts (file-name-split
+                                          (file-relative-name file work))))
+                              (and (= 3 (length parts))
+                                   (equal (nth 2 parts)
+                                          (concat (nth 1 parts) ".org")))))
                           (suderman/org-work-agenda-files work)))
                (existing (seq-find
                           (lambda (file)

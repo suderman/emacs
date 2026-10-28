@@ -12,7 +12,7 @@
 
 ;; Agenda discovery
 
-(ert-deftest suderman/org-discovers-work-agenda-files-by-convention ()
+(ert-deftest suderman/org-discovers-active-work-files-recursively ()
   (let* ((work (make-temp-file "suderman-org-work-" t))
          (nonfiction (expand-file-name "nonfiction" work))
          (project (expand-file-name "beefresearch" nonfiction))
@@ -22,6 +22,8 @@
     (unwind-protect
         (progn
           (dolist (directory (list task
+                                   (expand-file-name "archive/2025" task)
+                                   (expand-file-name ".hidden" task)
                                    (expand-file-name "gta" archive)
                                    (expand-file-name "upick" nonfiction)
                                    (expand-file-name "not-a-file.org" nonfiction)
@@ -29,12 +31,19 @@
                                    (expand-file-name ".hidden" work)
                                    (expand-file-name "emacs" suderman)))
             (make-directory directory t))
-          (dolist (file (list (expand-file-name "bcrc.org" nonfiction)
+          (dolist (file (list (expand-file-name "overview.org" work)
+                              (expand-file-name "bcrc.org" nonfiction)
                               (expand-file-name "archive.org" nonfiction)
                               (expand-file-name "gta/gta.org" archive)
                               (expand-file-name ".private.org" nonfiction)
                               (expand-file-name "beefresearch.org" project)
                               (expand-file-name "quote-review.org" task)
+                              (expand-file-name "archive.org" project)
+                              (expand-file-name "archive/2025/old.org" task)
+                              (expand-file-name ".hidden/notes.org" task)
+                              (expand-file-name ".private.org" task)
+                              (expand-file-name "hyprland.org"
+                                                (expand-file-name "emacs" suderman))
                               (expand-file-name "notes.org"
                                                 (expand-file-name "upick" nonfiction))
                               (expand-file-name ".secret.org"
@@ -48,9 +57,13 @@
           (should
            (equal (suderman/org-work-agenda-files work)
                   (list (expand-file-name "bcrc.org" nonfiction)
+                        (expand-file-name "quote-review.org" task)
                         (expand-file-name "beefresearch.org" project)
+                        (expand-file-name "upick/notes.org" nonfiction)
+                        (expand-file-name "overview.org" work)
                         (expand-file-name "davy.org" suderman)
-                        (expand-file-name "emacs/emacs.org" suderman))))
+                        (expand-file-name "emacs/emacs.org" suderman)
+                        (expand-file-name "emacs/hyprland.org" suderman))))
           (should-not
            (suderman/org-work-agenda-files
             (expand-file-name "missing" work))))
@@ -63,24 +76,36 @@
          (calendar (expand-file-name "calendar/import.org" org-directory))
          (client (expand-file-name "work/acme/acme.org" org-directory))
          (project (expand-file-name "work/acme/widget/widget.org" org-directory))
+         (sibling (expand-file-name "work/acme/widget/extra.org" org-directory))
+         (nested (expand-file-name "work/acme/widget/task/notes.org" org-directory))
          (inbox (expand-file-name "inbox.org" org-directory))
          (todo (expand-file-name "todo.org" org-directory))
          (routines (expand-file-name "routines.org" org-directory))
          (draft (expand-file-name "draft.org" org-directory))
          (archive (expand-file-name "notes/archive.org" org-directory))
-         (contexts (list life notes client project))
+         (nested-personal (mapcar (lambda (file) (expand-file-name file org-directory))
+                                  '("life/nested/notes.org"
+                                    "notes/nested/notes.org"
+                                    "calendar/nested/notes.org")))
+         (contexts (list life notes client sibling nested project))
          (destinations (cons todo contexts)))
     (unwind-protect
         (progn
           (dolist (directory (list (file-name-directory life)
                                    (file-name-directory notes)
                                    (file-name-directory calendar)
-                                   (file-name-directory project)))
+                                   (file-name-directory nested)))
             (make-directory directory t))
           (dolist (file (append (list inbox todo routines draft calendar archive)
-                                contexts))
+                                contexts nested-personal))
+            (make-directory (file-name-directory file) t)
             (with-temp-file file))
           (should (equal (suderman/org-context-files) contexts))
+          (should (equal (suderman/org-agenda-files)
+                         (append (list inbox todo
+                                       (expand-file-name "asana.org" org-directory)
+                                       calendar)
+                                 contexts)))
           (with-temp-buffer
             (setq buffer-file-name inbox)
             (should (equal (suderman/org-refile-files) destinations))
@@ -102,11 +127,19 @@
          (asana (expand-file-name "asana.org" org-directory))
          (project (expand-file-name "work/acme/widget/widget.org" org-directory))
          (client (expand-file-name "work/acme/acme.org" org-directory))
+         (sibling (expand-file-name "work/acme/widget/extra.org" org-directory))
+         (noncanonical (expand-file-name "work/acme/other/notes.org" org-directory))
+         (nested (expand-file-name "work/acme/widget/task/task.org" org-directory))
          (prompts 0))
     (unwind-protect
         (progn
           (make-directory (file-name-directory project) t)
           (with-temp-file client)
+          (dolist (file (list sibling noncanonical nested))
+            (make-directory (file-name-directory file) t)
+            (with-temp-file file
+              (insert "* Existing link outside a canonical project file\n"
+                      "[[id:asana-42][Asana task]]\n")))
           (with-temp-file project
             (insert "#+TITLE: Widget\n\n* TODO Older task\n"))
           (with-temp-file asana
