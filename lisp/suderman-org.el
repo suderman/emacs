@@ -703,7 +703,8 @@ Clicking the current state, leftmost, only closes the menu."
 (defun suderman/org-mouse-todo-menu (event)
   "Show every TODO state over the keyword clicked by EVENT.
 NONE, always last, removes the state.  The menu covers the start of the
-title rather than pushing it to a new line.  A second click on a state
+title and is padded to end exactly where a title character did, so the
+rest of the line neither moves nor rewraps.  A second click on a state
 sets it; any other command closes it."
   (interactive "e")
   (suderman/org-todo-menu-close)
@@ -737,8 +738,29 @@ sets it; any other command closes it."
                                      'suderman/org-todo-state "")
                          ;; One space keeps the covered title off NONE.
                          (substring separator 0 1)))
-           (overlay (make-overlay start (min (+ start (length menu))
-                                             (line-end-position)))))
+           (end (match-end 2))
+           (overlay (make-overlay start end))
+           ;; Pixel x and glyph row; y varies with each glyph's height.
+           (x-y (lambda (pos)
+                  (when-let* ((posn (posn-at-point pos)))
+                    (cons (car (posn-x-y posn)) (cdr (posn-actual-col-row posn))))))
+           (row (cdr (funcall x-y start)))
+           (menu-x (progn (overlay-put overlay 'display menu)
+                          (car (funcall x-y end))))
+           text-x-y)
+      ;; Cover title text out to the menu's width, measured without it.
+      (overlay-put overlay 'display nil)
+      (while (and (setq text-x-y (funcall x-y end))
+                  (eql (cdr text-x-y) row)
+                  (< (car text-x-y) menu-x)
+                  (< end (line-end-position)))
+        (setq end (1+ end)))
+      (when (and menu-x text-x-y (eql (cdr text-x-y) row) (> (car text-x-y) menu-x))
+        (setq menu (concat menu (propertize " " 'display `(space :width (,(- (car text-x-y) menu-x)))
+                                            'face separator-face
+                                            'mouse-face separator-face
+                                            'keymap suderman/org-todo-menu-map))))
+      (move-overlay overlay start end)
       (overlay-put overlay 'display menu)
       (overlay-put overlay 'suderman/org-todo-state current)
       (setq suderman/org-todo-menu overlay)
