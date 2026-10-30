@@ -641,30 +641,127 @@ as raw text, flush left and in monospace."
     (when (derived-mode-p 'org-mode)
       (suderman/org-enable-synced-file-behavior))))
 
-(defun suderman/org-mouse-cycle-todo (event)
-  "Cycle the TODO keyword clicked by EVENT."
+(defvar suderman/org-todo-menu nil
+  "Overlay showing the open TODO state menu, if any.")
+
+(defun suderman/org-todo-menu-states (current)
+  "Return this buffer's TODO keywords in a ring starting at CURRENT.
+Keywords of the later sequences, such as AUTO, follow the first keyword."
+  (let* ((main (car org-todo-sets))
+         (states (append (list (car main))
+                         (apply #'append (cdr org-todo-sets))
+                         (cdr main)))
+         (tail (member current states)))
+    (append tail (butlast states (length tail)))))
+
+(defun suderman/org-todo-menu-close ()
+  "Close the TODO state menu."
+  (when suderman/org-todo-menu
+    (delete-overlay suderman/org-todo-menu)
+    (setq suderman/org-todo-menu nil))
+  (remove-hook 'pre-command-hook #'suderman/org-todo-menu-dismiss))
+
+(defun suderman/org-todo-menu-dismiss ()
+  "Close the TODO state menu before any command except a choice from it."
+  (unless (memq this-command '(suderman/org-todo-menu-press
+                               suderman/org-todo-menu-choose))
+    (suderman/org-todo-menu-close)))
+
+(defun suderman/org-todo-menu-press ()
+  "Ignore a press on the TODO state menu; the click chooses."
+  (interactive))
+
+(put 'suderman/org-todo-menu-press 'ignored-mouse-command t)
+
+(defun suderman/org-todo-menu-choose (event)
+  "Set the state clicked by EVENT in the TODO state menu, then close it.
+Clicking the current state, leftmost, only closes the menu."
   (interactive "e")
+  (let* ((overlay suderman/org-todo-menu)
+         (start (and overlay (overlay-start overlay)))
+         (object (posn-string (event-start event)))
+         (state (and object (get-text-property (cdr object) 'suderman/org-todo-state
+                                               (car object)))))
+    (suderman/org-todo-menu-close)
+    (when (and start state (not (equal state (overlay-get overlay 'suderman/org-todo-state))))
+      (select-window (posn-window (event-start event)))
+      (goto-char start)
+      (org-todo state))))
+
+(defvar suderman/org-todo-menu-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [down-mouse-1] #'suderman/org-todo-menu-press)
+    (define-key map [mouse-1] #'suderman/org-todo-menu-choose)
+    (define-key map [mouse-2] #'suderman/org-todo-menu-choose)
+    map)
+  "Mouse bindings on the states of the TODO state menu.")
+
+(defun suderman/org-todo-hover-face (face)
+  "Return the hover face for a state shown in FACE: its own color, reversed."
+  `(:inherit ,face :inverse-video t))
+
+(defun suderman/org-mouse-todo-menu (event)
+  "Show every TODO state over the keyword clicked by EVENT.
+NONE, always last, removes the state.  The menu covers the start of the
+title rather than pushing it to a new line.  A second click on a state
+sets it; any other command closes it."
+  (interactive "e")
+  (suderman/org-todo-menu-close)
   (mouse-set-point event)
-  (if (member (org-get-todo-state) org-done-keywords)
-      (org-todo "TODO")
-    (org-todo)))
+  (when (save-excursion (org-back-to-heading t)
+                        (looking-at org-complex-heading-regexp))
+    (let* ((current (match-string 2))
+           (start (match-beginning 2))
+           ;; Separators need their own unchanged hover face, or Emacs
+           ;; hovers the whole menu with the covered keyword's.  A click
+           ;; on one closes the menu instead of reopening it.
+           (separator-face '(shadow suderman/fixed-pitch-text))
+           (separator (propertize " │ " 'face separator-face
+                                  'mouse-face separator-face
+                                  'keymap suderman/org-todo-menu-map))
+           (menu (concat (mapconcat
+                          (lambda (state)
+                            (let ((face (or (org-get-todo-face state) 'org-todo)))
+                              (propertize state
+                                          'face face
+                                          'mouse-face (suderman/org-todo-hover-face face)
+                                          'keymap suderman/org-todo-menu-map
+                                          'suderman/org-todo-state state)))
+                          (suderman/org-todo-menu-states current)
+                          separator)
+                         separator
+                         (propertize "NONE"
+                                     'face separator-face
+                                     'mouse-face (suderman/org-todo-hover-face separator-face)
+                                     'keymap suderman/org-todo-menu-map
+                                     'suderman/org-todo-state "")
+                         ;; One space keeps the covered title off NONE.
+                         (substring separator 0 1)))
+           (overlay (make-overlay start (min (+ start (length menu))
+                                             (line-end-position)))))
+      (overlay-put overlay 'display menu)
+      (overlay-put overlay 'suderman/org-todo-state current)
+      (setq suderman/org-todo-menu overlay)
+      (add-hook 'pre-command-hook #'suderman/org-todo-menu-dismiss))))
 
 (defvar suderman/org-mouse-todo-map
   (let ((map (make-sparse-keymap)))
-    (define-key map [mouse-1] #'suderman/org-mouse-cycle-todo)
+    (define-key map [mouse-1] #'suderman/org-mouse-todo-menu)
     map))
 
-(defun suderman/org-enable-mouse-todo-cycling ()
-  "Make TODO keywords in headlines cycle on mouse-1."
+(defun suderman/org-enable-mouse-todo-menu ()
+  "Open the TODO state menu from TODO keywords in headlines on mouse-1."
   (font-lock-add-keywords
    nil
    `((,(concat org-outline-regexp-bol
               "\\(" org-todo-regexp "\\)\\(?:[ \t]\\|$\\)")
-      1 `(face nil keymap ,suderman/org-mouse-todo-map mouse-face highlight)
+      1 `(face nil keymap ,suderman/org-mouse-todo-map
+               mouse-face ,(suderman/org-todo-hover-face
+                            (or (org-get-todo-face (match-string 1)) 'org-todo)))
       'prepend))
    t))
 
-(add-hook 'org-mode-hook #'suderman/org-enable-mouse-todo-cycling)
+(add-hook 'org-mode-hook #'suderman/org-enable-mouse-todo-menu)
 
 (defun suderman/org-open-below-heading ()
   "Open a line directly below the heading at point, showing its entry.
