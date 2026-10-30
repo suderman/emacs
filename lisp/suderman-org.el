@@ -717,7 +717,7 @@ sets it; any other command closes it."
            ;; hovers the whole menu with the covered keyword's.  A click
            ;; on one closes the menu instead of reopening it.
            (separator-face '(shadow suderman/fixed-pitch-text))
-           (separator (propertize " │ " 'face separator-face
+           (separator (propertize " " 'face separator-face
                                   'mouse-face separator-face
                                   'keymap suderman/org-todo-menu-map))
            (menu (concat (mapconcat
