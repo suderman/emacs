@@ -8,6 +8,12 @@
 
 (require 'ert)
 
+;; `project-current' saves every project it finds; keep fixtures out of the
+;; real list.
+(defvar project--list)
+(setq project-list-file (make-temp-file "suderman-test-projects-")
+      project--list nil)
+
 (let ((test-directory (file-name-directory load-file-name)))
   (dolist (file (directory-files test-directory t "-test\\.el\\'"))
     (load file nil 'nomessage)))
