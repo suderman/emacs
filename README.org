@@ -59,9 +59,12 @@ leader group after =SPC=. These are the keys I use most.
 | =C-c m=     | Mail                                     |
 | =F5=        | Reload the configuration                 |
 
-The dashboard opens on demand rather than at startup. Its top row opens common
-source and configuration directories through Dirvish, followed by recent
-projects and recent files. Backtick opens it from IBuffer and Dirvish too.
+The dashboard opens on demand rather than at startup, and in a new
+=emacsclient= frame opened without a file. Its top row opens common source and
+configuration directories through Dirvish, followed by recent files, frequent
+files, and recent projects. Frequent files rank each visit by a score that
+halves every week, so files you return to stay listed across restarts.
+Backtick opens it from IBuffer and Dirvish too.
 
 ** Editing in Normal state
 
