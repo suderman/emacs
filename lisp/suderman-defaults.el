@@ -51,9 +51,13 @@
 ;; Mouse support in terminal frames; graphical frames ignore it.
 (xterm-mouse-mode 1)
 
-(savehist-mode 1)
-(save-place-mode 1)
-(recentf-mode 1)
+;; Batch jobs such as org-dispatch load this config every few minutes.  They
+;; would overwrite the shared history files with their own lists on exit.
+(require 'savehist)
+(unless noninteractive
+  (savehist-mode 1)
+  (save-place-mode 1)
+  (recentf-mode 1))
 (global-auto-revert-mode 1)
 (electric-pair-mode 1)
 
