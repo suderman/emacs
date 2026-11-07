@@ -2079,6 +2079,47 @@ ssh-unlock adds the ssh key with a fingerprint before ssh runs."
                                        (string-trim (buffer-string)))))
                      (kill-buffer buffer)))))))
 
+(defvar suderman/june-host "kit"
+  "Host where June runs, whose files her links name outside ~/org.")
+
+(defun suderman/june-open (path &optional search)
+  "Open PATH from a link June wrote, then find SEARCH as an Org file link does.
+~/org is the same tree on every device, so its files open here.  Any other
+path is a file on `suderman/june-host', opened over TRAMP from elsewhere and
+not at all on Android.  SEARCH is a heading (*Heading), custom ID (#id),
+line number, or text; nothing in it is evaluated."
+  (let* ((org (file-name-as-directory (expand-file-name "~/org")))
+         (local (expand-file-name path))
+         (file (cond ((file-in-directory-p local org) local)
+                     ((featurep 'android)
+                      (user-error "June's link is to a file on %s" suderman/june-host))
+                     ((string= (system-name) suderman/june-host) local)
+                     (t (concat "/ssh:" suderman/june-host ":" path)))))
+    (find-file file)
+    (when (and search (not (string-empty-p search)))
+      (if (string-match-p "\\`[0-9]+\\'" search)
+          (progn (goto-char (point-min))
+                 (forward-line (1- (string-to-number search))))
+        (org-link-search search)))
+    (select-frame-set-input-focus (selected-frame))
+    nil))
+
+(defun suderman/june-org-protocol (info)
+  "Open the file in org-protocol INFO, from June's Android app.
+INFO has :path and an optional :search, as `suderman/june-open' takes them."
+  (suderman/june-open (plist-get info :path) (plist-get info :search))
+  nil)
+
+(with-eval-after-load 'org-protocol
+  (add-to-list 'org-protocol-protocol-alist
+               '("june-open" :protocol "june-open"
+                 :function suderman/june-org-protocol)))
+
+;; Android hands org-protocol: links to the server, which acts on them only once
+;; org-protocol is loaded; June's app sends one for each file link tapped.
+(when (featurep 'android)
+  (require 'org-protocol))
+
 (use-package org
   :ensure nil
   :init
