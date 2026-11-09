@@ -41,9 +41,7 @@ rebuild.
   from MELPA through package.el until the next flake update brings it into
   Nix. Mark built-ins such as Which-Key with =:ensure nil= so an older ELPA copy
   does not shadow them.
-- =edger= and =meow-purrsist= come from GitHub through =package-vc= on every
-  platform. =SPC q u= upgrades them. On Android it also upgrades archive
-  packages; on Linux, Nix owns those.
+- =edger=, =meow-purrsist=, and =june-links= come from GitHub through =package-vc= on every platform. =SPC q u= upgrades them. On Android it also upgrades archive packages; on Linux, Nix owns those.
 - The same Nix file supplies native modules, tree-sitter grammars, language
   servers, formatters, and command-line tools.
 - =early-init.el=, =init.el=, =lisp/=, and =assets/= also become an immutable
