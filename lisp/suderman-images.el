@@ -20,6 +20,8 @@
 (defvar doc-view-continuous)
 (defvar suderman/sideways-scroll)
 (defvar loupe-gallery-mode-map)
+(declare-function loupe-gallery-selected-file "loupe-gallery")
+(declare-function loupe-gallery-quit "loupe-gallery")
 
 (use-package loupe
   :vc (:url "https://github.com/suderman/loupe" :rev :newest)
@@ -99,8 +101,18 @@ fails and kills a GUI animation whenever a daemon's terminal frame is in use."
   (suderman/meow-off)
   (setq-local suderman/sideways-scroll (list nil nil t)))
 
+(defun suderman/gallery-dirvish ()
+  "Close the gallery and show its folder in Dirvish at the selected image."
+  (interactive)
+  (let ((file (loupe-gallery-selected-file)))
+    (loupe-gallery-quit)
+    ;; A gallery opened from Dirvish has just restored it.
+    (unless (with-current-buffer (window-buffer) (derived-mode-p 'dired-mode))
+      (suderman/dirvish file))))
+
 (with-eval-after-load 'loupe-gallery
   (keymap-set loupe-gallery-mode-map "SPC" #'meow-keypad)
+  (keymap-set loupe-gallery-mode-map "." #'suderman/gallery-dirvish)
   (keymap-set loupe-gallery-mode-map "," #'suderman/ibuffer-toggle)
   (add-hook 'loupe-gallery-mode-hook #'suderman/gallery-setup))
 
