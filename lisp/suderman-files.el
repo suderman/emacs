@@ -873,18 +873,9 @@ client's frame, not this buffer, keeps a terminal client alive."
   (keymap-set dired-mode-map "q" #'quit-window)
   (require 'dirvish-widgets)
   (dirvish-define-preview gif (file ext)
-    "Preview GIF images, looping while the preview remains visible."
+    "Preview GIF images in an Image mode buffer, where loupe animates them."
     (when (equal ext "gif")
-      (let ((gif (dirvish--find-file-temporarily file))
-            (callback
-             (lambda (recipe)
-               (when-let* ((buffer (cdr recipe))
-                           ((buffer-live-p buffer)))
-                 (with-current-buffer buffer
-                   (image-animate (get-char-property 1 'display)
-                                  nil t 1))))))
-        (run-with-idle-timer 1 nil callback gif)
-        gif)))
+      (dirvish--find-file-temporarily file)))
   (set-face-attribute 'dirvish-file-modes nil
                       :inherit 'font-lock-keyword-face
                       :foreground 'unspecified)

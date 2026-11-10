@@ -1,9 +1,9 @@
 ;;; suderman-images.el --- Image viewing -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Loupe zooms, pans, and pages through images and PDFs, and shows a folder
-;; as a gallery.  This module fits it to Meow, Doom Modeline, Dirvish, and
-;; terminal frames, and adds animation and clipboard copy.
+;; Loupe zooms, pans, pages through, and animates images and PDFs, and
+;; shows a folder as a gallery.  This module fits it to Meow, Doom Modeline,
+;; Dirvish, and terminal frames, and adds clipboard copy.
 
 ;;; Code:
 
@@ -63,12 +63,8 @@
              (file-name-nondirectory buffer-file-name))))
 
 (defun suderman/image-mode-setup ()
-  "Prepare Image mode for Meow Motion state and animation."
+  "Prepare Image mode for Meow Motion state."
   (when (derived-mode-p 'image-mode)
-    (when-let* ((image (image-get-display-property))
-                ((image-multi-frame-p image))
-                ((not (image-animate-timer image))))
-      (image-toggle-animation))
     (when (and (bound-and-true-p meow-global-mode)
                (not (and (bound-and-true-p meow-mode)
                          (bound-and-true-p meow-motion-mode)
