@@ -92,7 +92,7 @@
     (suderman/dirvish-ibuffer . "buffers")
     (suderman/dirvish-search . "search")
     (suderman/dirvish-help . "key help")
-    (suderman/image-dired-gallery . "gallery")
+    (suderman/gallery . "gallery")
     (tramp-dired-find-file-with-sudo . "sudo open")
     (browse-url-of-dired-file . "browser")
     (dired-flag-backup-files . "flag bak")

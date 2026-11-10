@@ -42,12 +42,14 @@ cursor.
 A tap on the buffer name in the mode line does nothing, so a stray tap cannot
 switch to the previous buffer.
 
-Pinch scales text in every buffer. Vertical swipes scroll by pixel and keep
+Pinch scales text in text buffers. In an image or PDF it zooms the page, and in the gallery it changes the number of columns; see [[file:files.org::*Dirvish and Image mode][Dirvish and Image mode]]. Vertical swipes scroll by pixel and keep
 going after you lift your finger. Buffers with truncated lines, such as Agenda,
 also swipe sideways; =SPC t t= turns that on or off for the current buffer.
 
 The Android config starts the Emacs server if it is not already running, so
 other apps can send files to Emacs through Open with.
+
+To make Emacs the phone's image viewer, open a photo from a file manager or gallery app, choose Emacs under Open with, then Always. When the other app allows it, Emacs receives the photo's real path, so swipes and =G= work on its folder. Thumbnails and zoom copies use Termux's ImageMagick; PDFs render with its Ghostscript.
 
 * Termux programs and packages
 

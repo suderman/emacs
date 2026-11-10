@@ -135,7 +135,9 @@ new one when a concern has genuinely outgrown its home.
 - `suderman-transfer.el`: staged copy/cut/paste, clipboard and terminal file
   import, Ripdrag, and Kitty transfers.
 - `suderman-files.el`: Dired, Dirvish, the sidebar, previews, and their keys.
-- `suderman-images.el`: Image mode and the Image-Dired gallery.
+- `suderman-images.el`: Image mode zoom, pan, and paging by touch, touchpad,
+  mouse, and keys; PDF pinch.
+- `suderman-gallery.el`: the thumbnail gallery.
 - `suderman-dashboard.el`: the on-demand dashboard.
 - `suderman-markdown.el`: Markdown and Pandoc preview.
 - `suderman-org.el`: Org agenda, capture, archive, and refile.

@@ -12,6 +12,7 @@
 (require 'image-mode)
 (require 'suderman-files)
 (require 'suderman-images)
+(require 'suderman-gallery)
 (require 'suderman-markdown)
 (require 'suderman-org)
 
@@ -109,20 +110,31 @@
                (lambda (_) "text/plain")))
       (should-error (suderman/image-copy-to-clipboard) :type 'user-error))))
 
-(ert-deftest suderman/image-gallery-updates-count-after-deletion ()
-  (with-temp-buffer
-    (image-dired-thumbnail-mode)
-    (let ((inhibit-read-only t))
-      (insert (propertize "x" 'image-dired-thumbnail t) " "
-              (propertize "x" 'image-dired-thumbnail t)))
-    (setq image-dired--number-of-thumbnails 2)
-    (cl-letf (((symbol-function 'image-dired-do-flagged-delete)
-               (lambda ()
-                 (let ((inhibit-read-only t))
-                   (delete-region (point-min) (+ (point-min) 2)))))
-              ((symbol-function 'image-dired--update-header-line) #'ignore))
-      (suderman/image-dired-delete))
-    (should (= image-dired--number-of-thumbnails 1))))
+(ert-deftest suderman/gallery-closes-only-images-it-opened ()
+  "Paging through a gallery must not kill a buffer the user already had."
+  (let* ((directory (make-temp-file "suderman-gallery" t))
+         (first (expand-file-name "a.txt" directory))
+         (second (expand-file-name "b.txt" directory))
+         (gallery (generate-new-buffer " *gallery-test*"))
+         theirs opened)
+    (unwind-protect
+        (progn
+          (write-region "a" nil first)
+          (write-region "b" nil second)
+          (setq theirs (find-file-noselect first))
+          (with-current-buffer gallery
+            (setq suderman/gallery-files (vector first second)))
+          (suderman/gallery--visit gallery 0)
+          (suderman/gallery--step gallery 1)
+          (setq opened (current-buffer))
+          (should (equal buffer-file-name second))
+          (should (buffer-live-p theirs))
+          (suderman/gallery--step gallery -1)
+          (should (eq (current-buffer) theirs))
+          (should-not (buffer-live-p opened)))
+      (dolist (buffer (list theirs opened gallery))
+        (when (buffer-live-p buffer) (kill-buffer buffer)))
+      (delete-directory directory t))))
 
 
 ;; Dirvish and file operations

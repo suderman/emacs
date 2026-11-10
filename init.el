@@ -29,6 +29,7 @@
 (require 'suderman-transfer)
 (require 'suderman-files)
 (require 'suderman-images)
+(require 'suderman-gallery)
 (require 'suderman-dashboard)
 (require 'suderman-markdown)
 (require 'suderman-org)

@@ -26,8 +26,9 @@ acting like separate tools.
 The editing map starts with selections, then applies changes to them. Dirvish
 cleans up Dired. Markdown preview runs Pandoc and refreshes after each save.
 Stylix supplies the colors, while Doom Modeline and Nerd Icons handle the lower
-status bar and file symbols. Image mode cycles through a directory, transforms
-images in place, and starts animated images automatically.
+status bar and file symbols. Image mode zooms by pinch, touchpad, or keys,
+swipes through a directory, and starts animated images automatically; =G= opens
+a thumbnail gallery.
 
 * Run it
 

@@ -129,12 +129,13 @@ archives, fonts, and PDFs. Minibuffer file selection uses the same preview
 dispatchers after a short delay. Animated images opened in Image mode also
 autoplay and loop.
 
-=G= opens a full-frame Image-Dired gallery of the current directory's top-level
-images. =hjkl= move between thumbnails, =RET= opens an image, =g= refreshes, and
-=x= deletes flagged images. In the image view, =n/p= cycle through gallery images
-and =q= returns to thumbnails. From thumbnails, =q= restores the original
-Dirvish layout and selected file. Ordinary Image mode uses Motion state: =n/p=
-browse the directory, =+= and =-= zoom, =r= and =R= rotate, and =0= resets.
+Image mode fits each image to its window and centres it. Pinch zooms around your fingers, one finger pans a zoomed image and keeps gliding after a flick, and a double tap zooms in or back to fit. At fit, a sideways swipe slides to the next or previous image. On desktop, a touchpad pinch or Control with the wheel zooms at the pointer, the wheel and a mouse drag pan a zoomed image, and a double click toggles zoom. At fit, each wheel notch flips to the next or previous image; a touchpad scroll flips once. Image mode uses Motion state: =+= and =-= zoom, =hjkl= and the arrows pan a zoomed image, =h/l= and =n/p= page through images otherwise, =r= and =R= rotate, and =0= resets.
+
+Emacs rescales an image only by loading it again, which takes up to a second for a camera photo on the phone. While fingers move, zoom draws a 1600-pixel copy without smoothing, which ImageMagick makes in the background and caches under =~/.cache/emacs/image-proxy/=. The real image is drawn once the fingers lift. Panning only moves a slice of the drawn image, so it costs nothing.
+
+=G= in Dirvish, Dired, or an image opens a thumbnail gallery of the directory's top-level images, in the listing's order, starting on the current file. Each photo fills a square tile, cropped to its centre, and the tiles fill the window width. Each pinch, Control with the wheel, or =+= and =-= shows one column fewer or more. Thumbnails load only as their rows come into view, so a folder of thousands of photos opens at once, and they share the freedesktop cache with other programs. A tap or =RET= opens an image; on desktop a click selects and a double click opens. In that image, paging and swiping follow the gallery's order and =q= returns to the gallery. =m= marks, as does a long press on Android, and a marked tile gets a thick frame; =U= unmarks all, =d= deletes the marked images or the selected one after confirmation, =s= switches between listing order and newest first, =g= rescans, and =q= restores the windows the gallery replaced.
+
+On Android, PDFs open in DocView, which renders pages with Termux's Ghostscript at 200 dpi, fitted to the window width. A pinch zooms the page roughly while the fingers move and sharply when they lift. One finger scrolls and keeps gliding after a flick, stopping at the page's edge. A drag that starts at the top or bottom of the page and goes a quarter of the screen past it turns the page. A double tap zooms to twice the width, or back to fit. On desktop, Control with the wheel zooms PDF Tools pages around the pointer, and a touchpad pinch draws the page roughly while the fingers move and sharply when they stop.
 
 On Wayland, Image mode's =c= copies image data. GIFs are copied as file URIs so
 receiving apps can use the animation. Dirvish =v= saves PNG, JPEG, GIF, WebP,
