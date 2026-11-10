@@ -2,12 +2,14 @@
 
 ;;; Commentary:
 ;; Android-only input: volume keys for the software keyboard, pinch zoom,
-;; touch scrolling, the Emacs server, and Termux executables.  The toolbar
-;; shared with desktop lives in `suderman-toolbar'.
+;; touch scrolling, the Emacs server, Termux executables, and the SIGCHLD
+;; handler that child processes depend on.  The toolbar shared with desktop
+;; lives in `suderman-toolbar'.
 
 ;;; Code:
 
 (require 'subr-x)
+(require 'suderman-paths)
 
 (defvar global-text-scale-adjust-limits)
 (defvar meow-keypad-describe-delay)
@@ -21,12 +23,43 @@
 (defvar touch-screen-word-select)
 
 (declare-function server-running-p "server" (&optional name))
+(declare-function sigchld-restore "sigchld")
 (declare-function touch-screen-hold "touch-screen" (event))
 (declare-function touch-screen-inhibit-drag "touch-screen")
 (declare-function suderman/sync-fixed-pitch-height "suderman-appearance")
 
 (defconst suderman/android-termux-bin
   "/data/data/com.termux/files/usr/bin")
+
+(defconst suderman/android-sigchld-source
+  (expand-file-name "../android/sigchld.c"
+                    (file-name-directory (or load-file-name buffer-file-name)))
+  "Source of the module that keeps Emacs's SIGCHLD handler.")
+
+(defun suderman/android-restore-sigchld (&rest _)
+  "Put back Emacs's SIGCHLD handler if Android replaced it."
+  (when (fboundp 'sigchld-restore)
+    (sigchld-restore)))
+
+(defun suderman/android-keep-sigchld ()
+  "Load the module that keeps Emacs noticing child processes exit.
+The first time Android's Java side starts a process, as when Open with
+hands a file to emacsclient, it resets SIGCHLD to its default.  Emacs
+installs its handler only at startup, so from then on processes stay
+running after they exit and sentinels never run.  The module, built once
+with Termux's clang, saves the handler when it loads, before the server
+starts; each server connection puts it back."
+  (let ((module (expand-file-name "sigchld.so" suderman/cache-dir)))
+    (when (and (fboundp 'module-load)
+               (file-readable-p suderman/android-sigchld-source)
+               (file-newer-than-file-p suderman/android-sigchld-source module)
+               (executable-find "clang"))
+      (call-process "clang" nil nil nil "-shared" "-fPIC" "-O2"
+                    "-o" module suderman/android-sigchld-source))
+    (when (and (file-exists-p module) (not (featurep 'sigchld)))
+      (module-load module))
+    (advice-add 'server-process-filter :before
+                #'suderman/android-restore-sigchld)))
 
 (defun suderman/android-show-keyboard ()
   "Show the Android software keyboard for the selected frame."
@@ -383,15 +416,16 @@ Instead that frame takes another frame's windows, and the other closes."
       (select-frame-set-input-focus frame))))
 
 (when (featurep 'android)
-  (require 'server)
-  (unless (server-running-p)
-    (server-start))
   (add-to-list 'exec-path suderman/android-termux-bin)
   (setenv "PATH"
           (string-join (delete-dups
                         (cons suderman/android-termux-bin
                               (parse-colon-path (getenv "PATH"))))
                        path-separator))
+  (suderman/android-keep-sigchld)
+  (require 'server)
+  (unless (server-running-p)
+    (server-start))
   (require 'face-remap)
   (global-set-key [touchscreen-pinch] #'suderman/android-global-pinch)
   (global-set-key [touchscreen-hold] #'suderman/android-hold-toggle-keyboard)

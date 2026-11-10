@@ -57,6 +57,8 @@ The Android module adds Termux's binary directory to =PATH= and =exec-path=.
 Keep =LD_LIBRARY_PATH= unset. Check the connection with =(executable-find
 "git")=, =(executable-find "rg")=, and =(executable-find "fd")=.
 
+The first time Android's Java side starts a process in Emacs's app, as when Open with hands a file to =emacsclient=, it resets the SIGCHLD signal handler. Emacs installs that handler only at startup, so from then on finished processes look like they are still running and their sentinels never run, which stalls Dirvish helpers, asynchronous Git, and =package-vc= upgrades. On startup the config builds [[file:../android/sigchld.c][android/sigchld.c]] with Termux's =clang= into the cache directory and loads it before the server starts; each =emacsclient= connection then puts the handler back.
+
 Android stores Emacs's bundled data under the virtual =/assets= tree, which an
 external GPG process cannot read. The package bootstrap copies the bundled GNU
 ELPA keyring to a temporary physical file for import and deletes it afterward.

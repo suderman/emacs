@@ -115,7 +115,8 @@ reload reloads exactly that list, so every `lisp/suderman-*.el` file must
 appear there. New behavior belongs in the narrowest existing module, or in a
 new one when a concern has genuinely outgrown its home.
 
-- `suderman-android.el`: Android-only input, the server, and Termux paths.
+- `suderman-android.el`: Android-only input, the server, Termux paths, and
+  the SIGCHLD module (`android/sigchld.c`) that keeps process exits visible.
 - `suderman-toolbar.el`: the touch toolbar shared by Android and desktop.
 - `suderman-paths.el`: XDG paths and mutable state locations.
 - `suderman-packages.el`: package.el and `use-package` defaults.
