@@ -206,7 +206,7 @@ Return non-nil when handling a normal FIND-FUNCTION file visit."
   "k" '("Previous entry" . dired-previous-line)
   "l" '("Open entry" . suderman/dired-open)
   "f" '("Toggle fullscreen" . dirvish-layout-toggle)
-  "G" '("Open image gallery" . suderman/gallery)
+  "G" '("Open image gallery" . loupe-gallery)
   "b" '("Drag files with Ripdrag" . suderman/dired-ripdrag)
   "TAB" '("Toggle subtree" . suderman/dirvish-toggle-subtree)
   "o" '("Toggle subtree" . suderman/dirvish-toggle-subtree)

@@ -77,8 +77,8 @@ Package ownership:
   `~/.local/share/emacs/elpa` until the next flake update moves it into Nix.
   That nightly workflow runs `nix run .#update-use-packages`; run it yourself
   to move a package sooner.
-- `edger` and `meow-purrsist` install from GitHub through `package-vc` on every
-  platform, and `fling` does on the Android APK. `SPC q u` upgrades Git
+- `edger`, `meow-purrsist`, and `loupe` install from GitHub through
+  `package-vc` on every platform, and `fling` does on the Android APK. `SPC q u` upgrades Git
   packages everywhere and archive packages only on Android.
 - Use `:ensure nil` for built-ins (Which-Key, Eglot) and for packages Nix adds
   through `extraEmacsPackages` (PDF Tools, Kitty graphics), so package.el
@@ -135,9 +135,8 @@ new one when a concern has genuinely outgrown its home.
 - `suderman-transfer.el`: staged copy/cut/paste, clipboard and terminal file
   import, Ripdrag, and Kitty transfers.
 - `suderman-files.el`: Dired, Dirvish, the sidebar, previews, and their keys.
-- `suderman-images.el`: Image mode zoom, pan, and paging by touch, touchpad,
-  mouse, and keys; PDF pinch.
-- `suderman-gallery.el`: the thumbnail gallery.
+- `suderman-images.el`: loupe setup with Meow and Doom Modeline, image
+  animation, clipboard copy, and DocView preferences.
 - `suderman-dashboard.el`: the on-demand dashboard.
 - `suderman-markdown.el`: Markdown and Pandoc preview.
 - `suderman-org.el`: Org agenda, capture, archive, and refile.
@@ -154,7 +153,9 @@ new one when a concern has genuinely outgrown its home.
 `meow-purrsist` (`~/src/suderman/meow-purrsist`) owns generic persistent Meow
 selection behavior. `edger` (`~/src/suderman/edger`) owns window movement that
 can hand off to the surrounding terminal multiplexer. `fling`
-(`~/src/suderman/fling`) owns kinetic scrolling after a touch swipe.
+(`~/src/suderman/fling`) owns kinetic scrolling after a touch swipe. `loupe`
+(`~/src/suderman/loupe`) owns image and PDF zoom, pan, and paging gestures and
+the thumbnail gallery.
 
 Do not put generated files, package trees, caches, or compiled Elisp in the
 repository. `.gitignore` describes those boundaries.
