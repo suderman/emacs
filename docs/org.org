@@ -8,7 +8,7 @@ Org files keep one physical line per paragraph and per list item, and the window
 A heading sits directly on its content, and one blank line closes a finished paragraph, list, or block before the next section. That blank line folds with its subtree, so folded siblings sit together. An open heading still shows a blank line below its subtree before the next heading, even when its last child is folded, so a folded last child does not run into its parent's next sibling. That line is display only. It never enters the file, the undo history, or the modified flag.
 
 * File links from June
-June owns the handler in [[https://github.com/suderman/june/tree/main/org/links][june-links]]. This config loads it on desktop and Android and sets =june-host= to ="kit"=. Files under =~/org= open locally on each device; other files open on kit, through TRAMP from another desktop, and are refused in the Android APK. Heading, custom-ID, line and text searches follow Org's file-link rules. The phone uses =org-protocol://june-open=; the desktop calls =june-open= through =emacsclient=.
+June owns the handler in [[https://github.com/suderman/june/tree/main/org/links][june-links]]. This config loads it on desktop and Android and sets =june-host= to ="kit"=. Files under =~/org= open locally on each device; other files open on kit, through TRAMP from other devices, including the Android APK. Heading, custom-ID, line and text searches follow Org's file-link rules. The phone uses =org-protocol://june-open=; the desktop calls =june-open= through =emacsclient=. On Android, unlock the existing SSH key with =~/bin/ssh-unlock= in Termux before opening a remote link. The fingerprint unlock lasts one hour; synced Org links need no SSH.
 
 * Tasks, Agenda, and archives
 
