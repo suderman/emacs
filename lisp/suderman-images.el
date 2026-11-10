@@ -14,6 +14,7 @@
 
 (defvar image-animate-loop)
 (defvar meow-cursor-type-motion)
+(defvar meow-cursor-type-default)
 (defvar doom-modeline-buffer-file-name-style)
 (defvar doc-view-resolution)
 (defvar doc-view-continuous)
@@ -73,10 +74,12 @@
                          (bound-and-true-p meow-motion-mode)
                          (eq meow--current-state 'motion))))
       (meow-mode 1))
-    ;; Meow's Motion cursor would frame the whole image.  Doom Modeline's
-    ;; usual style looks for a project, which lists the whole directory:
-    ;; 1.2 s per photo in a phone's camera folder.
+    ;; Meow's cursor would frame and blink around the whole image.  Meow
+    ;; resets a nil cursor to its default type, so hide that one too.
+    ;; Doom Modeline's usual style looks for a project, which lists the
+    ;; whole directory: 1.2 s per photo in a phone's camera folder.
     (setq-local meow-cursor-type-motion nil
+                meow-cursor-type-default nil
                 doom-modeline-buffer-file-name-style 'file-name)))
 
 (defun suderman/image-metadata-graphic-frame (arguments)
