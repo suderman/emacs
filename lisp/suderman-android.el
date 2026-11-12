@@ -8,10 +8,12 @@
 
 ;;; Code:
 
+(require 'multisession)
 (require 'subr-x)
 (require 'suderman-paths)
 
 (defvar global-text-scale-adjust-limits)
+(defvar suderman/text-height)
 (defvar meow-keypad-describe-delay)
 (defvar touch-screen-enable-hscroll)
 (defvar touch-screen-extend-selection)
@@ -199,27 +201,21 @@ Return the first tap's record when this tap completes a double tap."
       (setq suderman/android-blank-tap nil)
       previous)))
 
-(defun suderman/mouse-set-point-or-toggle-keyboard (event)
-  "Set point at EVENT, or toggle the Android keyboard on a double tap.
-Listings such as Dired and IBuffer are read-only, so a tap never shows the
-keyboard.  A double tap in the blank space below the last entry toggles it
-and leaves point where it was.  A tap elsewhere hides it, as Emacs does
-after other taps in read-only text."
+(defun suderman/listing-mouse-set-point (event)
+  "Set point at EVENT in a read-only listing such as Dired or IBuffer.
+A tap never shows the Android keyboard there; a long press toggles it.  A
+tap in the blank space below the last entry leaves point where it was.  A
+tap on an entry hides the keyboard, as Emacs does after other taps in
+read-only text."
   (interactive "e")
-  (let ((posn (event-start event)))
-    (if (not (and (featurep 'android)
-                  (suderman/android-below-last-line-p posn)))
-        (progn
-          (setq suderman/android-blank-tap nil)
-          (mouse-set-point event)
-          (when (featurep 'android)
-            (suderman/android-hide-keyboard)))
-      (when suderman/tap-selected-point
-        (goto-char suderman/tap-selected-point))
-      (when (suderman/android-double-blank-tap posn)
-        (if (suderman/android-keyboard-visible-p (selected-frame))
-            (suderman/android-hide-keyboard)
-          (suderman/android-show-keyboard))))))
+  (if (not (and (featurep 'android)
+                (suderman/android-below-last-line-p (event-start event))))
+      (progn
+        (mouse-set-point event)
+        (when (featurep 'android)
+          (suderman/android-hide-keyboard)))
+    (when suderman/tap-selected-point
+      (goto-char suderman/tap-selected-point))))
 
 (defun suderman/android-mouse-set-point (event &optional promote-to-region)
   "Set point at EVENT, or hide the keyboard on a double tap on blank space.
@@ -241,7 +237,8 @@ it was before the first tap.  PROMOTE-TO-REGION is as for `mouse-set-point'."
   "Move point to the long press EVENT and toggle the keyboard.
 Outside Insert state, selection belongs to Meow's keys, so the press selects
 nothing and a following drag does nothing.  In Insert state it selects a
-word and drags the selection as usual."
+word and drags the selection as usual.  Below the last line of read-only
+text, such as a Dired or IBuffer listing, point stays where it was."
   (interactive "e")
   (let* ((posn (event-start event))
          (window (posn-window posn)))
@@ -253,7 +250,9 @@ word and drags the selection as usual."
           (minibuffer-window-active-p window))
       (touch-screen-inhibit-drag)
       (select-window window)
-      (when (posn-point posn)
+      (when (and (posn-point posn)
+                 (not (and buffer-read-only
+                           (suderman/android-below-last-line-p posn))))
         (goto-char (posn-point posn)))
       (if (suderman/android-keyboard-visible-p (selected-frame))
           (suderman/android-hide-keyboard)
@@ -285,19 +284,83 @@ word and drags the selection as usual."
   (when (bound-and-true-p meow-keypad-mode)
     [suderman-keypad-quit]))
 
-(defun suderman/android-global-pinch (event)
-  "Use Android pinch EVENT to scale the default face globally."
+(define-multisession-variable suderman/listing-text-height nil
+  "Text height shared by Dired, Dirvish, and IBuffer listings, or nil.
+Pinching a listing sets it, so listings keep their own size, apart from
+the default that pinching other buffers changes.  Nil follows the default.
+Its value lives in `multisession-directory' and survives restarts."
+  :package "suderman")
+
+(defvar-local suderman/listing-text-cookie nil
+  "The face remapping that applies the listing text height here.")
+
+(defun suderman/listing-buffer-p ()
+  "Return non-nil in a Dired, Dirvish, or IBuffer listing."
+  (derived-mode-p 'dired-mode 'dirvish-directory-view-mode 'ibuffer-mode))
+
+(defun suderman/apply-listing-text-height ()
+  "Show the current listing at `suderman/listing-text-height'."
+  (when suderman/listing-text-cookie
+    (face-remap-remove-relative suderman/listing-text-cookie))
+  (setq suderman/listing-text-cookie
+        (when-let* ((height (multisession-value suderman/listing-text-height)))
+          (face-remap-add-relative 'default :height height))))
+
+(defun suderman/dirvish-scale-right-attrs (window &rest _)
+  "Keep Dirvish's right-hand attributes inside WINDOW at a listing height.
+Dirvish aligns them by their width in frame columns, which text at
+`suderman/listing-text-height' outgrows."
+  (with-current-buffer (window-buffer window)
+    (when suderman/listing-text-cookie
+      (let ((scale (/ (float (multisession-value suderman/listing-text-height))
+                      (face-attribute 'default :height nil 'default))))
+        (dolist (ov (overlays-in (point-min) (point-max)))
+          (when-let* (((overlay-get ov 'dirvish-r-ov))
+                      (string (overlay-get ov 'after-string)))
+            (pcase (get-text-property 0 'display string)
+              (`(space :align-to (- right-fringe ,width ,pad))
+               (setq string (copy-sequence string))
+               (put-text-property
+                0 1 'display
+                `(space :align-to (- right-fringe ,(* scale width) ,pad))
+                string)
+               (overlay-put ov 'after-string string)))))))))
+
+(defun suderman/android-pinch (event)
+  "Scale text with Android pinch EVENT.
+In a listing, scale every listing together; elsewhere scale the default
+face globally."
   (interactive "e")
   (let* ((ratio (nth 2 event))
-         (previous-ratio (- ratio (nth 5 event))))
+         (previous-ratio (- ratio (nth 5 event)))
+         (window (posn-window (nth 1 event)))
+         (listing (and (windowp window)
+                       (with-current-buffer (window-buffer window)
+                         (suderman/listing-buffer-p)))))
     (when (> previous-ratio 0)
-      (let* ((height (face-attribute 'default :height nil 'default))
-             (new-height (round (* height (/ ratio previous-ratio)))))
-        (setq new-height
-              (max (car global-text-scale-adjust-limits)
-                   (min (cdr global-text-scale-adjust-limits) new-height)))
-        (set-face-attribute 'default nil :height new-height)
-        (suderman/sync-fixed-pitch-height)))))
+      (let* ((default (face-attribute 'default :height nil 'default))
+             (height (if listing
+                         (or (multisession-value suderman/listing-text-height)
+                             default)
+                       default))
+             (new-height (max (car global-text-scale-adjust-limits)
+                              (min (cdr global-text-scale-adjust-limits)
+                                   (round (* height (/ ratio previous-ratio)))))))
+        (if (not listing)
+            (progn
+              (setf (multisession-value suderman/text-height) new-height)
+              (set-face-attribute 'default nil :height new-height)
+              (suderman/sync-fixed-pitch-height))
+          (setf (multisession-value suderman/listing-text-height) new-height)
+          (dolist (buffer (buffer-list))
+            (with-current-buffer buffer
+              (when (suderman/listing-buffer-p)
+                (suderman/apply-listing-text-height))))
+          (when (fboundp 'dirvish--render-attrs)
+            (dolist (window (window-list))
+              (when (with-current-buffer (window-buffer window)
+                      (derived-mode-p 'dired-mode))
+                (dirvish--render-attrs window)))))))))
 
 (defvar-local suderman/sideways-scroll nil
   "How `suderman/toggle-sideways-scroll' overrode this buffer, or nil.
@@ -427,7 +490,13 @@ Instead that frame takes another frame's windows, and the other closes."
   (unless (server-running-p)
     (server-start))
   (require 'face-remap)
-  (global-set-key [touchscreen-pinch] #'suderman/android-global-pinch)
+  (global-set-key [touchscreen-pinch] #'suderman/android-pinch)
+  (dolist (hook '(dired-mode-hook dirvish-directory-view-mode-hook
+                  ibuffer-mode-hook))
+    (add-hook hook #'suderman/apply-listing-text-height))
+  (with-eval-after-load 'dirvish
+    (advice-add 'dirvish--render-attrs :after
+                #'suderman/dirvish-scale-right-attrs))
   (global-set-key [touchscreen-hold] #'suderman/android-hold-toggle-keyboard)
   ;; A stray tap on the buffer name would switch to the previous buffer.
   (keymap-unset mode-line-buffer-identification-keymap "<mode-line> <mouse-1>" t)

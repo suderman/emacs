@@ -30,6 +30,15 @@
   :init
   (setq which-key-idle-delay 0.35)
   :config
+  ;; Labelled digits would no longer collapse into one 0..9 entry.
+  (add-to-list 'which-key-replacement-alist
+               '((nil . "\\`meow-digit-argument\\'") . (nil . "digit argument")))
+  (when (featurep 'android)
+    ;; Fit two columns in the phone's narrow frame: each column holds a key
+    ;; up to three characters wide, the separator, and the description.
+    (setq which-key-max-description-length
+          (lambda (width)
+            (- (/ (1- width) 2) 3 (string-width which-key-separator)))))
   (which-key-mode 1))
 
 ;;;; Global keys
@@ -73,8 +82,8 @@
 (setf
  (alist-get 'leader meow-keymap-alist)
  (define-keymap
-   "SPC" #'execute-extended-command
-   "?" #'suderman/cheatsheet
+   "SPC" '("command" . execute-extended-command)
+   "?" '("cheatsheet" . suderman/cheatsheet)
    "TAB" '("fold/open all" . suderman/meow-fold-all)
    "e" '("mail" . suderman/mail)
    "0" #'meow-digit-argument
@@ -90,85 +99,85 @@
 
    "," (cons "buffers"
              (define-keymap
-               "/" #'consult-buffer
-               "b" #'suderman/ibuffer-toggle
-               "k" #'kill-current-buffer
-               "," #'suderman/alternate-buffer
-               "n" #'next-buffer
-               "p" #'previous-buffer
-               "r" #'suderman/revert-buffer-no-confirm
-               "s" #'save-buffer))
+               "/" '("switch buffer" . consult-buffer)
+               "b" '("ibuffer" . suderman/ibuffer-toggle)
+               "k" '("kill" . kill-current-buffer)
+               "," '("alternate" . suderman/alternate-buffer)
+               "n" '("next" . next-buffer)
+               "p" '("previous" . previous-buffer)
+               "r" '("revert" . suderman/revert-buffer-no-confirm)
+               "s" '("save" . save-buffer)))
 
    "." (cons "files"
              (define-keymap
-               "." #'consult-fd
-               "/" #'consult-ripgrep
-               "f" #'suderman/dirvish
-               "b" #'consult-bookmark
-               "m" #'bookmark-set
-               "M" #'bookmark-delete
-               "," #'consult-recent-file
-               "s" #'save-buffer
-               "S" #'write-file
-               "R" #'tramp-cleanup-this-connection))
+               "." '("find file" . consult-fd)
+               "/" '("ripgrep" . consult-ripgrep)
+               "f" '("dirvish" . suderman/dirvish)
+               "b" '("bookmark" . consult-bookmark)
+               "m" '("set bookmark" . bookmark-set)
+               "M" '("delete bookmark" . bookmark-delete)
+               "," '("recent files" . consult-recent-file)
+               "s" '("save" . save-buffer)
+               "S" '("save as" . write-file)
+               "R" '("tramp cleanup" . tramp-cleanup-this-connection)))
 
    "g" (cons "git"
              (define-keymap
-               "B" #'magit-blame-addition
-               "C" #'magit-branch-checkout
-               "b" #'magit-blame-echo
-               "d" #'magit-diff-buffer-file
-               "f" #'magit-file-dispatch
-               "g" #'magit-status
-               "l" #'magit-log-buffer-file
-               "L" #'magit-log-current
-               "m" #'magit-dispatch
-               "s" #'magit-stage-files
-               "u" #'magit-unstage-files
+               "B" '("blame addition" . magit-blame-addition)
+               "C" '("checkout" . magit-branch-checkout)
+               "b" '("blame echo" . magit-blame-echo)
+               "d" '("diff file" . magit-diff-buffer-file)
+               "f" '("file dispatch" . magit-file-dispatch)
+               "g" '("status" . magit-status)
+               "l" '("log file" . magit-log-buffer-file)
+               "L" '("log current" . magit-log-current)
+               "m" '("dispatch" . magit-dispatch)
+               "s" '("stage files" . magit-stage-files)
+               "u" '("unstage files" . magit-unstage-files)
                "c" (cons "conflicts"
                          (define-keymap
-                           "0" #'smerge-kill-current
-                           "a" #'smerge-keep-all
-                           "b" #'smerge-keep-base
-                           "e" #'smerge-ediff
-                           "l" #'smerge-keep-lower
-                           "n" #'smerge-next
-                           "p" #'smerge-prev
-                           "r" #'smerge-refine
-                           "u" #'smerge-keep-upper))
+                           "0" '("kill current" . smerge-kill-current)
+                           "a" '("keep all" . smerge-keep-all)
+                           "b" '("keep base" . smerge-keep-base)
+                           "e" '("ediff" . smerge-ediff)
+                           "l" '("keep lower" . smerge-keep-lower)
+                           "n" '("next" . smerge-next)
+                           "p" '("previous" . smerge-prev)
+                           "r" '("refine" . smerge-refine)
+                           "u" '("keep upper" . smerge-keep-upper)))
                "h" (cons "hunks"
                          (define-keymap
-                           "d" #'diff-hl-diff-goto-hunk
-                           "n" #'diff-hl-next-hunk
-                           "p" #'diff-hl-previous-hunk
-                           "r" #'diff-hl-revert-hunk
-                           "s" #'diff-hl-stage-current-hunk
-                           "u" #'diff-hl-unstage-file
-                           "v" #'diff-hl-show-hunk))))
+                           "d" '("diff" . diff-hl-diff-goto-hunk)
+                           "n" '("next" . diff-hl-next-hunk)
+                           "p" '("previous" . diff-hl-previous-hunk)
+                           "r" '("revert" . diff-hl-revert-hunk)
+                           "s" '("stage" . diff-hl-stage-current-hunk)
+                           "u" '("unstage file" . diff-hl-unstage-file)
+                           "v" '("show" . diff-hl-show-hunk)))))
 
    "o" (cons "org"
              (define-keymap
                "a" '("archive" . suderman/org-archive)
-               "A" '("archive completed in buffer" . suderman/org-archive-done)
-               "c" #'org-capture
+               "A" '("archive done" . suderman/org-archive-done)
+               "c" '("capture" . org-capture)
                "d" '("DONE" . suderman/org-todo-done)
                "D" '("delete subtree" . suderman/org-delete-subtree)
                "e" '("EVAL" . suderman/org-todo-eval)
                "E" '("export" . suderman/org-export)
-               "g" #'suderman/org-heading
+               "g" '("go to heading" . suderman/org-heading)
                "h" '("HOLD" . suderman/org-todo-hold)
-               "l" #'suderman/org-insert-link
-               "L" #'org-store-link
-               "n" #'org-toggle-narrow-to-subtree
+               "l" '("insert link" . suderman/org-insert-link)
+               "L" '("store link" . org-store-link)
+               "n" '("narrow" . org-toggle-narrow-to-subtree)
                "o" '("dashboard" . suderman/org-dashboard)
                "p" '("PROG" . suderman/org-todo-prog)
                "q" '("tags" . org-set-tags-command)
-               "r" #'suderman/org-refile
+               "r" '("refile" . suderman/org-refile)
                "t" '("TODO" . suderman/org-todo-todo)
                "T" '("AUTO" . suderman/org-todo-auto)
-               "w" '("track Asana task" . suderman/org-asana-track)
-               "W" '("add agent step to Asana task" . suderman/org-asana-delegate)
-               "x" #'suderman/org-toggle-checkbox
+               "w" '("track Asana" . suderman/org-asana-track)
+               "W" '("add agent step" . suderman/org-asana-delegate)
+               "x" '("checkbox" . suderman/org-toggle-checkbox)
                "TAB" '("fold task" . suderman/org-fold-task)
                "[" '("go to task" . suderman/org-goto-task)
                "s" (cons "planning"
@@ -185,35 +194,35 @@
 
    "q" (cons "quit/config"
              (define-keymap
-               "p" #'suderman/pull-config
+               "p" '("pull config" . suderman/pull-config)
                "q" '("close client" . save-buffers-kill-terminal)
                "Q" '("stop server" . save-buffers-kill-emacs)
-               "s" '("save all and close" . suderman/save-and-quit)
-               "d" '("discard and close" . suderman/quit-without-saving)
-               "r" #'suderman/reload-config
-               "u" #'suderman/package-upgrade-all))
+               "s" '("save all, close" . suderman/save-and-quit)
+               "d" '("discard, close" . suderman/quit-without-saving)
+               "r" '("reload config" . suderman/reload-config)
+               "u" '("upgrade all" . suderman/package-upgrade-all)))
 
    "/" (cons "search"
              (define-keymap
-               "/" #'consult-ripgrep
-               "g" #'consult-git-grep
-               "l" #'consult-line
-               "L" #'consult-line-multi
-               "i" #'consult-imenu
-               "I" #'consult-imenu-multi
-               "o" #'consult-outline
-               "m" #'consult-mark
-               "M" #'consult-global-mark
-               "r" #'consult-register
-               "y" #'consult-yank-pop
-               "e" #'consult-compile-error
-               "f" #'consult-flymake
-               "s" #'consult-isearch-history
-               "c" #'suderman/clear-search))
+               "/" '("ripgrep" . consult-ripgrep)
+               "g" '("git grep" . consult-git-grep)
+               "l" '("line" . consult-line)
+               "L" '("line, buffers" . consult-line-multi)
+               "i" '("imenu" . consult-imenu)
+               "I" '("imenu, buffers" . consult-imenu-multi)
+               "o" '("outline" . consult-outline)
+               "m" '("mark" . consult-mark)
+               "M" '("global mark" . consult-global-mark)
+               "r" '("register" . consult-register)
+               "y" '("yank ring" . consult-yank-pop)
+               "e" '("compile error" . consult-compile-error)
+               "f" '("flymake" . consult-flymake)
+               "s" '("isearch history" . consult-isearch-history)
+               "c" '("clear search" . suderman/clear-search)))
 
    "t" (cons "toggles"
              (define-keymap
-               "c" '("column indicator" . display-fill-column-indicator-mode)
+               "c" '("fill column" . display-fill-column-indicator-mode)
                "d" '("dirvish sidebar" . suderman/dirvish-side-toggle)
                "f" '("formatting" . suderman/toggle-formatting)
                "h" '("current line" . hl-line-mode)
@@ -227,22 +236,22 @@
 
    "w" (cons "windows"
              (define-keymap
-               "=" #'balance-windows
-               "h" #'edger-left
-               "j" #'edger-down
-               "k" #'edger-up
-               "l" #'edger-right
-               "H" #'edger-resize-left
-               "J" #'edger-resize-down
-               "K" #'edger-resize-up
-               "L" #'edger-resize-right
-               "u" #'edger-horizontal
-               "i" #'edger-vertical
+               "=" '("balance" . balance-windows)
+               "h" '("left" . edger-left)
+               "j" '("down" . edger-down)
+               "k" '("up" . edger-up)
+               "l" '("right" . edger-right)
+               "H" '("resize left" . edger-resize-left)
+               "J" '("resize down" . edger-resize-down)
+               "K" '("resize up" . edger-resize-up)
+               "L" '("resize right" . edger-resize-right)
+               "u" '("split below" . edger-horizontal)
+               "i" '("split right" . edger-vertical)
                "n" '("new frame" . suderman/new-frame)
                "N" '("new tab" . tab-bar-new-tab)
-               "o" #'delete-other-windows
-               "s" #'save-buffer
-               "w" #'edger-close))
+               "o" '("close others" . delete-other-windows)
+               "s" '("save" . save-buffer)
+               "w" '("close" . edger-close)))
 
    "RET" (and (fboundp 'ghostel-project) #'ghostel-project)))
 

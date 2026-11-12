@@ -17,20 +17,13 @@ video files open through Android's native app chooser.
 
 The bottom toolbar has Ctrl, Meta, previous and next buffer, IBuffer, Dirvish,
 search, the Meow keypad, Tab, and Escape. Ctrl and Meta apply to the next key
-and can be combined. The keypad button also shows a hidden software keyboard,
-and a second press closes the keypad. Escape clears a selection and leaves
+and can be combined. A second press on the keypad button closes the keypad;
+it leaves the software keyboard as it was. Escape clears a selection and leaves
 Insert state, or cancels the current command. =F9= toggles the toolbar.
 
-Volume Up shows the software keyboard, or opens the keypad when the keyboard
-is already showing. Volume Down hides the keyboard, or closes an open keypad.
-In Dirvish and IBuffer, double-tap the blank space below the last entry to
-show or hide the keyboard without moving the cursor. Anywhere, a long press
-moves the cursor there and shows or hides the keyboard; it selects nothing,
-since Meow's keys select. In Insert state a long press selects a word
-instead, and dragging extends the selection. A tap in editable text shows the keyboard, except
-in Org and Markdown, where a tap in Normal state leaves it as it was.
-Entering Insert state shows it, and a double tap on blank space past the end
-of a line or below the last one hides it.
+Volume Up shows the software keyboard, or opens the keypad when the keyboard is already showing. Volume Down hides the keyboard, or closes an open keypad. Anywhere, including Dirvish and IBuffer, a long press moves the cursor there and shows or hides the keyboard; it selects nothing, since Meow's keys select. Below the last entry of a listing, it leaves the cursor where it was. In Insert state a long press selects a word instead, and dragging extends the selection. A tap in editable text shows the keyboard, except in Org and Markdown, where a tap in Normal state leaves it as it was. Entering Insert state shows it, and a double tap on blank space past the end of a line or below the last one hides it.
+
+The keypad's Which-Key list fits two columns on the phone. Leader entries have short labels for that, and other long descriptions are cut short.
 
 In Org and Markdown, a tap on a link or a foldable line only moves the cursor
 there, like the first tap on an IBuffer or Dirvish row. Foldable lines are
@@ -42,7 +35,7 @@ cursor.
 A tap on the buffer name in the mode line does nothing, so a stray tap cannot
 switch to the previous buffer.
 
-Pinch scales text in text buffers. In an image or PDF it zooms the page, and in the gallery it changes the number of columns; see [[file:files.org::*Dirvish and Image mode][Dirvish and Image mode]]. Vertical swipes scroll by pixel and keep
+Pinch scales text in text buffers. In Dirvish and IBuffer it scales every listing together, apart from text buffers, so listings can keep larger touch targets. Both sizes survive restarts; Emacs keeps them with =multisession= under =~/.local/state/emacs/multisession/=. In an image or PDF it zooms the page, and in the gallery it changes the number of columns; see [[file:files.org::*Dirvish and Image mode][Dirvish and Image mode]]. Vertical swipes scroll by pixel and keep
 going after you lift your finger. Buffers with truncated lines, such as Agenda,
 also swipe sideways; =SPC t t= turns that on or off for the current buffer.
 

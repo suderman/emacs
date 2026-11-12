@@ -836,10 +836,14 @@ client's frame, not this buffer, keeps a terminal client alive."
     (keymap-set map "<up>" #'dired-previous-line)
     (keymap-set map "<right>" #'suderman/dired-open)
     (keymap-set map "<xterm-paste>" #'suderman/dired-xterm-paste)
-    (keymap-set map "<mouse-1>" #'suderman/mouse-set-point-or-toggle-keyboard)
+    (keymap-set map "<mouse-1>" #'suderman/listing-mouse-set-point)
     (keymap-set map "<mouse-2>" #'suderman/dired-mouse-secondary-open)
     (keymap-set map "<double-mouse-1>" #'suderman/dired-mouse-open)
-    (keymap-set map "<mouse-3>" #'context-menu-open))
+    (keymap-set map "<mouse-3>" #'context-menu-open)
+    ;; Dired's own long press starts click-to-select mode.
+    (when (featurep 'android)
+      (keymap-set map "<touchscreen-hold>"
+                  #'suderman/android-hold-toggle-keyboard)))
   (keymap-set dirvish-directory-view-mode-map
               "<mouse-1>" #'suderman/dirvish-parent-mouse-select)
   (keymap-set dirvish-directory-view-mode-map

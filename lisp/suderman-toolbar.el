@@ -2,9 +2,8 @@
 
 ;;; Commentary:
 ;; A bottom toolbar with sticky Ctrl and Meta, previous and next buffer,
-;; IBuffer, Dirvish, search, the Meow keypad (with the software keyboard on
-;; Android), Tab, and Escape.  Both draw the theme-colored SVG icons in
-;; assets/toolbar.  F9 toggles it.
+;; IBuffer, Dirvish, search, the Meow keypad, Tab, and Escape.  Both draw
+;; the theme-colored SVG icons in assets/toolbar.  F9 toggles it.
 
 ;;; Code:
 
@@ -18,7 +17,6 @@
 (declare-function set-text-conversion-style "textconv.c"
                   (style &optional keep-selection))
 (declare-function tool-bar-apply-modifiers "tool-bar" (event modifiers))
-(declare-function suderman/android-keyboard-visible-p "suderman-android" (frame))
 
 (defun suderman/tool-bar-image (name &optional active)
   "Return a theme-aware tool-bar image expression for NAME.
@@ -119,28 +117,17 @@ rx=\"5\" fill=\"currentColor\" mask=\"url(#m)\"/></svg>"
                          meow-normal-state-keymap t))))
 
 (defun suderman/tool-bar-keypad ()
-  "Open the Meow keypad, and on Android a hidden software keyboard with it."
+  "Open the Meow keypad."
   (interactive)
-  (when (and (featurep 'android)
-             (not (suderman/android-keyboard-visible-p (selected-frame))))
-    (frame-toggle-on-screen-keyboard nil nil)
-    ;; The keyboard shrinks the frame, which erases a key list drawn first.
-    (with-timeout (0.6)
-      (while (not (suderman/android-keyboard-visible-p (selected-frame)))
-        (sit-for 0.02))))
   ;; A touch has no quick next key to wait for, so describe keys at once.
   (let ((meow-keypad-describe-delay 0))
     (meow-keypad)))
 
 (defun suderman/tool-bar-keypad-quit (_prompt)
-  "Make a second keypad button press quit the open Meow keypad.
-On Android, a press while the software keyboard is hidden shows it instead."
+  "Make a second keypad button press quit the open Meow keypad."
   (when (bound-and-true-p meow-keypad-mode)
-    (if (and (featurep 'android)
-             (not (suderman/android-keyboard-visible-p (selected-frame))))
-        (progn (frame-toggle-on-screen-keyboard nil nil) [])
-      ;; [escape] would reach the keypad as an undefined ESC.
-      [suderman-keypad-quit])))
+    ;; [escape] would reach the keypad as an undefined ESC.
+    [suderman-keypad-quit]))
 
 (defun suderman/setup-tool-bar (&optional theme)
   "Configure the touch-friendly input toolbar idempotently.

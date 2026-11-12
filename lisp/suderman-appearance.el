@@ -9,6 +9,7 @@
 ;;; Code:
 
 (require 'color)
+(require 'multisession)
 (require 'seq)
 (require 'use-package)
 
@@ -41,6 +42,10 @@ A synced style file sets this; otherwise it holds `suderman/fallback-style'.")
   "Prose size relative to the default face.")
 (defvar suderman/android-font-scale (/ 14.0 12.0)
   "Android point-size adjustment.  Android points are sp (1/160 inch).")
+(define-multisession-variable suderman/text-height nil
+  "Default face height chosen by pinching text, or nil for the style's size.
+Its value lives in `multisession-directory' and survives restarts."
+  :package "suderman")
 
 (defun suderman/load-system-style (&optional file)
   "Load FILE or the first readable synced style file.
@@ -167,7 +172,9 @@ Without FRAME, update every frame."
             (set-fontset-font t char (font-spec :family fallback) frame 'prepend))))
       (when (and variable (find-font (font-spec :family variable) frame))
         (set-face-attribute 'variable-pitch frame :family variable
-                            :height suderman/variable-font-scale)))
+                            :height suderman/variable-font-scale))
+      (when-let* ((height (multisession-value suderman/text-height)))
+        (set-face-attribute 'default frame :height height)))
     (suderman/sync-fixed-pitch-height frame)
     (suderman/set-nerd-font-fallbacks frame)))
 

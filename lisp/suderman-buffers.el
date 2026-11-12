@@ -213,7 +213,7 @@ On Android a tap anywhere on a buffer's row acts like a tap on its name."
                   (pos (posn-point (event-start event))))
         (save-excursion (goto-char pos) (ibuffer-current-buffer)))
       (suderman/ibuffer-mouse-visit-buffer event)
-    (suderman/mouse-set-point-or-toggle-keyboard event)))
+    (suderman/listing-mouse-set-point event)))
 
 (defun suderman/ibuffer-setup ()
   "Apply project grouping and display defaults to IBuffer."
