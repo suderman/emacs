@@ -12,6 +12,7 @@
 
 ;; Notmuch loads Message and the widget library itself.  Requiring them here
 ;; would load all three on every startup, including hosts without mail.
+(defvar notmuch-command)
 (defvar notmuch-fcc-dirs)
 (defvar widget-field-list)
 (declare-function mail-header-parse-addresses "mail-parse")
@@ -53,10 +54,15 @@
     "nonfiction/Sent" "nonfiction/Junk" "nonfiction/Trash")
   "IMAP folders mirrored by the NixOS mbsync accounts.")
 
+(defconst suderman/notmuch-command
+  (if (executable-find "notmuch-mail") "notmuch-mail" "notmuch")
+  "Notmuch CLI.  Termux's notmuch-mail reads another host over SSH until
+the phone has its own mail store.")
+
 (defun suderman/mail ()
   "Open Notmuch's mail overview on a host with the local mail store."
   (interactive)
-  (unless (executable-find "notmuch")
+  (unless (executable-find suderman/notmuch-command)
     (user-error "Notmuch CLI and local mail store are required on this host"))
   (notmuch))
 
@@ -94,11 +100,14 @@
 
 (defun suderman/mail-sync ()
   "Run account sync services, then g refreshes the view.
-Gmail needs a second pass to settle All Mail after Inbox and Trash changes."
+Gmail needs a second pass to settle All Mail after Inbox and Trash changes.
+Termux has no systemd, so its mail-sync script does the same work."
   (interactive)
   (async-shell-command
-   (concat "systemctl --user start email-suderman.service email-nonfiction.service"
-           " && systemctl --user start email-nonfiction.service")
+   (if (executable-find "mail-sync")
+       "mail-sync && mail-sync"
+     (concat "systemctl --user start email-suderman.service email-nonfiction.service"
+             " && systemctl --user start email-nonfiction.service"))
    "*Mail sync*"))
 
 (defun suderman/mail-folder-action-pending ()
@@ -178,10 +187,11 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
 (add-to-list 'package-pinned-packages '(notmuch . "melpa-stable"))
 
 (use-package notmuch
-  :if (executable-find "notmuch")
+  :if (executable-find suderman/notmuch-command)
   :commands (notmuch notmuch-unthreaded notmuch-mua-new-mail)
   :init
-  (setq mail-user-agent 'notmuch-user-agent
+  (setq notmuch-command suderman/notmuch-command
+        mail-user-agent 'notmuch-user-agent
         notmuch-search-oldest-first nil
         notmuch-show-empty-saved-searches t
         ;; 0.40's window refresh can change the current buffer during composition.
@@ -300,6 +310,10 @@ A Sent-copy failure must not leave a delivered message ready to resume and send.
        ((memq major-mode '(notmuch-hello-mode notmuch-search-mode
                            notmuch-tree-mode notmuch-show-mode))
         (suderman/mail-buffer-setup))))))
+
+;; Its autoloads register notmuch: links once Org loads, without loading Notmuch.
+(use-package ol-notmuch
+  :commands org-notmuch-open)
 
 (provide 'suderman-mail)
 ;;; suderman-mail.el ends here

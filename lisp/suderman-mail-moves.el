@@ -112,7 +112,10 @@ Use the active NOTMUCH_CONFIG and database.  No IMAP sync runs here.
 Return the destination path.  Index failure reports a completed filesystem move
 rather than pretending it rolled back; run notmuch new before any retry."
   (let* ((account (car (suderman/mail-move-source root source)))
-         (runtime (getenv "XDG_RUNTIME_DIR"))
+         ;; Termux has no XDG_RUNTIME_DIR; its mail-sync locks here instead.
+         (runtime (or (getenv "XDG_RUNTIME_DIR")
+                      (and (eq system-type 'android)
+                           "/data/data/com.termux/files/usr/var/run")))
          (library (locate-library "suderman-mail-moves")))
     (unless (and runtime (file-directory-p runtime) (not (file-remote-p runtime)))
       (user-error "A local XDG_RUNTIME_DIR is required for the sync lock"))

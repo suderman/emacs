@@ -33,6 +33,10 @@
 (defconst suderman/android-termux-bin
   "/data/data/com.termux/files/usr/bin")
 
+(defconst suderman/android-termux-scripts
+  "/data/data/com.termux/files/home/bin"
+  "Scripts from the Termux repository, such as mail-sync and notmuch-mail.")
+
 (defconst suderman/android-sigchld-source
   (expand-file-name "../android/sigchld.c"
                     (file-name-directory (or load-file-name buffer-file-name)))
@@ -479,11 +483,13 @@ Instead that frame takes another frame's windows, and the other closes."
       (select-frame-set-input-focus frame))))
 
 (when (featurep 'android)
+  (add-to-list 'exec-path suderman/android-termux-scripts)
   (add-to-list 'exec-path suderman/android-termux-bin)
   (setenv "PATH"
           (string-join (delete-dups
-                        (cons suderman/android-termux-bin
-                              (parse-colon-path (getenv "PATH"))))
+                        (append (list suderman/android-termux-bin
+                                      suderman/android-termux-scripts)
+                                (parse-colon-path (getenv "PATH"))))
                        path-separator))
   (suderman/android-keep-sigchld)
   (require 'server)

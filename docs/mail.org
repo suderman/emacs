@@ -1,8 +1,11 @@
 #+title: Mail
 #+startup: content
 
-Notmuch reads mail that mbsync keeps in IMAP folders on =kit=; msmtp sends it.
-Accounts, credentials, and sync services live in the NixOS configuration.
+Notmuch reads mail that mbsync keeps in IMAP folders; msmtp sends it. =kit=, =cog=, and the phone =gem= each sync their own full copy. On NixOS, accounts, credentials, and sync services live in the NixOS configuration. On the phone they live in the Termux repository: =config/mail/mail.conf= sets the sync interval and the host Emacs reads over SSH until the phone has a local store, and app passwords stay in =~/.secrets=.
+
+* Links from Org
+
+=ol-notmuch= makes =notmuch:id:MESSAGE-ID= links open that message, and =notmuch-search:= and =notmuch-tree:= links open a query. =org-store-link= in a message view stores a =notmuch:id:= link. A link to a draft stops matching after the draft is sent, because Gmail gives the sent copy a new Message-ID.
 
 * Reading and sending
 
