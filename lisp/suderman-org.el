@@ -911,9 +911,10 @@ symlinks to directories."
      #'string<)))
 
 (defun suderman/org-context-files ()
-  "Return active Org files from life, notes, and work contexts."
+  "Return active Org files from life, finance, notes, and work contexts."
   (append
    (suderman/org--direct-org-files (expand-file-name "life" org-directory))
+   (suderman/org--direct-org-files (expand-file-name "finance" org-directory))
    (suderman/org--direct-org-files (expand-file-name "notes" org-directory))
    (suderman/org-work-agenda-files (expand-file-name "work" org-directory))))
 

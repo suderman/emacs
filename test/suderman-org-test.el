@@ -72,6 +72,7 @@
 (ert-deftest suderman/org-builds-context-and-refile-file-lists ()
   (let* ((org-directory (make-temp-file "suderman-org-contexts-" t))
          (life (expand-file-name "life/kids.org" org-directory))
+         (finance (expand-file-name "finance/finance.org" org-directory))
          (notes (expand-file-name "notes/reference.org" org-directory))
          (calendar (expand-file-name "calendar/import.org" org-directory))
          (client (expand-file-name "work/acme/acme.org" org-directory))
@@ -85,9 +86,10 @@
          (archive (expand-file-name "notes/archive.org" org-directory))
          (nested-personal (mapcar (lambda (file) (expand-file-name file org-directory))
                                   '("life/nested/notes.org"
+                                    "finance/inbox/notes.org"
                                     "notes/nested/notes.org"
                                     "calendar/nested/notes.org")))
-         (contexts (list life notes client sibling nested project))
+         (contexts (list life finance notes client sibling nested project))
          (destinations (cons todo contexts)))
     (unwind-protect
         (progn
