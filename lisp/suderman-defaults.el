@@ -58,6 +58,9 @@
   (savehist-mode 1)
   (save-place-mode 1)
   (recentf-mode 1))
+;; File notifications see changes, so skip the 5-second poll of every buffer.
+;; On the phone that poll touched shared storage all day for nothing.
+(setq auto-revert-avoid-polling t)
 (global-auto-revert-mode 1)
 (electric-pair-mode 1)
 
