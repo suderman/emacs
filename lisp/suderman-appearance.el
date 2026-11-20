@@ -227,7 +227,9 @@ Without FRAME, update every frame."
   ;; compact while expanded block endings retain their full-width background.
   (when (facep 'org-block-begin-line)
     (set-face-extend 'org-block-begin-line nil)
-    (set-face-extend 'org-block-end-line t)))
+    (set-face-extend 'org-block-end-line t))
+  ;; The amendments above recompute mode-line faces after the theme hooks.
+  (suderman/clear-tty-backgrounds))
 
 (defun suderman/apply-system-palette (&optional appearance)
   "Follow toolkit APPEARANCE using the synced Stylix palette pair.
@@ -277,10 +279,44 @@ rereads the style file, so newly synced colors apply without a restart."
   (interactive)
   (suderman/frame-text-scale-adjust 1))
 
+(defvar suderman/tty-theme-background nil
+  "The theme background that terminal frames paint as the terminal's own.")
+
+(defun suderman/clear-tty-backgrounds (&rest _)
+  "Let terminal frames show the terminal's background behind the theme's.
+Faces painted in the theme background become the terminal default instead,
+which a translucent terminal shows through.  Kitty does this by itself for
+cells matching its background; the Herdr app only for cells with none."
+  (dolist (frame (frame-list))
+    (when (and (eq (framep frame) t) (not (frame-initial-p frame)))
+      (let ((background (face-background 'default frame)))
+        (when (and (stringp background)
+                   (not (string-prefix-p "unspecified" background)))
+          (setq suderman/tty-theme-background background)))
+      (when suderman/tty-theme-background
+        ;; Without a color, Emacs would guess the frame is light.
+        (set-terminal-parameter
+         (frame-terminal frame) 'background-mode
+         (if (color-dark-p
+              (mapcar (lambda (value) (/ value 65535.0))
+                      (color-values-from-color-spec
+                       suderman/tty-theme-background)))
+             'dark
+           'light))
+        (dolist (face (face-list))
+          (let ((background (face-attribute face :background frame)))
+            (when (and (stringp background)
+                       (string-equal-ignore-case
+                        background suderman/tty-theme-background))
+              (set-face-background face "unspecified-bg" frame))))))))
+
 (defun suderman/theme-blend (face alpha)
   "Blend FACE's foreground into the theme background by ALPHA."
   (let ((accent (face-foreground face nil t))
         (background (face-background 'default nil t)))
+    (when (and (stringp background)
+               (string-prefix-p "unspecified" background))
+      (setq background suderman/tty-theme-background))
     (when (and (stringp accent) (stringp background))
       (when-let* ((accent-rgb (color-name-to-rgb accent))
                   (background-rgb (color-name-to-rgb background)))
@@ -469,6 +505,9 @@ rereads the style file, so newly synced colors apply without a restart."
 (suderman/refresh-system-fonts)
 (add-hook 'after-make-frame-functions #'suderman/apply-selection-faces)
 (add-hook 'after-make-frame-functions #'suderman/apply-tty-menu-faces)
+;; Last, so theme-blending hooks still read the theme background.
+(add-hook 'enable-theme-functions #'suderman/clear-tty-backgrounds 90)
+(add-hook 'after-make-frame-functions #'suderman/clear-tty-backgrounds 90)
 
 (provide 'suderman-appearance)
 ;;; suderman-appearance.el ends here
